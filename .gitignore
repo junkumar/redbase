@@ -1,1 +1,3 @@
 src/pf_test*
+build/
+lib/
