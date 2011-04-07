@@ -1,3 +1,6 @@
 src/pf_test*
+src/rm_test
+src/gtest
+src/TAGS
 build/
 lib/

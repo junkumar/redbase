@@ -27,14 +27,22 @@ typedef int SlotNum;
 //
 class RID {
 public:
-    RID();                                         // Default constructor
-    RID(PageNum pageNum, SlotNum slotNum);
-    ~RID();                                        // Destructor
-
-    RC GetPageNum(PageNum &pageNum) const;         // Return page number
-    RC GetSlotNum(SlotNum &slotNum) const;         // Return slot number
+  static const PageNum NULL_PAGE = -1;
+  static const SlotNum NULL_SLOT = -1;
+  RID()
+    :page(NULL_PAGE), slot(NULL_SLOT) {}     // Default constructor
+  RID(PageNum pageNum, SlotNum slotNum)
+    :page(pageNum), slot(slotNum) {}
+  ~RID(){}                                        // Destructor
+  
+  RC GetPageNum(PageNum &pageNum) const          // Return page number
+  { return page; }
+  RC GetSlotNum(SlotNum &slotNum) const         // Return slot number
+  { return slot; }
 
 private:
+  PageNum page;
+  SlotNum slot;
 };
 
-#endif
+#endif // RM_RID_H

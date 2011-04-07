@@ -22,11 +22,37 @@
 #include "rm_rid.h"
 #include "pf.h"
 
+
+#define RM_PAGE_LIST_END  -1       // end of list of free pages
+#define RM_PAGE_USED      -2       // page is being used
+
+//
+// RM_FileHdr: Header structure for files
+//
+struct RM_FileHdr {
+   int firstFree;     // first free page in the linked list
+   int numPages;      // # of pages in the file
+};
+
+//
+// RM_PageHdr: Header structure for pages
+//
+struct RM_PageHdr {
+    int nextFree;       // nextFree can be any of these values:
+                        //  - the number of the next free page
+                        //  - RM_PAGE_LIST_END if this is last free page
+                        //  - RM_PAGE_USED if the page is not free
+};
+
+// Justify the file header to the length of one page
+const int RM_FILE_HDR_SIZE = PF_PAGE_SIZE + sizeof(RM_PageHdr);
+
 //
 // RM_Record: RM Record interface
 //
 class RM_Record {
-public:
+	friend class RM_RecordTest;
+  public:
     RM_Record ();
     ~RM_Record();
 
@@ -34,8 +60,14 @@ public:
     // record contents.
     RC GetData(char *&pData) const;
 
+		// Sets data in the record for a fixed recordsize of size.
+    RC SetData(char *pData, int size);
+
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
+  private:
+		int recordSize;
+		char * data;			
 };
 
 //
@@ -44,6 +76,8 @@ public:
 class RM_FileHandle {
 public:
     RM_FileHandle ();
+    RM_FileHandle (PF_FileHandle*);
+		RC getPF_FileHandle(PF_FileHandle &);
     ~RM_FileHandle();
 
     // Given a RID, return the record
@@ -57,6 +91,17 @@ public:
     // Forces a page (along with any contents stored in this class)
     // from the buffer pool to disk.  Default value forces all pages.
     RC ForcePages (PageNum pageNum = ALL_PAGES);
+private:
+    
+   // IsValidPageNum will return TRUE if page number is valid and FALSE
+   // otherwise
+   int IsValidPageNum (PageNum pageNum) const;
+
+   PF_FileHandle *pfHandle;                       // pointer to opened PF_FileHandle
+   RM_FileHdr hdr;                                // file header
+	 bool bFileOpen;                                // file open flag
+   bool bHdrChanged;                              // dirty flag for file hdr
+	 int recordSize;
 };
 
 //
@@ -91,6 +136,9 @@ public:
     RC OpenFile   (const char *fileName, RM_FileHandle &fileHandle);
 
     RC CloseFile  (RM_FileHandle &fileHandle);
+
+private:
+    PF_Manager&   pfm; // A reference to the external PF_Manager
 };
 
 //
@@ -98,4 +146,14 @@ public:
 //
 void RM_PrintError(RC rc);
 
-#endif
+#define RM_LASTWARN START_RM_WARN
+
+#define RM_SIZETOOBIG      (START_RM_ERR - 0)  // record size too big
+#define RM_PF              (START_RM_ERR - 1)  // error in PF
+#define RM_NULLRECORD      (START_RM_ERR - 2)  
+#define RM_RECSIZEMISMATCH (START_RM_ERR - 3)  // record size mismatch
+#define RM_EOF             (START_RM_ERR - 4)  // end of file
+
+#define RM_LASTERROR RM_EOF
+
+#endif // RM_H
