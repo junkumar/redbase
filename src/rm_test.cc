@@ -68,10 +68,10 @@ void PrintError(RC rc);
 void LsFile(char *fileName);
 void PrintRecord(TestRec &recBuf);
 RC AddRecs(RM_FileHandle &fh, int numRecs);
-/*
+
 RC VerifyFile(RM_FileHandle &fh, int numRecs);
-RC PrintFile(RM_FileHandle &fh);
-*/
+RC PrintFile(RM_FileScan &fh);
+
 RC CreateFile(char *fileName, int recordSize);
 RC DestroyFile(char *fileName);
 RC OpenFile(char *fileName, RM_FileHandle &fh);
@@ -79,9 +79,9 @@ RC CloseFile(char *fileName, RM_FileHandle &fh);
 RC InsertRec(RM_FileHandle &fh, char *record, RID &rid);
 RC UpdateRec(RM_FileHandle &fh, RM_Record &rec);
 RC DeleteRec(RM_FileHandle &fh, RID &rid);
-/*
+
 RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec);
-*/
+
 
 //
 // Array of pointers to the test functions
@@ -245,7 +245,6 @@ RC AddRecs(RM_FileHandle &fh, int numRecs)
     // Return ok
     return (0);
 }
-/* // nandu
 
 //
 // VerifyFile
@@ -268,8 +267,11 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
     printf("\nverifying file contents\n");
 
     RM_FileScan fs;
+    // if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
+    //                     NO_OP, NULL, NO_HINT)))
+    int val = 10;
     if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
-                        NO_OP, NULL, NO_HINT)))
+                        LT_OP, (void*)&val, NO_HINT)))
         return (rc);
 
     // For each record in the file
@@ -290,6 +292,9 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
             pRecBuf->r != (float)pRecBuf->num) {
             printf("VerifyFile: invalid record = [%s, %d, %f]\n",
                    pRecBuf->str, pRecBuf->num, pRecBuf->r);
+            printf("Nandu expected RID[%d,%d] = [%s, %d, %f]\n",
+                   rid.Page(), rid.Slot(), stringBuf, pRecBuf->num, pRecBuf->r);
+
             exit(1);
         }
 
@@ -298,6 +303,9 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
                    pRecBuf->str, pRecBuf->num, pRecBuf->r);
             exit(1);
         }
+
+        printf("Nandu found RID[%d,%d] = [%s, %d, %f]\n",
+               rid.Page(), rid.Slot(), stringBuf, pRecBuf->num, pRecBuf->r);
 
         found[pRecBuf->num] = 1;
     }
@@ -368,7 +376,6 @@ RC PrintFile(RM_FileScan &fs)
 // and/or set breakpoints when testing these methods.                 //
 ////////////////////////////////////////////////////////////////////////
 
-*/ //nandu
 
 //
 // CreateFile
@@ -446,7 +453,6 @@ RC UpdateRec(RM_FileHandle &fh, RM_Record &rec)
 {
     return (fh.UpdateRec(rec));
 }
-/* //nandu
 
 //
 // GetNextRecScan
@@ -458,7 +464,7 @@ RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec)
     return (fs.GetNextRec(rec));
 }
 
-*/ // nandu
+
 /////////////////////////////////////////////////////////////////////
 // Sample test functions follow.                                   //
 /////////////////////////////////////////////////////////////////////
@@ -502,10 +508,12 @@ RC Test2(void)
     if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
         (rc = OpenFile(FILENAME, fh)) ||
         (rc = AddRecs(fh, FEW_RECS)) ||
+        (rc = VerifyFile(fh, FEW_RECS)) ||
         (rc = CloseFile(FILENAME, fh)))
         return (rc);
 
     LsFile(FILENAME);
+    // PrintFile(fh);
 
     if ((rc = DestroyFile(FILENAME)))
         return (rc);

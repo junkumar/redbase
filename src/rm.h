@@ -134,6 +134,7 @@ class RM_Record {
 //
 class RM_FileHandle {
 	friend class RM_FileHandleTest;
+	friend class RM_FileScan;
 	friend class RM_Manager;
 public:
     RM_FileHandle ();
@@ -183,6 +184,59 @@ public:
    bool bHdrChanged;                              // dirty flag for file hdr
 };
 
+class Predicate {
+public:
+	Predicate() {}
+	~Predicate() {}
+
+	Predicate(                     AttrType   attrTypeIn,	     
+                  int        attrLengthIn,
+                  int        attrOffsetIn,
+                  CompOp     compOpIn,
+                  void       *valueIn,
+                  ClientHint pinHintIn) 
+		{
+			attrType = attrTypeIn;	     
+			attrLength =         attrLengthIn;
+			attrOffset = attrOffsetIn;
+			compOp = compOpIn;
+			value = valueIn;
+			pinHint = pinHintIn;
+		}
+
+	bool eval(const char *buf, CompOp c) const {
+		if(c == NO_OP) {
+			return true;
+		}
+		const char * attr = buf + attrOffset;
+		
+		if(c == LT_OP) {
+			if(attrType == INT) {
+				return *attr < *((int *)value);
+			}
+			if(attrType == FLOAT) {
+				return *attr < *((float *)value);
+			}
+			if(attrType == STRING) {
+				return strncmp(attr, (char *)value, attrLength) < 0;
+			}
+		}
+		
+	}
+
+	CompOp initOp() const { return compOp; }
+
+
+
+private:
+	AttrType   attrType;
+	int        attrLength;
+	int        attrOffset;
+	CompOp     compOp;
+	void*      value;
+	ClientHint pinHint;
+};
+
 //
 // RM_FileScan: condition-based scan of records in the file
 //
@@ -200,6 +254,11 @@ public:
                   ClientHint pinHint = NO_HINT); // Initialize a file scan
     RC GetNextRec(RM_Record &rec);               // Get next matching record
     RC CloseScan ();                            // Close the scan
+ private:
+		Predicate * pred;
+		RM_FileHandle * prmh;
+		RID current;
+		bool bOpen;
 };
 
 //

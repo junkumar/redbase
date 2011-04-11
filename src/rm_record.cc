@@ -52,8 +52,10 @@ RC RM_Record::Set     (char *pData, int size, RID rid)
 
 RC RM_Record::GetData     (char *&pData) const 
 {
-	if (data != NULL)
+	if (data != NULL) {
 		pData = data;
+		return 0;
+	}
 	else 
 		return RM_NULLRECORD;
 }
@@ -66,6 +68,7 @@ RC RM_Record::GetRid     (RID &rid) const
 		memcpy(pr, 
 					 data + recordSize - sizeof(RID),
 					 sizeof(RID));
+		return 0;
 	} 
 	else 
 		return RM_NULLRECORD;
