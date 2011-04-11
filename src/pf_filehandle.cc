@@ -432,7 +432,6 @@ RC PF_FileHandle::FlushPages() const
 
       // First seek to the appropriate place
 		 if (lseek(unixfd, 0, L_SET) < 0) {
-			 perror(NULL);
 			 return (PF_UNIX);
 		 }
       // Write header

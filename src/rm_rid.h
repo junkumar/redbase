@@ -12,8 +12,10 @@
 
 #include "redbase.h"
 #include "iostream"
+#include <cassert>
+#include <cstring>
 
-using std::ostream;
+using namespace std;
 
 //
 // PageNum: uniquely identifies a page in a file
