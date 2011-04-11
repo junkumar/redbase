@@ -30,7 +30,7 @@ using namespace std;
 //
 // Defines
 //
-#define FILENAME   "testrel"         // test file name
+const char * FILENAME =  "testrel";       // test file name
 #define STRLEN      29               // length of string in testrec
 #define PROG_UNIT   50               // how frequently to give progress
                                       //   reports when adding lots of recs
@@ -72,10 +72,10 @@ RC AddRecs(RM_FileHandle &fh, int numRecs);
 RC VerifyFile(RM_FileHandle &fh, int numRecs);
 RC PrintFile(RM_FileScan &fh);
 
-RC CreateFile(char *fileName, int recordSize);
-RC DestroyFile(char *fileName);
-RC OpenFile(char *fileName, RM_FileHandle &fh);
-RC CloseFile(char *fileName, RM_FileHandle &fh);
+RC CreateFile(const char *fileName, int recordSize);
+RC DestroyFile(const char *fileName);
+RC OpenFile(const char *fileName, RM_FileHandle &fh);
+RC CloseFile(const char *fileName, RM_FileHandle &fh);
 RC InsertRec(RM_FileHandle &fh, char *record, RID &rid);
 RC UpdateRec(RM_FileHandle &fh, RM_Record &rec);
 RC DeleteRec(RM_FileHandle &fh, RID &rid);
@@ -181,7 +181,7 @@ void PrintError(RC rc)
 //
 // Desc: list the filename's directory entry
 //
-void LsFile(char *fileName)
+void LsFile(const char *fileName)
 {
     char command[80];
 
@@ -272,7 +272,7 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
     //int val = 10;
     // if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
     //                     LT_OP, (void*)&val, NO_HINT)))
-    char * grr = "a15";
+    const char * grr = "a15";
     if ((rc=fs.OpenScan(fh,STRING,3,offsetof(TestRec, str),
                         GE_OP, (void*)grr, NO_HINT)))
         return (rc);
@@ -385,7 +385,7 @@ RC PrintFile(RM_FileScan &fs)
 //
 // Desc: call RM_Manager::CreateFile
 //
-RC CreateFile(char *fileName, int recordSize)
+RC CreateFile(const char *fileName, int recordSize)
 {
     printf("\ncreating %s\n", fileName);
     return (rmm.CreateFile(fileName, recordSize));
@@ -396,7 +396,7 @@ RC CreateFile(char *fileName, int recordSize)
 //
 // Desc: call RM_Manager::DestroyFile
 //
-RC DestroyFile(char *fileName)
+RC DestroyFile(const char *fileName)
 {
     printf("\ndestroying %s\n", fileName);
     return (rmm.DestroyFile(fileName));
@@ -408,7 +408,7 @@ RC DestroyFile(char *fileName)
 //
 // Desc: call RM_Manager::OpenFile
 //
-RC OpenFile(char *fileName, RM_FileHandle &fh)
+RC OpenFile(const char *fileName, RM_FileHandle &fh)
 {
     printf("\nopening %s\n", fileName);
     return (rmm.OpenFile(fileName, fh));
@@ -419,7 +419,7 @@ RC OpenFile(char *fileName, RM_FileHandle &fh)
 //
 // Desc: call RM_Manager::CloseFile
 //
-RC CloseFile(char *fileName, RM_FileHandle &fh)
+RC CloseFile(const char *fileName, RM_FileHandle &fh)
 {
     if (fileName != NULL)
         printf("\nClosing %s\n", fileName);

@@ -255,7 +255,7 @@ RC RM_FileHandle::GetRec     (const RID &rid, RM_Record &rec) const
 	rid.GetSlotNum(s);
 	RC rc = 0;
 	PF_PageHandle ph;
-	if(rc = pfHandle->GetThisPage(p, ph))
+	if((rc = pfHandle->GetThisPage(p, ph)))
 		return rc;
 	char * pData = NULL;
 	if(RC rc = this->GetSlotPointer(ph, s, pData))
@@ -277,14 +277,14 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 	SlotNum s;
 	RC rc;
 	char * pSlot;
-	if(rc = this->GetNextFreeSlot(ph, p, s))
+	if((rc = this->GetNextFreeSlot(ph, p, s)))
 		return rc;
-	if(rc = this->GetPageHeader(ph, pHdr))
+		 if((rc = this->GetPageHeader(ph, pHdr)))
 		return rc;
 	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
 	// std::cerr << "RM_FileHandle::InsertRec befor" << b << std::endl;
 	// TODO GetSlotPtr is trashing the pHdr
-	if(rc = this->GetSlotPointer(ph, s, pSlot))
+	if((rc = this->GetSlotPointer(ph, s, pSlot)))
 		return rc;
 	rid = RID(p, s);
 	memcpy(pSlot, pData, fullRecordSize - sizeof(RID));
@@ -295,7 +295,7 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 	if(pHdr.numFreeSlots == 0) {
 		// remove from free list 
 		hdr.firstFree = pHdr.nextFree;
-		pHdr.nextFree == RM_PAGE_FULLY_USED;
+		pHdr.nextFree = RM_PAGE_FULLY_USED;
 	}
   // std::cerr << "RM_FileHandle::InsertRec numFreeSlots in page " << pHdr.numFreeSlots << std::endl;
 	b.to_char_buf(pHdr.freeSlotMap, b.numChars());
@@ -317,7 +317,7 @@ RC RM_FileHandle::DeleteRec  (const RID &rid)
 	RC rc = 0;
 	PF_PageHandle ph;
 	RM_PageHdr pHdr(this->GetNumSlots());
-	if(rc = pfHandle->GetThisPage(p, ph) ||
+	if((rc = pfHandle->GetThisPage(p, ph)) ||
 		 (rc = this->GetPageHeader(ph, pHdr))
 		)
 		return rc;
@@ -366,6 +366,7 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec)
 		return rc;
 	memcpy(pSlot, pData, fullRecordSize - sizeof(RID));
 	memcpy(pSlot + fullRecordSize - sizeof(RID), (char *) &rid, sizeof(RID));
+	return 0;
 }
 
 

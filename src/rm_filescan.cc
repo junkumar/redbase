@@ -82,7 +82,8 @@ class Predicate {
 		if(c == NE_OP) {
 			return !this->eval(buf, EQ_OP);
 		}
-
+		assert("Bad value for c - should never get here.");
+		return true;
 	}
 
 	CompOp initOp() const { return compOp; }
@@ -140,9 +141,9 @@ RC RM_FileScan::GetNextRec     (RM_Record &rec)
 	RC rc;
 	
 	for( int j = current.Page(); j < prmh->GetNumPages(); j++) {
-		if(rc = prmh->pfHandle->GetThisPage(j, ph))
+		if((rc = prmh->pfHandle->GetThisPage(j, ph)))
 			return rc;
-		if(rc = prmh->GetPageHeader(ph, pHdr))
+		if((rc = prmh->GetPageHeader(ph, pHdr)))
 			return rc;
 		bitmap b(pHdr.freeSlotMap, prmh->GetNumSlots());
 		int i = -1;

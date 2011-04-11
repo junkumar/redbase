@@ -40,7 +40,7 @@ RM_Record::~RM_Record()
 
 RC RM_Record::Set     (char *pData, int size, RID rid)
 {
-	if(recordSize != 0 && (size != recordSize - sizeof(RID)))
+	if(recordSize != 0 && (size != recordSize - (int)sizeof(RID)))
 		return RM_RECSIZEMISMATCH;
 	recordSize = size + sizeof(RID);
 	if (data == NULL)
@@ -48,6 +48,7 @@ RC RM_Record::Set     (char *pData, int size, RID rid)
   memcpy(data, pData, size);
 	RID *pr = &rid;
 	memcpy(data + size, (char*) pr, sizeof(RID));
+	return 0;
 }
 
 RC RM_Record::GetData     (char *&pData) const 

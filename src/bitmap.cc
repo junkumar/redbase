@@ -35,49 +35,46 @@ int bitmap::numChars() const
 	return numChars;
 }
 
-bool bitmap::reset()
+void bitmap::reset()
 {
   // faster - return memset((void*)buffer, 0, this->numChars());
-	for( int i = 0; i < size; i++) {
+	for( unsigned int i = 0; i < size; i++) {
 		bitmap::reset(i);
 	}
 }
 
-bool bitmap::reset(unsigned int bitNumber)
+void bitmap::reset(unsigned int bitNumber)
 {
 	assert(bitNumber <= (size - 1));
 	int byte = bitNumber/8;
 	int offset = bitNumber%8;
 	
 	buffer[byte] &= ~(1 << offset);
-	return true;
 }
 
-bool bitmap::set(unsigned int bitNumber)
+void bitmap::set(unsigned int bitNumber)
 {
 	assert(bitNumber <= size - 1);
 	int byte = bitNumber/8;
 	int offset = bitNumber%8;
 
 	buffer[byte] |= (1 << offset);
-	return true;
 }
 
-bool bitmap::set()
+void bitmap::set()
 {
-	for( int i = 0; i < size; i++) {
+	for( unsigned int i = 0; i < size; i++) {
 		bitmap::set(i);
 	}
 }
 
-// bool bitmap::flip(unsigned int bitNumber)
+// void bitmap::flip(unsigned int bitNumber)
 // {
 // 	assert(bitNumber <= size - 1);
 // 	int byte = bitNumber/8;
 // 	int offset = bitNumber%8;
 
 // 	buffer[byte] ^= (1 << offset);
-// 	return true;
 // }
 
 bool bitmap::test(unsigned int bitNumber) const
@@ -97,7 +94,7 @@ ostream& operator <<(ostream & os, const bitmap& b)
 	{
 		if( i % 8 == 0 && i != 0 )
 			os << ".";
-		os << b.test(i) ? 1 : 0;
+		os << (b.test(i) ? 1 : 0);
 	}
 	os << "]";
   return os;

@@ -40,7 +40,7 @@ TEST_F(PF_ManagerTest, Header) {
 	
 	fh.AllocatePage(headerPage);
 	headerPage.GetData(pData);
-	char * buf = "wwww";
+	const char * buf = "wwww";
 	memcpy(pData, buf, 4);
 	PageNum headerPageNum;
 	headerPage.GetPageNum(headerPageNum);

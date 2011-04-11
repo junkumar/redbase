@@ -37,17 +37,17 @@ class bitmap {
 	bitmap(char * buf, int numBits); //deserialize from buf
 	~bitmap();
 
-	bool set(unsigned int bitNumber);
-	bool set(); // set all bits to 1
-	bool reset(unsigned int bitNumber);
-	bool reset(); // set all bits to 0
+	void set(unsigned int bitNumber);
+	void set(); // set all bits to 1
+	void reset(unsigned int bitNumber);
+	void reset(); // set all bits to 0
 	bool test(unsigned int bitNumber) const;
 
 	int numChars() const; // return size of char buffer to hold bitmap
 	int to_char_buf(char *, int len) const; //serialize content to char buffer
 	int getSize() const { return size; } 
  private:
-	int size;
+	unsigned int size;
 	char * buffer;
 };
 
@@ -89,6 +89,7 @@ RM_PageHdr(int numSlots) : numSlots(numSlots), numFreeSlots(numSlots)
 					 &numFreeSlots, sizeof(numFreeSlots));
 		memcpy(buf + sizeof(nextFree) + sizeof(numSlots) + sizeof(numFreeSlots),
 					 freeSlotMap, this->mapsize()*sizeof(char));
+		return 0;
 	}
 	int from_buf(const char * buf)
 	{
@@ -99,6 +100,7 @@ RM_PageHdr(int numSlots) : numSlots(numSlots), numFreeSlots(numSlots)
 		memcpy(freeSlotMap, 
 					 buf + sizeof(nextFree) + sizeof(numSlots) + sizeof(numFreeSlots),
 					 this->mapsize()*sizeof(char));
+		return 0;
 	}
 };
 
