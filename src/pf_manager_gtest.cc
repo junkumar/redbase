@@ -8,7 +8,7 @@ protected:
 	virtual void SetUp() 
 	{
 		RC rc;
-		system("rm pftestfile");
+		system("rm -f pftestfile");
 		if(
 			(rc = pfm.CreateFile("pftestfile")) 
 			 || (rc =	pfm.OpenFile("pftestfile", fh))
@@ -18,7 +18,7 @@ protected:
 
 	virtual void TearDown() 
   {
-		pfm.DestroyFile("gtestfile");
+		pfm.DestroyFile("pftestfile");
 	}
 
   // Declares the variables your tests want to use.
