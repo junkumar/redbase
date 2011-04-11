@@ -1,0 +1,79 @@
+
+Record Manager for RedBase
+
+Nandu Jayakumar
+CS 346 Spring 2011
+nandu@cs.stanford.edu
+
+
+---------------------------------------
+
+Overall Design:
+
+    Users of the RM (RecordManager) sub-system are exposed to RIDs but
+    are otherwise able to ignore the notion pages completely and leave
+    the handling of those to RM. They use the RM abstraction of
+    records (especially in conjunction with the FileScan interface) to
+    work at a higher level.
+
+    The code is organized based on functionality. The RM's interface
+    is fully specified in rm.h using a series of different
+    classes. Each of these classes has a separate implementation file
+    (rm_filehandle.cc, rm_record.cc...) as well as a unit test file
+    (rm_filehandle_gtest.cc, rm_record_gtest.cc...). The *_gtest.cc
+    files contain google-test style unit tests with rm_test.cc has a
+    slightly modified version of the provided test.
+
+
+---------------------------------------
+
+Key Data Structures:
+
+    The Page Header (RM_PageHdr) contains a bitmap to track the free
+    slots within a page. This packed data structure provides a
+    space-efficient way to track the slots that are free.
+   
+
+    The FileHeader (RM_FileHdr) uses a free list approach to keep
+    track of free pages much like the header in the PF component. This
+    works well because traversing the list is never required and a
+    single access to the front of the linked list is good enough for
+    all changes. This is currently in a whole page all by itself so
+    that all pages with records can be treated symmetrically. The
+    first free page is tracked using a page number in the FileHeader
+    while the PageHeader in each page tracks the next free page after
+    this one.
+
+
+    
+---------------------------------------
+
+Testing:
+
+   Automated unit tests were used to test each class that was built
+   individually. A popular test harness - google-test, which is in the
+   same style as JUnit was used to make testing fast and automatic.
+   Additionally, the pf_test* and rm_test (modified to also do scans)
+   were also used to test correctness of the data. The harness will
+   verify test correctness so that human interactivity is not needed.
+   The google-test source code and the test cases will be submitted.
+   Special care was taken to ensure that writes were available across
+   opens/closes.
+   Different record sizes were tested.
+   Testing large number of operations in order to use multiple pages
+   was also done.
+
+---------------------------------------
+
+Bugs/Known Issues:
+    
+    Marked under several places in the code with //TODO.
+    Always returning an error code in methods is very limiting in
+    terms of writing good interfaces. Typed exceptions with simple
+    tracing would have served this project much better.
+    The limitation of not #including other headers resulted in rm.h
+    being a huge header with several class declarations making it
+    unwieldy.
+    The stored record in the disk currently contains the RID as a
+    suffix - there is no real need for this and it should be cleaned
+    out in the interest of saving some IOs.
