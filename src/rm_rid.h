@@ -11,6 +11,9 @@
 // components will require the use of RID but not the rest of RM.
 
 #include "redbase.h"
+#include "iostream"
+
+using std::ostream;
 
 //
 // PageNum: uniquely identifies a page in a file
@@ -36,13 +39,23 @@ public:
   ~RID(){}                                        // Destructor
   
   RC GetPageNum(PageNum &pageNum) const          // Return page number
-  { return page; }
+  { pageNum = page; return 0; }
   RC GetSlotNum(SlotNum &slotNum) const         // Return slot number
-  { return slot; }
+  { slotNum = slot; return 0; }
+  
+  bool operator==(const RID & rhs) const
+  {
+    PageNum p;SlotNum s;
+    rhs.GetPageNum(p);
+    rhs.GetSlotNum(s);
+    return (p == page && s == slot);
+  }
 
 private:
   PageNum page;
   SlotNum slot;
 };
+
+ostream& operator <<(ostream & os, const RID& r);
 
 #endif // RM_RID_H

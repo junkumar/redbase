@@ -4,6 +4,8 @@
 //
 
 #include <cstdio>
+#include <cstring>
+#include <cassert>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -44,7 +46,7 @@ RM_Manager::~RM_Manager()
 //
 RC RM_Manager::CreateFile (const char *fileName, int recordSize)
 {
-   if(recordSize >= PF_PAGE_SIZE - sizeof(RID))
+   if(recordSize >= PF_PAGE_SIZE - (int)sizeof(RID))
       return RM_SIZETOOBIG;
 
    int RC = pfm.CreateFile(fileName);
@@ -63,18 +65,49 @@ RC RM_Manager::CreateFile (const char *fileName, int recordSize)
    }
    
    PF_PageHandle headerPage;
-   RC = pfh.GetFirstPage(headerPage);
+   char * pData;
+   
+   RC = pfh.AllocatePage(headerPage);
    if (RC < 0)
    {
       PF_PrintError(RC);
       return RM_PF;
    }
-   //TODO - header page init
+   RC = headerPage.GetData(pData);
+   if (RC < 0)
+   {
+      PF_PrintError(RC);
+      return RM_PF;
+   }
+   RM_FileHdr hdr;
+   hdr.firstFree = RM_PAGE_LIST_END;
+   hdr.numPages = 1; // hdr page
+   hdr.extRecordSize = recordSize;
+
+   memcpy(pData, &hdr, sizeof(hdr));
    //TODO - remove PF_PrintError or make it #define optional
-   
+   PageNum headerPageNum;
+   headerPage.GetPageNum(headerPageNum);
+   assert(headerPageNum == 0);
+   RC = pfh.MarkDirty(headerPageNum);
+   if (RC < 0)
+   {
+      PF_PrintError(RC);
+      return RM_PF;
+   }
+   RC = pfh.UnpinPage(headerPageNum);
+   if (RC < 0)
+   {
+      PF_PrintError(RC);
+      return RM_PF;
+   }  
    RC = pfm.CloseFile(pfh);
-   // Return ok
-   return (RC);
+   if (RC < 0)
+   {
+      PF_PrintError(RC);
+      return RM_PF;
+   }
+   return (0);
 }
 
 //
@@ -86,7 +119,13 @@ RC RM_Manager::CreateFile (const char *fileName, int recordSize)
 //
 RC RM_Manager::DestroyFile (const char *fileName)
 {
-   return pfm.DestroyFile(fileName); 
+   RC RC = pfm.DestroyFile(fileName); 
+   if (RC < 0)
+   {
+      PF_PrintError(RC);
+      return RM_PF;
+   }
+   return 0;
 }
 
 //
@@ -99,19 +138,36 @@ RC RM_Manager::DestroyFile (const char *fileName)
 //       buffer manager object
 // Ret:  PF_FILEOPEN or other RM return code
 //
-RC RM_Manager::OpenFile (const char *fileName, RM_FileHandle &fileHandle)
+RC RM_Manager::OpenFile (const char *fileName, RM_FileHandle &rmh)
 {
    PF_FileHandle pfh;
    RC rc = pfm.OpenFile(fileName, pfh);
-   if (rc != 0)
+   if (rc < 0)
    {
       PF_PrintError(rc);
       return RM_PF;
    }
-   RM_FileHandle rmh(&pfh);
-   // TODO - put values into rmh
-   // copy header into filehandle
-   fileHandle = rmh;
+   // header page is at 0
+   PF_PageHandle ph;
+   char * pData;
+   if ((rc = pfh.GetThisPage(0, ph)) ||
+       (rc = ph.GetData(pData)))
+      return(rc);
+   RM_FileHdr hdr;
+   memcpy(&hdr, pData, sizeof(hdr));
+   rc = rmh.Open(&pfh, hdr.extRecordSize);
+   if (rc < 0)
+   {
+      RM_PrintError(rc);
+      return rc;
+   }
+   rc = pfh.UnpinPage(0);
+   if (rc < 0)
+   {
+      PF_PrintError(rc);
+      return rc;
+   }
+
    return 0;
 }
 
@@ -125,15 +181,56 @@ RC RM_Manager::OpenFile (const char *fileName, RM_FileHandle &fileHandle)
 //                    this function modifies local var's in fileHandle
 // Ret:  RM return code
 //
-RC RM_Manager::CloseFile(RM_FileHandle &fileHandle)
+RC RM_Manager::CloseFile(RM_FileHandle &rfileHandle)
 {
-   PF_FileHandle pfh;
-   RC rc = fileHandle.getPF_FileHandle(pfh);
-   if (rc < 0) {
-      return rc;
+   if(!rfileHandle.bFileOpen || rfileHandle.pfHandle == NULL)
+      return RM_FNOTOPEN;
+
+   if(rfileHandle.hdrChanged())
+   {
+      // write header to disk
+		 PF_PageHandle ph;
+		 rfileHandle.pfHandle->GetThisPage(0, ph);
+		 rfileHandle.SetFileHeader(ph); // write hdr into file
+
+		 std::cerr << "RM_Manager::CloseFile hdr.numPages" << rfileHandle.hdr.numPages << std::endl;
+		 { //testing
+			 char * pData;
+			 ph.GetData(pData);
+			 RM_FileHdr hdr;
+			 memcpy(&hdr, pData, sizeof(hdr));
+			 std::cerr << "RM_Manager::CloseFile inner hdr.numPages" << hdr.numPages << std::endl;
+		 }
+
+		 RC rc = rfileHandle.pfHandle->MarkDirty(0);
+		 if (rc < 0)
+		 {
+			 PF_PrintError(rc);
+			 return rc;
+		 }
+
+		 rc = rfileHandle.ForcePages();
+		 if (rc < 0)
+		 {
+			 RM_PrintError(rc);
+			 return rc;
+		 }
+	 }
+      
+   //PF_FileHandle pfh;
+   // RC rc = rfileHandle.GetPF_FileHandle(pfh);
+   // if (rc < 0) {
+   //     RM_PrintError(rc);
+   //     return rc;
+   // }
+   RC rc2 = pfm.CloseFile(*rfileHandle.pfHandle);
+   if (rc2 < 0) {
+      PF_PrintError(rc2);
+      return rc2;
    }
-   rc = pfm.CloseFile(pfh);
-   return rc;
+	 // TODO - is there a cleaner way than reaching into innards like this ?
+	 delete rfileHandle.pfHandle;
+	 rfileHandle.pfHandle = NULL;
+   rfileHandle.bFileOpen = false;
+   return 0;
 }
-
-

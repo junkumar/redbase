@@ -24,6 +24,10 @@ static char *RM_ErrorMsg[] = {
   (char*)"error is in the PF component",
   (char*)"record null",
   (char*)"record size mismatch",
+  (char*)"attempt to open already open file handle",
+  (char*)"bad parameters specified to RM open file handle",
+  (char*)"file is not open",
+  (char*)"Bad RID - invalid page num or slot num",
   (char*)"end of file",
 };
 

@@ -67,8 +67,8 @@ RC Test2(void);
 void PrintError(RC rc);
 void LsFile(char *fileName);
 void PrintRecord(TestRec &recBuf);
-/* // nandu
 RC AddRecs(RM_FileHandle &fh, int numRecs);
+/*
 RC VerifyFile(RM_FileHandle &fh, int numRecs);
 RC PrintFile(RM_FileHandle &fh);
 */
@@ -76,10 +76,10 @@ RC CreateFile(char *fileName, int recordSize);
 RC DestroyFile(char *fileName);
 RC OpenFile(char *fileName, RM_FileHandle &fh);
 RC CloseFile(char *fileName, RM_FileHandle &fh);
-/*
 RC InsertRec(RM_FileHandle &fh, char *record, RID &rid);
 RC UpdateRec(RM_FileHandle &fh, RM_Record &rec);
 RC DeleteRec(RM_FileHandle &fh, RID &rid);
+/*
 RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec);
 */
 
@@ -200,7 +200,6 @@ void PrintRecord(TestRec &recBuf)
     printf("[%s, %d, %f]\n", recBuf.str, recBuf.num, recBuf.r);
 }
 
-/* // nandu
 
 
 //
@@ -246,6 +245,7 @@ RC AddRecs(RM_FileHandle &fh, int numRecs)
     // Return ok
     return (0);
 }
+/* // nandu
 
 //
 // VerifyFile
@@ -416,7 +416,6 @@ RC CloseFile(char *fileName, RM_FileHandle &fh)
     return (rmm.CloseFile(fh));
 }
 
-/* //nandu
 
 //
 // InsertRec
@@ -447,6 +446,7 @@ RC UpdateRec(RM_FileHandle &fh, RM_Record &rec)
 {
     return (fh.UpdateRec(rec));
 }
+/* //nandu
 
 //
 // GetNextRecScan
@@ -495,20 +495,20 @@ RC Test1(void)
 RC Test2(void)
 {
     RC            rc;
-//    RM_FileHandle fh;
+    RM_FileHandle fh;
 
     printf("test2 starting ****************\n");
 
-    // if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
-    //     (rc = OpenFile(FILENAME, fh)) ||
-    //     (rc = AddRecs(fh, FEW_RECS)) ||
-    //     (rc = CloseFile(FILENAME, fh)))
-    //     return (rc);
+    if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
+        (rc = OpenFile(FILENAME, fh)) ||
+        (rc = AddRecs(fh, FEW_RECS)) ||
+        (rc = CloseFile(FILENAME, fh)))
+        return (rc);
 
-    // LsFile(FILENAME);
+    LsFile(FILENAME);
 
-    // if ((rc = DestroyFile(FILENAME)))
-    //     return (rc);
+    if ((rc = DestroyFile(FILENAME)))
+        return (rc);
 
     printf("\ntest2 done ********************\n");
     return (0);

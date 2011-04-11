@@ -13,18 +13,19 @@ BUILD_DIR      = ../build/
 LIB_DIR        = ../lib/
 GTEST_ROOT     = ../gtest-1.5.0
 INC_DIRS       = -I. -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
-AR             = ar -qc
+AR             = ar -rc
 RANLIB         = ranlib
 YACC           = bison -dy
 LEX            = flex
 
 # -m32 - Generates code that runs on any i386 system
 #        sizeof(int) = sizeof(long) = sizeof(void *) = 4
-# -g - Debugging information
+# -ggdb - Debugging information
+# -DDEBUG - Enables assert failures
 # -O1 - Basic optimization
 # -Wall - All warnings
 # -DDEBUG_PF - This turns on the LOG file for lots of BufferMgr info
-CFLAGS         = -m32 -g -O1 -Wall $(STATS_OPTION) $(INC_DIRS)
+CFLAGS         = -m32 -ggdb -DDEBUG -O0 -Wall $(STATS_OPTION) $(INC_DIRS)
 
 # The STATS_OPTION can be set to -DPF_STATS or to nothing to turn on and
 # off buffer manager statistics.  The student should not modify this
@@ -38,7 +39,9 @@ PF_SOURCES     = pf_buffermgr.cc pf_error.cc pf_filehandle.cc \
                  pf_pagehandle.cc pf_hashtable.cc pf_manager.cc \
                  pf_statistics.cc statistics.cc
 RM_SOURCES     = statistics.cc rm_manager.cc rm_error.cc rm_filescan.cc \
-                 rm_record.cc rm_filehandle.cc rm_record_gtest.cc
+                 rm_record.cc rm_filehandle.cc rm_record_gtest.cc \
+		 rm_filehandle_gtest.cc bitmap.cc bitmap_gtest.cc \
+		 pf_manager_gtest.cc 
 IX_SOURCES     = statistics.cc
 SM_SOURCES     = statistics.cc #sm_stub.cc printer.cc
 QL_SOURCES     = statistics.cc #ql_manager_stub.cc
@@ -56,9 +59,9 @@ UTILS_OBJECTS  = $(addprefix $(BUILD_DIR), $(UTILS_SOURCES:.cc=.o))
 PARSER_OBJECTS = $(addprefix $(BUILD_DIR), $(PARSER_SOURCES:.cc=.o))
 TESTER_OBJECTS = $(addprefix $(BUILD_DIR), $(TESTER_SOURCES:.cc=.o))
 GTEST_OBJECTS  = $(addprefix $(BUILD_DIR), gtest-all.o)
-OBJECTS        = $(PF_OBJECTS) $(RM_OBJECTS) $(IX_OBJECTS) \
+OBJECTS        = $(sort $(PF_OBJECTS) $(RM_OBJECTS) $(IX_OBJECTS) \
                  $(SM_OBJECTS) $(QL_OBJECTS) $(PARSER_OBJECTS) \
-                 $(TESTER_OBJECTS) $(UTILS_OBJECTS) 
+                 $(TESTER_OBJECTS) $(UTILS_OBJECTS) )
 
 LIBRARY_PF     = $(LIB_DIR)libpf.a
 LIBRARY_RM     = $(LIB_DIR)librm.a
@@ -84,7 +87,7 @@ all: $(LIBRARIES) $(UTILS) tags gtest
 
 clean: tags-clean
 	rm -f $(BUILD_DIR)*.o $(BUILD_DIR)*.d y.output y.tab.h \
-	parse.c	$(LIBRARIES) $(EXECUTABLES) gtest
+	parse.c	$(LIBRARIES) $(EXECUTABLES) gtest $(BUILD_DIR)*.d.*
 
 testers: all $(TESTS)
 
@@ -156,16 +159,14 @@ $(BUILD_DIR)interp.o: interp.c
 
 # create gtest library object
 $(BUILD_DIR)gtest-all.o: $(GTEST_SOURCES)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -DGTEST_HAS_PTHREAD=0 -c $< -o $@
 
 $(BUILD_DIR)gtest_main.o: $(GTEST_ROOT)/src/gtest_main.cc
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # link in all the *_gtest.cc files that contain unit tests
-gtest: $(BUILD_DIR)gtest_main.o $(filter %_gtest.o,$(OBJECTS))
+gtest: $(BUILD_DIR)gtest_main.o $(filter %_gtest.o,$(OBJECTS)) $(LIBRARIES)
 	$(CC) $(CFLAGS) $^ -o $@ -L$(LIB_DIR) $(LIBS)
-
-
 
 #
 # Rules

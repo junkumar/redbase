@@ -38,17 +38,16 @@ RM_Record::~RM_Record()
 // 	return recordSize;
 // }
 
-RC RM_Record::SetData     (char *pData, int size)
+RC RM_Record::Set     (char *pData, int size, RID rid)
 {
 	if(recordSize != 0 && (size != recordSize - sizeof(RID)))
 		return RM_RECSIZEMISMATCH;
 	recordSize = size + sizeof(RID);
 	if (data == NULL)
 		data = new char[recordSize];
-  strncpy(data, pData, size);
-	RID r(20, 20); //TODO
-	RID *pr = &r;
-	strncpy(data + size, (char*) pr, sizeof(RID));
+  memcpy(data, pData, size);
+	RID *pr = &rid;
+	memcpy(data + size, (char*) pr, sizeof(RID));
 }
 
 RC RM_Record::GetData     (char *&pData) const 
@@ -64,10 +63,20 @@ RC RM_Record::GetRid     (RID &rid) const
 	if(data != NULL) 
 	{
 		char * pr = (char *) &rid;
-		strncpy(pr, 
-						data + recordSize - sizeof(RID),
-						sizeof(RID));
+		memcpy(pr, 
+					 data + recordSize - sizeof(RID),
+					 sizeof(RID));
 	} 
 	else 
 		return RM_NULLRECORD;
+}
+
+ostream& operator <<(ostream & os, const RID& r)
+{
+  PageNum p;
+  SlotNum s;
+  r.GetPageNum(p);
+  r.GetSlotNum(s);
+  os << "[" << p << "," << s << "]";
+  return os;
 }

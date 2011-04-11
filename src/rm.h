@@ -22,9 +22,7 @@
 #include "rm_rid.h"
 #include "pf.h"
 
-
-#define RM_PAGE_LIST_END  -1       // end of list of free pages
-#define RM_PAGE_USED      -2       // page is being used
+#include <cassert>
 
 //
 // RM_FileHdr: Header structure for files
@@ -32,20 +30,79 @@
 struct RM_FileHdr {
    int firstFree;     // first free page in the linked list
    int numPages;      // # of pages in the file
+	 int extRecordSize;  // record size as seen by users.
 };
+
+class bitmap {
+ public:
+	bitmap(int numBits);
+	bitmap(char * buf, int numBits); //deserialize from buf
+	~bitmap();
+
+	bool set(unsigned int bitNumber);
+	bool set(); // set all bits to 1
+	bool reset(unsigned int bitNumber);
+	bool reset(); // set all bits to 0
+	bool test(unsigned int bitNumber) const;
+
+	int numChars() const; // return size of char buffer to hold bitmap
+	int to_char_buf(char *, int len) const; //serialize content to char buffer
+	int getSize() const { return size; } 
+ private:
+	int size;
+	char * buffer;
+};
+
+ostream& operator <<(ostream & os, const bitmap& b);
 
 //
 // RM_PageHdr: Header structure for pages
 //
+#define RM_PAGE_LIST_END  -1       // end of list of free pages
+#define RM_PAGE_FULLY_USED      -2       // page is fully used with no free slots
+                                   // not a member of the free list
 struct RM_PageHdr {
-    int nextFree;       // nextFree can be any of these values:
-                        //  - the number of the next free page
-                        //  - RM_PAGE_LIST_END if this is last free page
-                        //  - RM_PAGE_USED if the page is not free
-};
+	int nextFree;       // nextFree can be any of these values:
+	                    //  - the number of the next free page
+	                    //  - RM_PAGE_LIST_END if this is last free page
+                      //  - RM_PAGE_FULLY_USED if the page is not free
+	char * freeSlotMap; // A bitmap that tracks the free slots within 
+	                    // the page
+	int numSlots;
+	int numFreeSlots;
 
-// Justify the file header to the length of one page
-const int RM_FILE_HDR_SIZE = PF_PAGE_SIZE + sizeof(RM_PageHdr);
+  RM_PageHdr(int numSlots) : numSlots(numSlots), numFreeSlots(numSlots)
+	{ assert(numSlots > 0); freeSlotMap = new char[this->mapsize()];}
+
+  ~RM_PageHdr()
+	{ delete freeSlotMap; }
+
+	int size() const 
+	{ return sizeof(nextFree) + sizeof(numSlots) + sizeof(numFreeSlots)
+			+ bitmap(numSlots).numChars()*sizeof(char); }
+	int mapsize() const 
+	{ return this->size() - sizeof(nextFree)
+			- sizeof(numSlots) - sizeof(numFreeSlots);}
+	int to_buf(char *& buf) const
+	{ 
+		memcpy(buf, &nextFree, sizeof(nextFree));
+		memcpy(buf + sizeof(nextFree), &numSlots, sizeof(numSlots));
+		memcpy(buf + sizeof(nextFree) + sizeof(numSlots), 
+					 &numFreeSlots, sizeof(numFreeSlots));
+		memcpy(buf + sizeof(nextFree) + sizeof(numSlots) + sizeof(numFreeSlots),
+					 freeSlotMap, this->mapsize()*sizeof(char));
+	}
+	int from_buf(const char * buf)
+	{
+		memcpy(&nextFree, buf, sizeof(nextFree));
+		memcpy(&numSlots, buf + sizeof(nextFree), sizeof(numSlots));
+		memcpy(&numFreeSlots, buf + sizeof(nextFree) + sizeof(numSlots),
+					 sizeof(numFreeSlots));
+		memcpy(freeSlotMap, 
+					 buf + sizeof(nextFree) + sizeof(numSlots) + sizeof(numFreeSlots),
+					 this->mapsize()*sizeof(char));
+	}
+};
 
 //
 // RM_Record: RM Record interface
@@ -61,7 +118,9 @@ class RM_Record {
     RC GetData(char *&pData) const;
 
 		// Sets data in the record for a fixed recordsize of size.
-    RC SetData(char *pData, int size);
+    // Real object is only available and usable at this point not after
+    // construction
+    RC Set(char *pData, int size, RID id);
 
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
@@ -74,10 +133,12 @@ class RM_Record {
 // RM_FileHandle: RM File interface
 //
 class RM_FileHandle {
+	friend class RM_FileHandleTest;
+	friend class RM_Manager;
 public:
     RM_FileHandle ();
-    RM_FileHandle (PF_FileHandle*);
-		RC getPF_FileHandle(PF_FileHandle &);
+    RC Open(PF_FileHandle*, int recordSize);
+		RC SetHdr(RM_FileHdr h) { hdr = h; return 0;}
     ~RM_FileHandle();
 
     // Given a RID, return the record
@@ -91,17 +152,35 @@ public:
     // Forces a page (along with any contents stored in this class)
     // from the buffer pool to disk.  Default value forces all pages.
     RC ForcePages (PageNum pageNum = ALL_PAGES);
-private:
-    
-   // IsValidPageNum will return TRUE if page number is valid and FALSE
-   // otherwise
-   int IsValidPageNum (PageNum pageNum) const;
+
+		RC GetPF_FileHandle(PF_FileHandle &) const;
+		bool hdrChanged() const { return bHdrChanged; }
+		int GetFullRecordSize() const { return fullRecordSize; }
+		int GetNumPages() const { return hdr.numPages; }
+		int GetNumSlots() const;
+
+ private:
+		bool IsValidPageNum (const PageNum pageNum) const;
+		bool IsValidRID(const RID rid) const;
+
+		// Return next free page or allocate one as needed.
+	 RC GetNextFreePage(PageNum& pageNum);
+	 RC GetNextFreeSlot(PF_PageHandle& ph, PageNum& pageNum, SlotNum&);
+	 RC GetPageHeader(PF_PageHandle ph, RM_PageHdr & pHdr) const;
+	 RC SetPageHeader(PF_PageHandle ph, const RM_PageHdr& pHdr);
+	 RC GetSlotPointer(PF_PageHandle ph, SlotNum s, char *& pData) const;
+
+	 // write hdr member using a newly open file's header page
+	 RC GetFileHeader(PF_PageHandle ph);
+	 // persist header into the first page of a file for later
+	 RC SetFileHeader(PF_PageHandle ph) const;
 
    PF_FileHandle *pfHandle;                       // pointer to opened PF_FileHandle
    RM_FileHdr hdr;                                // file header
+	 int fullRecordSize; // external + RID
+
 	 bool bFileOpen;                                // file open flag
    bool bHdrChanged;                              // dirty flag for file hdr
-	 int recordSize;
 };
 
 //
@@ -120,7 +199,7 @@ public:
                   void       *value,
                   ClientHint pinHint = NO_HINT); // Initialize a file scan
     RC GetNextRec(RM_Record &rec);               // Get next matching record
-    RC CloseScan ();                             // Close the scan
+    RC CloseScan ();                            // Close the scan
 };
 
 //
@@ -152,7 +231,11 @@ void RM_PrintError(RC rc);
 #define RM_PF              (START_RM_ERR - 1)  // error in PF
 #define RM_NULLRECORD      (START_RM_ERR - 2)  
 #define RM_RECSIZEMISMATCH (START_RM_ERR - 3)  // record size mismatch
-#define RM_EOF             (START_RM_ERR - 4)  // end of file
+#define RM_HANDLEOPEN      (START_RM_ERR - 4)
+#define RM_BADOPEN         (START_RM_ERR - 5)
+#define RM_FNOTOPEN        (START_RM_ERR - 6)
+#define RM_BAD_RID         (START_RM_ERR - 7)
+#define RM_EOF             (START_RM_ERR - 8)  // end of file
 
 #define RM_LASTERROR RM_EOF
 

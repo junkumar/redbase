@@ -6,6 +6,7 @@
 #define REDBASE_H
 
 // Please DO NOT include any other files in this file.
+#include <iostream> //TODO
 
 //
 // Globally-useful defines
