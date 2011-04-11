@@ -185,19 +185,19 @@ public:
 };
 
 class Predicate {
-public:
+ public:
 	Predicate() {}
 	~Predicate() {}
 
 	Predicate(                     AttrType   attrTypeIn,	     
-                  int        attrLengthIn,
-                  int        attrOffsetIn,
-                  CompOp     compOpIn,
-                  void       *valueIn,
-                  ClientHint pinHintIn) 
+																 int        attrLengthIn,
+																 int        attrOffsetIn,
+																 CompOp     compOpIn,
+																 void       *valueIn,
+																 ClientHint pinHintIn) 
 		{
 			attrType = attrTypeIn;	     
-			attrLength =         attrLengthIn;
+			attrLength = attrLengthIn;
 			attrOffset = attrOffsetIn;
 			compOp = compOpIn;
 			value = valueIn;
@@ -221,14 +221,45 @@ public:
 				return strncmp(attr, (char *)value, attrLength) < 0;
 			}
 		}
-		
+		if(c == GT_OP) {
+			if(attrType == INT) {
+				return *attr > *((int *)value);
+			}
+			if(attrType == FLOAT) {
+				return *attr > *((float *)value);
+			}
+			if(attrType == STRING) {
+				return strncmp(attr, (char *)value, attrLength) > 0;
+			}
+		}
+		if(c == EQ_OP) {
+			if(attrType == INT) {
+				return *attr == *((int *)value);
+			}
+			if(attrType == FLOAT) {
+				return *attr == *((float *)value);
+			}
+			if(attrType == STRING) {
+				return strncmp(attr, (char *)value, attrLength) == 0;
+			}
+		}
+		if(c == LE_OP) {
+			return this->eval(buf, LT_OP) || this->eval(buf, EQ_OP); 
+		}
+		if(c == GE_OP) {
+			return this->eval(buf, GT_OP) || this->eval(buf, EQ_OP); 
+		}
+		if(c == NE_OP) {
+			return !this->eval(buf, EQ_OP);
+		}
+
 	}
 
 	CompOp initOp() const { return compOp; }
 
 
 
-private:
+ private:
 	AttrType   attrType;
 	int        attrLength;
 	int        attrOffset;

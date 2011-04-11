@@ -34,7 +34,7 @@ using namespace std;
 #define STRLEN      29               // length of string in testrec
 #define PROG_UNIT   50               // how frequently to give progress
                                       //   reports when adding lots of recs
-#define FEW_RECS   20                // number of records added in
+#define FEW_RECS  20                // number of records added in
 
 //
 // Computes the offset of a field in a record (should be in <stddef.h>)
@@ -269,9 +269,12 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
     RM_FileScan fs;
     // if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
     //                     NO_OP, NULL, NO_HINT)))
-    int val = 10;
-    if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
-                        LT_OP, (void*)&val, NO_HINT)))
+    //int val = 10;
+    // if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
+    //                     LT_OP, (void*)&val, NO_HINT)))
+    char * grr = "a15";
+    if ((rc=fs.OpenScan(fh,STRING,3,offsetof(TestRec, str),
+                        GE_OP, (void*)grr, NO_HINT)))
         return (rc);
 
     // For each record in the file
