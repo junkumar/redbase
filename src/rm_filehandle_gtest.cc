@@ -99,10 +99,9 @@ TEST_F(RM_FileHandleTest, FreeList) {
 		t.num = i;
 		fh.InsertRec((char*) &t, p2rid);
 		std::cerr << "p2 RID was " << p2rid << std::endl;
-//
 	}
 	// p1 should be full
-	// ASSERT_EQ(fh.GetNumPages(), 3);
+	ASSERT_EQ(fh.GetNumPages(), 3);
 	std::cerr << "p2 RID was " << p2rid << std::endl;
 	fh.DeleteRec(p1rid);
 	RID newr;
@@ -132,14 +131,14 @@ TEST_F(RM_FileHandleTest, SmallRecIntegrity) {
 	SmallRec t;
 	RID r;
 	std::vector<RID> vec;
-	int count = 3;
+	int count = 3000;
 	for( int i = 0; i < count; i++)
 	{
 		t.i = i;
 		sfh.InsertRec((char*) &t, r);
 		vec.push_back(r);
 	}
-	// ASSERT_EQ(sfh.GetNumPages(), 10);
+	ASSERT_EQ(sfh.GetNumPages(), 10);
 
 	// check within same open
 	for( int i = 0; i < count; i++)
@@ -148,20 +147,16 @@ TEST_F(RM_FileHandleTest, SmallRecIntegrity) {
 		sfh.GetRec(vec[i], rec);
 		SmallRec * pBuf;
 		rec.GetData((char*&)pBuf);
-		std::cerr << vec[i] << "pBuf->i " << pBuf->i << " i " << i << std::endl;
-		// ASSERT_EQ(pBuf->i, i);
+		// std::cerr << vec[i] << "pBuf->i " << pBuf->i << " i " << i << std::endl;
+		ASSERT_EQ(pBuf->i, i);
 	}
 
 	// check with new open
 	rmm.CloseFile(sfh);
 	RM_FileHandle sfh2;
 
-	PF_FileHandle pfh;
-	rc = pfm.OpenFile("gtestfilesmall", pfh);
-	rc = sfh2.Open(&pfh, sizeof(SmallRec));
-
-	// rc =	rmm.OpenFile("gtestfilesmall", sfh2);
-	// ASSERT_EQ(sfh2.GetNumPages(), 10);
+	rc =	rmm.OpenFile("gtestfilesmall", sfh2);
+	ASSERT_EQ(sfh2.GetNumPages(), 10);
 
 	for( int i = 0; i < count; i++)
 	{
@@ -169,9 +164,8 @@ TEST_F(RM_FileHandleTest, SmallRecIntegrity) {
 		sfh2.GetRec(vec[i], rec);
 		SmallRec * pBuf;
 		rec.GetData((char*&)pBuf);
-		std::cerr << vec[i] << "pBuf->i " << pBuf->i << " i " << i << std::endl;
-
-		//ASSERT_EQ(pBuf->i, i);
+		// std::cerr << vec[i] << "pBuf->i " << pBuf->i << " i " << i << std::endl;
+		ASSERT_EQ(pBuf->i, i);
 	}
 	rmm.CloseFile(sfh2);
 	rmm.DestroyFile("gtestfilesmall");

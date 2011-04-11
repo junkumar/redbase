@@ -193,15 +193,6 @@ RC RM_Manager::CloseFile(RM_FileHandle &rfileHandle)
 		 rfileHandle.pfHandle->GetThisPage(0, ph);
 		 rfileHandle.SetFileHeader(ph); // write hdr into file
 
-		 std::cerr << "RM_Manager::CloseFile hdr.numPages" << rfileHandle.hdr.numPages << std::endl;
-		 { //testing
-			 char * pData;
-			 ph.GetData(pData);
-			 RM_FileHdr hdr;
-			 memcpy(&hdr, pData, sizeof(hdr));
-			 std::cerr << "RM_Manager::CloseFile inner hdr.numPages" << hdr.numPages << std::endl;
-		 }
-
 		 RC rc = rfileHandle.pfHandle->MarkDirty(0);
 		 if (rc < 0)
 		 {

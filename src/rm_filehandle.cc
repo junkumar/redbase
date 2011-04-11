@@ -46,12 +46,12 @@ RC RM_FileHandle::Open(PF_FileHandle* pfh, int size)
 			 ph.GetData(pData);
 			 RM_FileHdr hdr;
 			 memcpy(&hdr, pData, sizeof(hdr));
-			 std::cerr << "RM_FileHandle::Open inner hdr.numPages" << hdr.numPages << std::endl;
+			 // std::cerr << "RM_FileHandle::Open inner hdr.numPages" << hdr.numPages << std::endl;
 	}
 
 	this->GetFileHeader(ph); // write into hdr
 
-	std::cerr << "RM_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
+	// std::cerr << "RM_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
 
 	
 	bHdrChanged = true;
@@ -75,7 +75,7 @@ RC RM_FileHandle::GetNextFreeSlot(PF_PageHandle & ph, PageNum& pageNum, SlotNum&
 			|| (rc = this->GetPageHeader(ph, pHdr)))
 			return rc;
 	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());	
-  std::cerr << "RM_FileHandle::GetNextFreeSlot from pHdr" << b << endl;
+  // std::cerr << "RM_FileHandle::GetNextFreeSlot from pHdr" << b << endl;
 	for (int i = 0; i < this->GetNumSlots(); i++) 
 	{
 		if (b.test(i)) { 
@@ -111,7 +111,7 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
 
 		if(pHdr.nextFree == RM_PAGE_FULLY_USED)
 		{
-			std::cerr << "RM_FileHandle::GetNextFreePage - Page Full!" << endl;
+			// std::cerr << "RM_FileHandle::GetNextFreePage - Page Full!" << endl;
 		}
 		{
 			char *pData;
@@ -128,7 +128,7 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
 			bitmap b(this->GetNumSlots());
 			b.set(); // Initially all slots are free
 			b.to_char_buf(phdr.freeSlotMap, b.numChars());
-			std::cerr << "RM_FileHandle::GetNextFreePage new!!" << b << endl;
+			// std::cerr << "RM_FileHandle::GetNextFreePage new!!" << b << endl;
 			phdr.to_buf(pData);
 		}
 
@@ -141,7 +141,7 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
 			(rc = this->GetPageHeader(ph, pHdr));
 			bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
 
-			std::cerr << "RM_FileHandle::GetNextFreePage regen" << b << endl;
+			// std::cerr << "RM_FileHandle::GetNextFreePage regen" << b << endl;
 		}
 
 
@@ -149,10 +149,10 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
 		hdr.firstFree = pageNum;
 		hdr.numPages++;
 		assert(hdr.numPages > 1); // page num 1 would be header page
-    std::cerr << "RM_FileHandle::GetNextFreePage hdr.numPages is " 
-							<< hdr.numPages 
-							<< " method " << this->GetNumPages()
-							<< endl;
+    // std::cerr << "RM_FileHandle::GetNextFreePage hdr.numPages is " 
+		// 					<< hdr.numPages 
+		// 					<< " method " << this->GetNumPages()
+		// 					<< endl;
 		bHdrChanged = true;
 		return 0; // pageNum is set correctly
 	}
@@ -282,7 +282,7 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 	if(rc = this->GetPageHeader(ph, pHdr))
 		return rc;
 	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
-	std::cerr << "RM_FileHandle::InsertRec befor" << b << std::endl;
+	// std::cerr << "RM_FileHandle::InsertRec befor" << b << std::endl;
 	// TODO GetSlotPtr is trashing the pHdr
 	if(rc = this->GetSlotPointer(ph, s, pSlot))
 		return rc;
@@ -297,10 +297,10 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 		hdr.firstFree = pHdr.nextFree;
 		pHdr.nextFree == RM_PAGE_FULLY_USED;
 	}
-  std::cerr << "RM_FileHandle::InsertRec numFreeSlots in page " << pHdr.numFreeSlots << std::endl;
+  // std::cerr << "RM_FileHandle::InsertRec numFreeSlots in page " << pHdr.numFreeSlots << std::endl;
 	b.to_char_buf(pHdr.freeSlotMap, b.numChars());
 	rc = this->SetPageHeader(ph, pHdr);
-  std::cerr << "RM_FileHandle::InsertRec after" << b << std::endl;
+  // std::cerr << "RM_FileHandle::InsertRec after" << b << std::endl;
 // TODO mark page as dirty
 	return 0;
 }
@@ -333,9 +333,9 @@ RC RM_FileHandle::DeleteRec  (const RID &rid)
 		hdr.firstFree = p; 
 	}
 	pHdr.numFreeSlots++;
-	std::cerr << "RM_FileHandle::DeleteRec numFreeSlots in page " 
-						<< pHdr.numFreeSlots 
-						<< std::endl;
+	// std::cerr << "RM_FileHandle::DeleteRec numFreeSlots in page " 
+	// 					<< pHdr.numFreeSlots 
+	// 					<< std::endl;
 	b.to_char_buf(pHdr.freeSlotMap, b.numChars());
 	rc = this->SetPageHeader(ph, pHdr);
 	return rc;
