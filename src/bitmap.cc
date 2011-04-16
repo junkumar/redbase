@@ -6,6 +6,8 @@
 bitmap::bitmap(int numBits): size(numBits)
 {
 	buffer = new char[this->numChars()];
+  // zero out to avoid valgrind warnings.
+  memset((void*)buffer, 0, this->numChars());
 	this->reset();
 }
 
@@ -37,7 +39,6 @@ int bitmap::numChars() const
 
 void bitmap::reset()
 {
-  // faster - return memset((void*)buffer, 0, this->numChars());
 	for( unsigned int i = 0; i < size; i++) {
 		bitmap::reset(i);
 	}

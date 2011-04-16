@@ -38,9 +38,9 @@ protected:
 // Setup will call both constructor and Open()
 
 TEST_F(RM_FileHandleTest, FullSize) {
-	ASSERT_EQ(40 ,sizeof(TestRec));
-	ASSERT_EQ(48 ,fh.GetFullRecordSize());
-	ASSERT_EQ(84, fh.GetNumSlots());
+	ASSERT_EQ(40UL ,sizeof(TestRec));
+	ASSERT_EQ(40 ,fh.fullRecordSize());
+	ASSERT_EQ(101, fh.GetNumSlots());
 }
 
 TEST_F(RM_FileHandleTest, SmallRec) {
@@ -56,9 +56,9 @@ TEST_F(RM_FileHandleTest, SmallRec) {
 		)
 		RM_PrintError(rc);
 
-	ASSERT_EQ(4 ,sizeof(SmallRec));
-	ASSERT_EQ(12 ,sfh.GetFullRecordSize());
-	ASSERT_EQ(336, sfh.GetNumSlots());
+	ASSERT_EQ(4UL, sizeof(SmallRec));
+	ASSERT_EQ(4 ,sfh.fullRecordSize());
+	ASSERT_EQ(988, sfh.GetNumSlots());
 
 	rmm.CloseFile(sfh);
 	rmm.DestroyFile("gtestfilesmall");
@@ -82,7 +82,7 @@ TEST_F(RM_FileHandleTest, Persist) {
 		)
 		RM_PrintError(rc);
 
-	ASSERT_EQ(fh2.GetFullRecordSize(), 48);
+	ASSERT_EQ(fh2.fullRecordSize(), 40);
 	ASSERT_EQ(fh2.GetNumPages(), 1);
 	
 	rmm.CloseFile(fh2);
@@ -117,6 +117,8 @@ TEST_F(RM_FileHandleTest, FreeList) {
 TEST_F(RM_FileHandleTest, SmallRecIntegrity) {
 	struct SmallRec {
 		int i;
+    int j;
+    int k;
 	};
 	RM_FileHandle sfh;
 	RC rc;
@@ -170,4 +172,19 @@ TEST_F(RM_FileHandleTest, SmallRecIntegrity) {
 	}
 	rmm.CloseFile(sfh2);
 	rmm.DestroyFile("gtestfilesmall");
+}
+
+TEST_F(RM_FileHandleTest, over40pages) {
+  for( int page = 1; page < 60; page++) 
+  {
+    RID rid;
+    for ( int record = 0; record < fh.GetNumSlots(); record++ )
+    {
+      TestRec t;
+      
+      RC rc = fh.InsertRec((char *)&t, rid);
+      ASSERT_EQ(rc, 0);
+    }
+    ASSERT_EQ(rid, RID(page, fh.GetNumSlots()-1));
+  }
 }

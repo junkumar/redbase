@@ -22,7 +22,7 @@ using namespace std;
 // Constructor allows the creation of null references that can be populated by
 // later functions.
 RM_Record::RM_Record() 
-:recordSize(0), data(NULL)
+  :recordSize(-1), data(NULL), rid(-1,-1)
 {
 }
 
@@ -38,22 +38,23 @@ RM_Record::~RM_Record()
 // 	return recordSize;
 // }
 
+// Allows a resetting as long as size matches.
 RC RM_Record::Set     (char *pData, int size, RID rid)
 {
-	if(recordSize != 0 && (size != recordSize - (int)sizeof(RID)))
+	if(recordSize != -1 && (size != recordSize))
 		return RM_RECSIZEMISMATCH;
-	recordSize = size + sizeof(RID);
+	recordSize = size;
+  this->rid = rid;
 	if (data == NULL)
 		data = new char[recordSize];
   memcpy(data, pData, size);
-	RID *pr = &rid;
-	memcpy(data + size, (char*) pr, sizeof(RID));
 	return 0;
 }
 
 RC RM_Record::GetData     (char *&pData) const 
 {
-	if (data != NULL) {
+	if (data != NULL && recordSize != -1)
+  {
 		pData = data;
 		return 0;
 	}
@@ -63,14 +64,11 @@ RC RM_Record::GetData     (char *&pData) const
 
 RC RM_Record::GetRid     (RID &rid) const 
 {
-	if(data != NULL) 
+	if (data != NULL && recordSize != -1)
 	{
-		char * pr = (char *) &rid;
-		memcpy(pr, 
-					 data + recordSize - sizeof(RID),
-					 sizeof(RID));
-		return 0;
-	} 
+    rid = this->rid;
+    return 0;
+  }
 	else 
 		return RM_NULLRECORD;
 }

@@ -70,10 +70,10 @@ TEST_F(bitmapTest, Set16) {
 	}
 	char buf[2];
 	b.to_char_buf(buf,2);
-	std::cerr << b << std::endl;
+	// std::cerr << b << std::endl;
 
 	bitmap newb(buf, s);
-	std::cerr << newb << std::endl;
+	// std::cerr << newb << std::endl;
 	for(int i=0; i < newb.getSize(); i++)
 	{
 		if (i % 2)

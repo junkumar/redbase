@@ -7,19 +7,18 @@
 #include <cstdio>
 #include <iostream>
 #include "rm.h"
+#include "pf.h"
 
 using namespace std;
+
 
 //
 // Error table
 //
-static char *RM_WarnMsg[] = {
-  (char*)"record is too big for a page",
-  (char*)"error is in the PF component",
-  (char*)"end of file",
+const char *RM_WarnMsg[] = {
 };
 
-static char *RM_ErrorMsg[] = {
+const char *RM_ErrorMsg[] = {
   (char*)"record size is too big for a page",
   (char*)"error is in the PF component",
   (char*)"record null",
@@ -62,5 +61,31 @@ void RM_PrintError(RC rc)
 		cerr << "START_RM_ERR was " << START_RM_ERR << endl;
 		cerr << "RM_LASTERROR was " << RM_LASTERROR << endl;
     cerr << "RM error: " << rc << " is out of bounds\n";
+	}
+}
+
+
+//
+// PrintError
+//
+// Desc: Send a message whether it is a RM or a PF return code to cerr
+// In:   rc - return code for which a message is desired
+//
+void PrintError(RC rc)
+{
+  // Check the return code is within proper limits
+  if ((rc >= START_RM_WARN && rc <= RM_LASTWARN)
+      || (-rc >= -START_RM_ERR && -rc < -RM_LASTERROR))
+    RM_PrintError(rc);
+  else if ((rc >= START_PF_WARN && rc <= PF_LASTWARN)
+           || (-rc >= -START_PF_ERR && -rc < -PF_LASTERROR))
+    PF_PrintError(rc);
+  else if (rc == 0)
+    cerr << "PrintError called with return code of 0\n";
+  else
+	{
+   // Print error
+		cerr << "rc was " << rc << endl;
+		cerr << "Out of bounds for both RM and PF err/warn" << endl;
 	}
 }

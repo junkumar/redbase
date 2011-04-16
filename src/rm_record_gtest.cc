@@ -22,7 +22,7 @@ protected:
 };
 
 TEST_F(RM_RecordTest, DefCons) {
-	ASSERT_TRUE(getRecordSize(&r) == 0);
+	ASSERT_TRUE(getRecordSize(&r) == -1);
 }
 
 TEST_F(RM_RecordTest, SetData) {

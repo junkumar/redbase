@@ -46,7 +46,7 @@ RM_Manager::~RM_Manager()
 //
 RC RM_Manager::CreateFile (const char *fileName, int recordSize)
 {
-   if(recordSize >= PF_PAGE_SIZE - (int)sizeof(RID))
+   if(recordSize >= PF_PAGE_SIZE - (int)sizeof(RM_PageHdr))
       return RM_SIZETOOBIG;
 
    int RC = pfm.CreateFile(fileName);
@@ -194,6 +194,13 @@ RC RM_Manager::CloseFile(RM_FileHandle &rfileHandle)
 		 rfileHandle.SetFileHeader(ph); // write hdr into file
 
 		 RC rc = rfileHandle.pfHandle->MarkDirty(0);
+		 if (rc < 0)
+		 {
+			 PF_PrintError(rc);
+			 return rc;
+		 }
+
+		 rc = rfileHandle.pfHandle->UnpinPage(0);
 		 if (rc < 0)
 		 {
 			 PF_PrintError(rc);

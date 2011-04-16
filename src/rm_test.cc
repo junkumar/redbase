@@ -155,23 +155,6 @@ int main(int argc, char *argv[])
 }
 
 
-
-//
-// PrintError
-//
-// Desc: Print an error message by calling the proper component-specific
-//       print-error function
-//
-void PrintError(RC rc)
-{
-    if (abs(rc) <= END_PF_WARN)
-        PF_PrintError(rc);
-    else if (abs(rc) <= END_RM_WARN)
-        RM_PrintError(rc);
-    else
-        cerr << "Error code out of range: " << rc << "\n";
-}
-
 ////////////////////////////////////////////////////////////////////
 // The following functions may be useful in tests that you devise //
 ////////////////////////////////////////////////////////////////////
@@ -267,14 +250,14 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
     printf("\nverifying file contents\n");
 
     RM_FileScan fs;
-    // if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
-    //                     NO_OP, NULL, NO_HINT)))
-    //int val = 10;
+    if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
+                        NO_OP, NULL, NO_HINT)))
+      //int val = 10;
     // if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
     //                     LT_OP, (void*)&val, NO_HINT)))
-    const char * grr = "a15";
-    if ((rc=fs.OpenScan(fh,STRING,3,offsetof(TestRec, str),
-                        GE_OP, (void*)grr, NO_HINT)))
+//     const char * grr = "a15";
+//     if ((rc=fs.OpenScan(fh,STRING,3,offsetof(TestRec, str),
+//                         GE_OP, (void*)grr, NO_HINT)))
         return (rc);
 
     // For each record in the file
@@ -317,10 +300,11 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
         goto err;
 
     if ((rc=fs.CloseScan()))
-        return (rc);
+        goto err;
 
     // make sure we had the right number of records in the file
     if (n != numRecs) {
+        delete[] found;
         printf("%d records in file (supposed to be %d)\n",
                n, numRecs);
         exit(1);

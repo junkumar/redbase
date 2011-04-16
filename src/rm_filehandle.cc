@@ -21,7 +21,7 @@ using namespace std;
 // information on every page).
 
 RM_FileHandle::RM_FileHandle() 
-	:pfHandle(NULL), fullRecordSize(-1), bFileOpen(false), bHdrChanged(false)
+	:pfHandle(NULL), bFileOpen(false), bHdrChanged(false)
 {
 }
 
@@ -37,10 +37,12 @@ RC RM_FileHandle::Open(PF_FileHandle* pfh, int size)
 	bFileOpen = true;
   pfHandle = new PF_FileHandle;
 	*pfHandle = *pfh ;
-	fullRecordSize = size + sizeof(RID);
 
 	PF_PageHandle ph;
 	pfHandle->GetThisPage(0, ph);
+  // Needs to be called everytime GetThisPage is called.
+	pfHandle->UnpinPage(0); 
+
 	{ // testing
 			 char * pData;
 			 ph.GetData(pData);
@@ -50,7 +52,6 @@ RC RM_FileHandle::Open(PF_FileHandle* pfh, int size)
 	}
 
 	this->GetFileHeader(ph); // write into hdr
-
 	// std::cerr << "RM_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
 
 	
@@ -72,6 +73,8 @@ RC RM_FileHandle::GetNextFreeSlot(PF_PageHandle & ph, PageNum& pageNum, SlotNum&
 	
 	if ((rc= this->GetNextFreePage(pageNum)) 
 			|| (rc = pfHandle->GetThisPage(pageNum, ph))
+      // Needs to be called everytime GetThisPage is called.
+	    || (rc = pfHandle->UnpinPage(pageNum)) 
 			|| (rc = this->GetPageHeader(ph, pHdr)))
 			return rc;
 	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());	
@@ -96,8 +99,13 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
 	if(hdr.firstFree != RM_PAGE_LIST_END) 
 	{
 		// this last page on the free list might actually be full
-		RC rc = pfHandle->GetThisPage(hdr.firstFree, ph);
-		rc = this->GetPageHeader(ph, pHdr);
+		RC rc;
+    if ((rc = pfHandle->GetThisPage(hdr.firstFree, ph))
+        // Needs to be called everytime GetThisPage is called.
+        || (rc = pfHandle->UnpinPage(hdr.firstFree))
+        || (rc = this->GetPageHeader(ph, pHdr)))
+      return rc;
+
 	}
 	if( //we need to allocate a new page
 		  // because this is the firs time
@@ -130,11 +138,21 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
 			b.to_char_buf(phdr.freeSlotMap, b.numChars());
 			// std::cerr << "RM_FileHandle::GetNextFreePage new!!" << b << endl;
 			phdr.to_buf(pData);
+
+      // the default behavior of the buffer pool is to pin pages
+      // let us make sure that we unpin explicitly after setting
+      // things up
+      if (
+//        (rc = pfHandle->MarkDirty(pageNum)) ||
+        (rc = pfHandle->UnpinPage(pageNum)))
+        return rc;
 		}
 
 		{ // testing
 			PF_PageHandle ph;
 			pfHandle->GetThisPage(pageNum, ph);
+      // Needs to be called everytime GetThisPage is called.
+      pfHandle->UnpinPage(pageNum);
 
 			RM_PageHdr pHdr(this->GetNumSlots());
 			RC rc;
@@ -202,7 +220,7 @@ RC RM_FileHandle::GetSlotPointer(PF_PageHandle ph, SlotNum s, char *& pData) con
 	if (rc >= 0 ) {
 		bitmap b(this->GetNumSlots());
 		pData = pData + (RM_PageHdr(this->GetNumSlots()).size());
-		pData = pData + s * fullRecordSize;
+		pData = pData + s * this->fullRecordSize();
 	}
   
 	return rc;
@@ -211,25 +229,25 @@ RC RM_FileHandle::GetSlotPointer(PF_PageHandle ph, SlotNum s, char *& pData) con
 int RM_FileHandle::GetNumSlots() const
 {
 	assert(pfHandle != NULL);
-	if(fullRecordSize != 0) {
+	if(this->fullRecordSize() != 0) {
 		int bytes_available = PF_PAGE_SIZE - sizeof(RM_PageHdr);
-		int slots = floor(1.0 * bytes_available/ (fullRecordSize + 1/8));
+		int slots = floor(1.0 * bytes_available/ (this->fullRecordSize() + 1/8));
 		int r = sizeof(RM_PageHdr) + bitmap(slots).numChars();
 		
-		while ((slots*fullRecordSize) + r > PF_PAGE_SIZE) {
+		while ((slots*this->fullRecordSize()) + r > PF_PAGE_SIZE) {
 		 	slots--;
 			r = sizeof(RM_PageHdr) + bitmap(slots).numChars();
 			// std::cerr << "PF_PAGE_SIZE " << PF_PAGE_SIZE << std::endl;
-			// std::cerr << " slots*frs " << slots*fullRecordSize
+			// std::cerr << " slots*frs " << slots*this->fullRecordSize()
 			// 					<< " r "<< r 
-			// 					<< " frs " << fullRecordSize
+			// 					<< " frs " << this->fullRecordSize()
 			// 					<<	std::endl;
 		}
 		
 		// std::cerr << "Final  " << std::endl;
-		// std::cerr << " slots*frs " << slots*fullRecordSize
+		// std::cerr << " slots*frs " << slots*this->fullRecordSize()
 		// 					<< " r "<< r 
-		// 					<< " frs " << fullRecordSize
+		// 					<< " frs " << this->fullRecordSize()
 		// 					<<	std::endl;
 		return slots;
 	} else {
@@ -255,7 +273,9 @@ RC RM_FileHandle::GetRec     (const RID &rid, RM_Record &rec) const
 	rid.GetSlotNum(s);
 	RC rc = 0;
 	PF_PageHandle ph;
-	if((rc = pfHandle->GetThisPage(p, ph)))
+	if((rc = pfHandle->GetThisPage(p, ph))
+     // Needs to be called everytime GetThisPage is called.
+     || (rc = pfHandle->UnpinPage(p)))
 		return rc;
 	char * pData = NULL;
 	if(RC rc = this->GetSlotPointer(ph, s, pData))
@@ -287,8 +307,7 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 	if((rc = this->GetSlotPointer(ph, s, pSlot)))
 		return rc;
 	rid = RID(p, s);
-	memcpy(pSlot, pData, fullRecordSize - sizeof(RID));
-	memcpy(pSlot + fullRecordSize - sizeof(RID), (char *) &rid, sizeof(RID));
+	memcpy(pSlot, pData, this->fullRecordSize());
 	
 	b.reset(s); // slot s is no longer free
 	pHdr.numFreeSlots--;
@@ -318,6 +337,8 @@ RC RM_FileHandle::DeleteRec  (const RID &rid)
 	PF_PageHandle ph;
 	RM_PageHdr pHdr(this->GetNumSlots());
 	if((rc = pfHandle->GetThisPage(p, ph)) ||
+     // Needs to be called everytime GetThisPage is called.
+     (rc = pfHandle->UnpinPage(p)) ||
 		 (rc = this->GetPageHeader(ph, pHdr))
 		)
 		return rc;
@@ -357,15 +378,18 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec)
 
 	PF_PageHandle ph;
 	char * pSlot;
-	if(RC rc = pfHandle->GetThisPage(p, ph))
+  RC rc;
+	if((rc = pfHandle->GetThisPage(p, ph))
+     // Needs to be called everytime GetThisPage is called.
+     || (rc = pfHandle->UnpinPage(p)))
 		return rc;
+
 	char * pData = NULL;
 	rec.GetData(pData);
 
 	if(RC rc = this->GetSlotPointer(ph, s, pSlot))
 		return rc;
-	memcpy(pSlot, pData, fullRecordSize - sizeof(RID));
-	memcpy(pSlot + fullRecordSize - sizeof(RID), (char *) &rid, sizeof(RID));
+	memcpy(pSlot, pData, this->fullRecordSize());
 	return 0;
 }
 
