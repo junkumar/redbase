@@ -19,6 +19,10 @@ struct IX_FileHdr {
   int firstFree;     // first free page in the linked list
   int numPages;      // # of pages in the file
   int pairSize;      // size of each (key, RID) pair in index
+  int order;         // order of btree
+  int height;        // height of btree
+  AttrType attrType;
+  int attrLength;
 };
 
 
