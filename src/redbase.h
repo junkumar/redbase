@@ -7,6 +7,8 @@
 
 // Please DO NOT include any other files in this file.
 #include <iostream> //TODO
+#include <cmath>
+#include <cassert>
 
 //
 // Globally-useful defines

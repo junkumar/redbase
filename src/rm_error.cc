@@ -6,7 +6,8 @@
 #include <cerrno>
 #include <cstdio>
 #include <iostream>
-#include "rm.h"
+#include "rm_error.h"
+#include "ix_error.h"
 #include "pf.h"
 
 using namespace std;
@@ -80,6 +81,9 @@ void PrintError(RC rc)
   else if ((rc >= START_PF_WARN && rc <= PF_LASTWARN)
            || (-rc >= -START_PF_ERR && -rc < -PF_LASTERROR))
     PF_PrintError(rc);
+  else if ((rc >= START_IX_WARN && rc <= IX_LASTWARN)
+           || (-rc >= -START_IX_ERR && -rc < -IX_LASTERROR))
+    IX_PrintError(rc);
   else if (rc == 0)
     cerr << "PrintError called with return code of 0\n";
   else

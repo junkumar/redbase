@@ -6,6 +6,7 @@
 #ifndef RM_ERROR_H
 #define RM_ERROR_H
 
+#include "redbase.h"
 //
 // Print-error function
 //
