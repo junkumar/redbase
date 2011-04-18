@@ -17,7 +17,7 @@ void IX_PrintError(RC rc);
 #define IX_SIZETOOBIG      (START_IX_ERR - 0)  // key size too big
 #define IX_PF              (START_IX_ERR - 1)  // error in PF
 #define IX_BADIXPAGE       (START_IX_ERR - 2)  
-#define IX_RECSIZEMISMATCH (START_IX_ERR - 3)  // record size mismatch
+#define IX_FCREATEFAIL     (START_IX_ERR - 3)  // record size mismatch
 #define IX_HANDLEOPEN      (START_IX_ERR - 4)
 #define IX_BADOPEN         (START_IX_ERR - 5)
 #define IX_FNOTOPEN        (START_IX_ERR - 6)

@@ -1,0 +1,158 @@
+
+Index Manager for RedBase
+
+Nandu Jayakumar
+CS 346 Spring 2011
+nandu@cs.stanford.edu
+
+
+---------------------------------------
+
+Overall Design:
+
+    Users of the RM (RecordManager) sub-system are exposed to RIDs but
+    are otherwise able to ignore the notion pages completely and leave
+    the handling of those to RM. They use the RM abstraction of
+    records (especially in conjunction with the FileScan interface) to
+    work at a higher level.
+
+    The code is organized based on functionality. The RM's interface
+    is fully specified in rm.h using a series of different
+    classes. Each of these classes has a separate implementation file
+    (rm_filehandle.cc, rm_record.cc...) as well as a unit test file
+    (rm_filehandle_gtest.cc, rm_record_gtest.cc...). The *_gtest.cc
+    files contain google-test style unit tests with rm_test.cc has a
+    slightly modified version of the provided test.
+
+
+---------------------------------------
+
+Key Data Structures:
+
+>    Within an index page the list of keys is always maintained in
+>    sorted order. So binary search algos can be used everywhere.
+
+    The Page Header (RM_PageHdr) contains a bitmap to track the free
+    slots within a page. This packed data structure provides a
+    space-efficient way to track the slots that are free.
+   
+
+    The FileHeader (RM_FileHdr) uses a free list approach to keep
+    track of free pages much like the header in the PF component. This
+    works well because traversing the list is never required and a
+    single access to the front of the linked list is good enough for
+    all changes. This is currently in a whole page all by itself so
+    that all pages with records can be treated symmetrically. The
+    first free page is tracked using a page number in the FileHeader
+    while the PageHeader in each page tracks the next free page after
+    this one.
+
+
+    
+---------------------------------------
+
+Testing:
+
+   Automated unit tests were used to test each class that was built
+   individually. A popular test harness - google-test, which is in the
+   same style as JUnit was used to make testing fast and automatic.
+   Additionally, the pf_test* and rm_test (modified to also do scans)
+   were also used to test correctness of the data. The harness will
+   verify test correctness so that human interactivity is not needed.
+   The google-test source code and the test cases will be submitted.
+   Special care was taken to ensure that writes were available across
+   opens/closes.
+   Different record sizes were tested.
+   Testing large number of operations in order to use multiple pages
+   was also done.
+
+---------------------------------------
+
+Bugs/Known Issues:
+    
+    Marked under several places in the code with //TODO.
+    Always returning an error code in methods is very limiting in
+    terms of writing good interfaces. Typed exceptions with simple
+    tracing would have served this project much better.
+    The limitation of not #including other headers resulted in rm.h
+    being a huge header with several class declarations making it
+    unwieldy.
+    The stored record in the disk currently contains the RID as a
+    suffix - there is no real need for this and it should be cleaned
+    out in the interest of saving some IOs.
+
+---------------------------------------
+
+1) Give your formula for determining how many record slots can fit on
+each data page of a given RM file. Make sure to point to the code that
+implements this formula.
+
+Code is at rm_filehandle.cc:211
+int RM_FileHandle::GetNumSlots() const
+
+
+There are three parts that make up the each data page
+1. page header static portion
+2. page header - packed bits for the bitmap
+3. records
+
+1 is fixed while both 2&3 depend on the size of each record.
+
+An initial number of slots is picked based on assuming that it takes
+1/8 bytes (1 bit) additional per record. But this does not account for
+the fact that we can only use full bytes. The number is recalculated
+after testing if this #slots can be used to fit in all the records and
+the bitmap.
+
+
+2) Describe how your RM_FileScan maintains the "state" of the scan.
+For example, does it keep a reference to the previous record returned,
+the next record to be returned, or something else? Briefly discuss
+possible advantages or disadvantages of your approach in the context
+of RedBase.
+
+Code is at rm_filescan.cc:133
+RC RM_FileScan::GetNextRec     (RM_Record &rec)
+
+A reference to the record just returned is always maintained. This is
+in a data member of the RM_FileScan class called
+"current". GetNextRec() is an iterator-style interface and users will
+only make forward, sequential accesses. We can take advantage of this
+limited access pattern and optimize it by not having to read any
+pieces of information again - both data (records) or metadata like the
+page headers.
+
+A potential disadvantage is the fact that this access pattern returns
+incorrect or missing data if any new records are inserted or updated
+while a scan is in progress.
+
+3) Do you use in-memory data structures to cache copies of file
+headers? If so, briefly outline your caching scheme. Make sure to
+explain how changes to file header information are handled, and what
+happens when files are opened multiple times. State any assumptions
+that are required for the correct working of your scheme. If you
+decided not to use in-memory data structures to cache copies of file
+headers, explain your rationale, including the advantages and
+disadvantages of your approach.
+
+Code is at rm.h:180
+Class RM_FileHandle, members
+       RM_FileHdr hdr
+       bool bHdrChanged
+
+A copy of the file header is cached in memory in my implementation. I
+cache it in the RM_FileHandle object. Every new open handle to a file
+has a copy of the header cached. This way header information like
+record size or the first free page can be extracted quickly without IO
+operations. A potential disadvantage is when changes to the header are
+made concurrently through different file handles, effectively
+invalidating the cached version of the header. My assumptions are that
+this never happens. A flag (bHdrChanged) is used to track whether the
+header cache needs to be written back to disk or not.
+
+If a file is opened multiple times then as long as a close is called
+between the open calls, all information in the header is cleanly
+transferred from the cache back to the header. This is another
+assumption in my code regarding how files are opened. My test cases
+include tests for explicitly opening the file multiple times and
+checking integrity of the stored information.

@@ -6,81 +6,45 @@
 #include "ix_index_handle.h"
 #include "ix_error.h"
 
-// T must be a simple type where sizeof(T) is the real size
-// and it cannot be serialized directly. A default constructor
-// T() must be available.
-template <class T>
+// Key has to be a single attribute of type attrType and length attrLength
+
 class BtreeNode {
  public:
-  BtreeNode(int pageSize = PF_PAGE_SIZE, bool duplicates = false, 
+  // if newPage is false then the page ph is expected to contain an
+  // existing btree node, otherwise a fresh node is assumed.
+  BtreeNode(AttrType attrType, int attrLength,
+            PF_PageHandle& ph, bool newPage = true,
+            int pageSize = PF_PAGE_SIZE, bool duplicates = false, 
             bool leaf = false, bool root = false);
   ~BtreeNode();
- protected:
-  /* friend class Btree<T>; */
-  /* friend class BtreeNodeTest; */
-  /* friend class BtreeTest; */
-  RC IsValid();
+  friend class BtreeNodeTest;
+  RC IsValid() const;
+  int GetMaxKeys() const;
   int GetNumKeys();
+  int GetKey(int pos, void* &key) const;
+  int SetKey(int pos, const void* newkey);
+  int Insert(const void* newkey, const RID& newrid);
+  int Remove(const void* newkey);
+  int FindKey(const void* &key) const;
+  int FindKeyPosition(const void* &key) const;
+  int CmpKey(const void * k1, const void * k2) const;
+  bool isSorted() const;
+    
  private:
   // serialized
-  T * keys;
+  char * keys; // should not be accessed directly as keys[] but with SetKey()
   RID * rids;
-  // not serialized
-  PageNum address; // where did this page come from ?
+  int numKeys; // stored in keys[order] - no real page header
+  // not serialized - common to all ix pages
+  int attrLength;
+  AttrType attrType;
   int order;
+  // not serialized - convenience
+  PF_PageHandle * pph; // where did this page come from ?
   bool dups; // Are duplicate values allowed for keys ?
   bool isRoot;
   bool isLeaf;
 };
 
-template <class T>
-BtreeNode<T>::BtreeNode(int pageSize, bool duplicates,
-                        bool leaf, bool root) 
-:dups(duplicates), keys(NULL), rids(NULL), address(-1),
-  isRoot(root), isLeaf(leaf) 
-{
-  //TODO page header ?
-  order = floor((pageSize) / (sizeof(RID) + sizeof(T)));
-  // n + 1 pointers vs n keys
-  if(sizeof(RID) + (order * (sizeof(T) + sizeof(RID)))
-     > pageSize)
-    order--;
-  assert(sizeof(RID) + (order * (sizeof(T) + sizeof(RID))) 
-         <= pageSize);
-  // Leaf Node - 
-  // Intermediate Node
-
-  keys = new T[order];
-  rids = new RID[order+1];
-}
-
-template <class T>
-BtreeNode<T>::~BtreeNode()
-{
-  if (keys != NULL)
-    delete [] keys;
-  if(rids != NULL)
-    delete [] rids;
-};
-
-template <class T>
-RC BtreeNode<T>::IsValid()
-{
-  if (order <= 0)
-    return IX_SIZETOOBIG;
-
-  bool ret = true;
-  ret = ret && (keys == NULL);
-  ret = ret && (rids == NULL);
-
-  return ret ? 0 : IX_BADIXPAGE;
-};
-
-template <class T>
-int BtreeNode<T>::GetNumKeys()
-{
-  assert(IsValid() == 0);
-  return order;
-};
 
 #endif // BTREE_NODE_H

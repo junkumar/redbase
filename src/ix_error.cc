@@ -22,7 +22,7 @@ const char *IX_ErrorMsg[] = {
   (char*)"key attribute size is too big for a page",
   (char*)"error is in the PF component",
   (char*)"Index page with btree node is no longer valid",
-  (char*)"record size mismatch",
+  (char*)"Index file creation failed",
   (char*)"attempt to open already open file handle",
   (char*)"bad parameters specified to IX open file handle",
   (char*)"file is not open",

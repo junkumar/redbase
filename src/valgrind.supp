@@ -7,6 +7,14 @@
 }
 
 {
+   syscallwritecontainsuninitbyte
+   Memcheck:Param
+   write(buf)
+   fun:write$UNIX2003
+   ...
+}
+
+{
    ostream-operator-<<
    Memcheck:Leak
    fun:malloc
