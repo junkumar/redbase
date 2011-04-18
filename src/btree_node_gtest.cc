@@ -26,17 +26,46 @@ protected:
     ifh.pfHandle->GetThisPage(0, ph);
     // Needs to be called everytime GetThisPage is called.
     ifh.pfHandle->UnpinPage(0);
+
+		system("rm -f gtestfile2.0");
+		if(
+			(rc = ixm.CreateIndex("gtestfile2", 0, INT, sizeof(int))) 
+      || (rc =	ixm.OpenIndex("gtestfile2", 0, ifh2))
+			)
+			IX_PrintError(rc);
+
+    rc = ifh2.pfHandle->GetThisPage(0, ph2);
+    if (rc != 0) PF_PrintError(rc);
+
+    // Needs to be called everytime GetThisPage is called.
+    rc = ifh2.pfHandle->UnpinPage(0);
+    if (rc != 0) PF_PrintError(rc);
+
 	}
 
 	virtual void TearDown() 
   {
+    RC rc;
+		if(
+      (rc =	ixm.CloseIndex(ifh))
+			|| (rc = ixm.DestroyIndex("gtestfile", 0)) 
+			)
+			IX_PrintError(rc);
+
+		if(
+      (rc =	ixm.CloseIndex(ifh2))
+			|| (rc = ixm.DestroyIndex("gtestfile2", 0)) 
+			)
+			IX_PrintError(rc);
 	}
 
   // Declares the variables your tests want to use.
   IX_Manager ixm;
   PF_Manager pfm;
   PF_PageHandle ph;
+  PF_PageHandle ph2;
   IX_IndexHandle ifh;
+  IX_IndexHandle ifh2;
 };
 
 // Setup will call both constructor and Open()
@@ -208,4 +237,35 @@ TEST_F(BtreeNodeTest, Sort) {
   int val = 25;
   b.SetKey(3, &val);
   ASSERT_FALSE(b.isSorted());
+}
+
+TEST_F(BtreeNodeTest, Split) {
+  BtreeNode b(INT, sizeof(int), ph);
+  for (int i = 0; i <= 9; i++) {
+    b.Insert(&i, RID());
+    const int * pi = NULL;
+    b.GetKey(i, (void*&)pi);
+    ASSERT_EQ(i, *pi);
+  }
+  ASSERT_TRUE(b.isSorted());
+
+  BtreeNode r(INT, sizeof(int), ph2);
+  ASSERT_EQ(r.IsValid(), 0);
+  
+
+  ASSERT_EQ(10, b.GetNumKeys());
+  ASSERT_EQ(0, r.GetNumKeys());
+  
+  b.Split(&r);
+
+  ASSERT_EQ(5, b.GetNumKeys());
+  ASSERT_EQ(5, r.GetNumKeys());
+  
+  for (int i = 0; i < 5; i++) {
+    const int * pi = NULL;
+    r.GetKey(i, (void*&)pi);
+    ASSERT_EQ(i+5, *pi);
+  }
+  ASSERT_TRUE(r.isSorted());
+
 }

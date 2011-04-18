@@ -5,6 +5,7 @@
 #include "pf.h"
 #include "rm_rid.h"
 #include "ix_error.h"
+#include <iosfwd>
 
 // Key has to be a single attribute of type attrType and length attrLength
 
@@ -28,15 +29,31 @@ class BtreeNode {
   // return -1 if there is no space
   int Insert(const void* newkey, const RID& newrid);
 
-  int Remove(const void* newkey);
+// return 0 if remove was successful
+// return -1 if key does not exist
+// kpos is optional - will remove from that position if specified
+// if kpos is specified newkey can be NULL
+  int Remove(const void* newkey, int kpos = -1);
   
   // exact match
   int FindKey(const void* &key) const;
   RID FindAddr(const void* &key) const;
+  // get rid for given position
+  // return (-1, -1) if there was an error or pos was not found
+  RID GetAddr(const int pos) const;
+
 
   // find a poistion instead of exact match
   int FindKeyPosition(const void* &key) const;
   RID FindAddrAtPosition(const void* &key) const;
+
+  // split or merge this node with rhs node
+  RC Split(BtreeNode* rhs);
+  RC Merge(BtreeNode* rhs);
+
+  // print
+  void Print(ostream & os);
+
 
   int CmpKey(const void * k1, const void * k2) const;
   bool isSorted() const;

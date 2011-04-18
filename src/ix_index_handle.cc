@@ -50,7 +50,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
   while(result == -1) // no room in node - deal with overflow
   {
-
+    return -1;
   }
   
   if(level >= 0) {

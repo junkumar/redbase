@@ -24,6 +24,7 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
   char * pData = NULL;
   RC rc = ph.GetData(pData);
   if (rc != 0) {
+    // bad page - call IsValid after construction to check
     return;
   }
 
@@ -156,13 +157,23 @@ int BtreeNode::Insert(const void* newkey, const RID & rid)
 
 // return 0 if remove was successful
 // return -1 if key does not exist
-int BtreeNode::Remove(const void* newkey)
+// kpos is optional - will remove from that position if specified
+// if kpos is specified newkey can be NULL
+int BtreeNode::Remove(const void* newkey, int kpos)
 {
   assert(IsValid() == 0);
-  int pos = FindKey(newkey);
-  if (pos < 0)
-    return pos;
-  // shift all keys after this
+  int pos = -1;
+  if (kpos != -1) {
+    if (kpos < 0 || kpos >= numKeys)
+      return -1;
+    pos = kpos;
+  } 
+  else {
+    pos = FindKey(newkey);
+    if (pos < 0)
+      return pos;
+    // shift all keys after this
+  }
   for(int i = pos; i < numKeys-1; i++)
   {
     void *p;
@@ -201,8 +212,18 @@ int BtreeNode::FindKeyPosition(const void* &key) const
   return 0; // key is smaller than anything currently
 }
 
-// return position if key will fit in a particular position
-// return (-1, -1) if there was an error
+// get rid for given position
+// return (-1, -1) if there was an error or pos was not found
+RID BtreeNode::GetAddr(const int pos) const
+{
+  assert(IsValid() == 0);
+  if(pos < 0 || pos > numKeys)
+    return RID(-1, -1);
+  return rids[pos];
+}
+
+// return rid for exact key match
+// return (-1, -1) if there was an error or key was not found
 RID BtreeNode::FindAddr(const void* &key) const
 {
   assert(IsValid() == 0);
@@ -250,8 +271,9 @@ int BtreeNode::CmpKey(const void * a, const void * b) const
     if ( *(MyType*)a <  *(MyType*)b ) return -1;
   }
 
+  assert((false, "should never get here - bad attrtype"));
+  return 0;
 }
-
 
 bool BtreeNode::isSorted() const
 {
@@ -267,4 +289,87 @@ bool BtreeNode::isSorted() const
       return false;
   }
   return true;
+}
+
+// return -1 on error, 0 on success
+// split or merge this node with rhs node
+RC BtreeNode::Split(BtreeNode* rhs)
+{
+  assert(IsValid() == 0);
+  assert(rhs->IsValid() == 0);
+
+  // if (numKeys < order)
+  //   return -1; // splitting too early - TODO
+
+  // this node is full
+  // shift higher keys to rhs
+  int firstMovedPos = (numKeys+1)/2;
+  int moveCount = (numKeys - firstMovedPos + 1);
+  // ensure that rhs wont overflow
+  if( (rhs->GetNumKeys() + moveCount)
+      > rhs->GetMaxKeys())
+    return -1;
+
+  for (int pos = firstMovedPos; pos < numKeys; pos++) {
+    RID r = rids[pos];
+    void * k = NULL; this->GetKey(pos, k);
+    RC rc = rhs->Insert(k, r);
+    if(rc != 0) return rc;
+  }
+
+  // TODO use range remove - faster
+  for (int i = 0; i < moveCount; i++) {
+    RC rc = this->Remove(NULL, firstMovedPos);
+    if(rc != 0) return rc;
+  }
+
+  assert(IsValid() == 0);
+  assert(rhs->IsValid() == 0);
+  return 0;
+}
+
+// return -1 on error, 0 on success
+// merge this node with rhs node and put everything in this node
+RC BtreeNode::Merge(BtreeNode* rhs) {
+  assert(IsValid() == 0);
+  assert(rhs->IsValid() == 0);
+
+  if (numKeys + rhs->GetNumKeys() > order)
+    return -1; // overflow will result from merge
+
+  for (int pos = 0; pos < rhs->GetNumKeys(); pos++) {
+    void * k = NULL; rhs->GetKey(pos, k);
+    RID r = rhs->GetAddr(pos);
+    RC rc = this->Insert(k, r);
+    if(rc != 0) return rc;
+  }
+
+  int moveCount = rhs->GetNumKeys();
+  for (int i = 0; i < moveCount; i++) {
+    RC rc = rhs->Remove(NULL, 0);
+    if(rc != 0) return rc;
+  }
+
+  assert(IsValid() == 0);
+  assert(rhs->IsValid() == 0);
+  return 0;
+}
+
+void BtreeNode::Print(ostream & os) {
+  os << "numKeys = " << numKeys << endl;
+  os << "{";
+  for (int pos = 0; pos < GetNumKeys(); pos++) {
+    void * k = NULL; GetKey(pos, k);
+    os << "(";
+    if( attrType == INT )
+      os << *((int*)k);
+    if( attrType == FLOAT )
+      os << *((float*)k);
+    if( attrType == STRING )
+      os << *((char*)k);
+      
+    os << "," 
+       << GetAddr(pos) << "), ";
+  }
+  os << "}" << endl;
 }

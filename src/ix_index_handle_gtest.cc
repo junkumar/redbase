@@ -61,8 +61,6 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     RC rc = ifh.Search(&i, s);
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(r, s);
-    cerr << s << endl;
-
   }
 
   RC rc = ixm.CloseIndex(ifh);
@@ -76,7 +74,25 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     RID s;
     rc = ifh.Search(&i, s);
     ASSERT_EQ(rc, 0);
-    //ASSERT_EQ(r, s);
-    cerr << s << endl;
+    ASSERT_EQ(r, s);
   }
+}
+
+TEST_F(IX_IndexHandleTest, RootOverflow) {
+  for (int i = 0; i < 340; i++) {
+    RID r(i, i);
+    RC rc;
+    rc = ifh.InsertEntry(&i, r);
+    ASSERT_EQ(rc, 0);
+
+    RID s;
+    rc = ifh.Search(&i, s);
+    ASSERT_EQ(rc, 0);
+    ASSERT_EQ(r, s);
+  }
+
+  int i = 341;
+  RC rc = ifh.InsertEntry(&i, RID());
+  ASSERT_EQ(rc, 0);
+
 }
