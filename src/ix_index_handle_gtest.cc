@@ -27,6 +27,12 @@ protected:
 
 	virtual void TearDown() 
   {
+    RC rc;
+		if(
+      (rc =	ixm.CloseIndex(ifh))
+			|| (rc = ixm.DestroyIndex("gtestfile", 0)) 
+			)
+			IX_PrintError(rc);
 	}
 
   // Declares the variables your tests want to use.

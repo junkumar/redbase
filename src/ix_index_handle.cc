@@ -3,7 +3,8 @@
 IX_IndexHandle::IX_IndexHandle()
 	:pfHandle(NULL), bFileOpen(false), bHdrChanged(false)
 {
-  
+  root = NULL;
+  path = NULL;
 }
 
 IX_IndexHandle::~IX_IndexHandle()
@@ -22,11 +23,13 @@ IX_IndexHandle::~IX_IndexHandle()
 
 RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 {
+  assert(IsValid() == 0);
   bool newLargest = false;
   void * prevKey = NULL;
   int level = hdr.height - 1;
   BtreeNode* node = FindLeaf(pData);
-  
+  assert(node != NULL);
+
   // largest key in tree
   void * largest = NULL;
   node->LargestKey(largest);
@@ -95,6 +98,7 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, PageNum rootPage)
     RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph); 
     if (rc != 0) return rc;
   } else {
+    path = new BtreeNode* [1];
     PageNum p;
     RC rc = GetNewPage(p);
     if (rc != 0) return rc;
@@ -102,7 +106,6 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, PageNum rootPage)
     if (rc != 0) return rc;
     hdr.height = 1;
     hdr.rootPage = p;
-    hdr.numPages++;
   }
   
   bool leaf = (hdr.height == 1 ? true : false);
@@ -112,6 +115,7 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, PageNum rootPage)
                        leaf, true);
   hdr.order = root->GetMaxKeys();
 	bHdrChanged = true;
+  assert(IsValid() == 0);
 	return 0;
 }
 
@@ -145,7 +149,12 @@ RC IX_IndexHandle::IsValid () const
 {
   bool ret = true;
   ret = ret && (pfHandle != NULL);
-
+  if(hdr.height > 0) {
+    ret = ret && (hdr.rootPage > 0); // 0 is for file header
+    ret = ret && (hdr.numPages >= hdr.height + 1);
+    ret = ret && (root != NULL);
+    ret = ret && (path != NULL);
+  }
   return ret ? 0 : IX_BADIXPAGE;
 }
 
@@ -173,13 +182,13 @@ RC IX_IndexHandle::GetNewPage(PageNum& pageNum)
   return 0; // pageNum is set correctly
 }
 
-// return NULL if the key is bad
+// return NULL if there is not root
 // otherwise return a pointer to the leaf node where key might go
 // also populates the path member variable with the path
 BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
 {
   assert(IsValid() == 0);
-  if (root == NULL || path == NULL) return NULL;
+  if (root == NULL) return NULL;
   RID addr;
   if(hdr.height == 1) {
     path[0] = root;

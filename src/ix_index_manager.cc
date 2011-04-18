@@ -84,7 +84,8 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
   hdr.numPages = 1; // header page
   hdr.pairSize = attrLength + sizeof(RID);
   hdr.order = -1;
-  hdr.height = 1;
+  hdr.height = 0;
+  hdr.rootPage = -1;
   hdr.attrType = attrType;
   hdr.attrLength = attrLength;
   hdr.dups = false; //TODO get actual values
