@@ -29,9 +29,7 @@ IX_Manager::~IX_Manager()
 // CreateIndex
 //
 // Desc: Create a new IX table/file named fileName
-// with recordSize as the fixed size of records.
 // In:   fileName - name of file to create
-// In:   recordSize
 // Ret:  IX return code
 //
 RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
@@ -83,13 +81,13 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
     return IX_PF;
   }
   IX_FileHdr hdr;
-  hdr.firstFree = IX_PAGE_LIST_END;
-  hdr.numPages = 1; // hdr page
+  hdr.numPages = 1; // header page
   hdr.pairSize = attrLength + sizeof(RID);
   hdr.order = -1;
-  hdr.height = -1;
+  hdr.height = 1;
   hdr.attrType = attrType;
   hdr.attrLength = attrLength;
+  hdr.dups = false; //TODO get actual values
 
   memcpy(pData, &hdr, sizeof(hdr));
   //TODO - remove PF_PrintError or make it #define optional
@@ -168,7 +166,7 @@ RC IX_Manager::OpenIndex (const char *fileName, int indexNo, IX_IndexHandle &rmh
     return(rc);
   IX_FileHdr hdr;
   memcpy(&hdr, pData, sizeof(hdr));
-  rc = rmh.Open(&pfh, hdr.pairSize);
+  rc = rmh.Open(&pfh, hdr.pairSize, hdr.rootPage);
   if (rc < 0)
   {
     IX_PrintError(rc);

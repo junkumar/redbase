@@ -16,6 +16,7 @@ using namespace std;
 // Error table
 //
 const char *IX_WarnMsg[] = {
+  (char*)"key was not found in btree",
 };
 
 const char *IX_ErrorMsg[] = {
@@ -27,6 +28,7 @@ const char *IX_ErrorMsg[] = {
   (char*)"bad parameters specified to IX open file handle",
   (char*)"file is not open",
   (char*)"Bad RID - invalid page num or slot num",
+  (char*)"Bad Key - null or invalid",
   (char*)"end of file",
 };
 
@@ -46,10 +48,6 @@ void IX_PrintError(RC rc)
   else if ((-rc >= -START_IX_ERR) && -rc < -IX_LASTERROR)
 	{
    // Print error
-		cerr << "rc was " << rc << endl;
-		cerr << "START_IX_ERR was " << START_IX_ERR << endl;
-		cerr << "IX_LASTERROR was " << IX_LASTERROR << endl;
-
     cerr << "IX error: " << IX_ErrorMsg[-rc + START_IX_ERR] << "\n";
 	}
   else if (rc == 0)

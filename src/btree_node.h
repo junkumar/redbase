@@ -3,7 +3,7 @@
 
 #include "redbase.h"
 #include "pf.h"
-#include "ix_index_handle.h"
+#include "rm_rid.h"
 #include "ix_error.h"
 
 // Key has to be a single attribute of type attrType and length attrLength
@@ -21,15 +21,27 @@ class BtreeNode {
   RC IsValid() const;
   int GetMaxKeys() const;
   int GetNumKeys();
-  int GetKey(int pos, void* &key) const;
+  RC GetKey(int pos, void* &key) const;
   int SetKey(int pos, const void* newkey);
+
+  // return 0 if insert was successful
+  // return -1 if there is no space
   int Insert(const void* newkey, const RID& newrid);
+
   int Remove(const void* newkey);
+  
+  // exact match
   int FindKey(const void* &key) const;
+  RID FindAddr(const void* &key) const;
+
+  // find a poistion instead of exact match
   int FindKeyPosition(const void* &key) const;
+  RID FindAddrAtPosition(const void* &key) const;
+
   int CmpKey(const void * k1, const void * k2) const;
   bool isSorted() const;
-    
+  RC LargestKey(void *& key) const;
+
  private:
   // serialized
   char * keys; // should not be accessed directly as keys[] but with SetKey()
@@ -40,7 +52,6 @@ class BtreeNode {
   AttrType attrType;
   int order;
   // not serialized - convenience
-  PF_PageHandle * pph; // where did this page come from ?
   bool dups; // Are duplicate values allowed for keys ?
   bool isRoot;
   bool isLeaf;

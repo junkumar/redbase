@@ -8,9 +8,7 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
                      bool leaf, bool root)
 :keys(NULL), rids(NULL),
  attrLength(attrLength), attrType(attrType),
- pph(&ph),
- dups(duplicates), isRoot(root), isLeaf(leaf),
- numKeys(0)
+ dups(duplicates), isRoot(root), isLeaf(leaf)
 {
   order = floor((pageSize) / (sizeof(RID) + attrLength)) - 1;
   // n + 1 pointers + n keys + 1 keyspace used for numKeys
@@ -26,7 +24,6 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
   char * pData = NULL;
   RC rc = ph.GetData(pData);
   if (rc != 0) {
-    pph = NULL;
     return;
   }
 
@@ -36,8 +33,10 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
   keys = pData;
   rids = (RID*) (pData + attrLength*(order+1));
   // if this is an existing page read number of keys from page
-  if(!newPage)
+  if(!newPage) {
+    numKeys = 0; //needs init value >=0
     GetNumKeys();
+  }
   else
     // or start fresh with 0 keys
     numKeys = 0;
@@ -74,6 +73,20 @@ int BtreeNode::GetMaxKeys() const
   return order;
 };
 
+// populate NULL if there are no keys
+// other populate largest key
+RC BtreeNode::LargestKey(void *& key) const
+{
+  assert(IsValid() == 0);
+  if (numKeys > 0) {
+    GetKey(numKeys-1, key);
+    return 0;
+  } else {
+    key = NULL;
+    return 0;
+  }
+};
+
 int BtreeNode::GetNumKeys() 
 {
   assert(IsValid() == 0);
@@ -86,7 +99,7 @@ int BtreeNode::GetNumKeys()
 
 // return 0 if key is found at position
 // return -1 if position is bad
-int BtreeNode::GetKey(int pos, void* &key) const
+RC BtreeNode::GetKey(int pos, void* &key) const
 {
   assert(IsValid() == 0);
   assert(pos >= 0 && pos < numKeys);
@@ -162,6 +175,15 @@ int BtreeNode::Remove(const void* newkey)
   return 0;
 }
 
+// return position if key will fit in a particular position
+// return (-1, -1) if there was an error
+RID BtreeNode::FindAddrAtPosition(const void* &key) const
+{
+  assert(IsValid() == 0);
+  int pos = FindKeyPosition(key);
+  if (pos == -1) return RID(-1,-1);
+  return rids[pos];
+}
 
 // return position if key will fit in a particular position
 // return -1 if there was an error
@@ -178,6 +200,17 @@ int BtreeNode::FindKeyPosition(const void* &key) const
   }
   return 0; // key is smaller than anything currently
 }
+
+// return position if key will fit in a particular position
+// return (-1, -1) if there was an error
+RID BtreeNode::FindAddr(const void* &key) const
+{
+  assert(IsValid() == 0);
+  int pos = FindKey(key);
+  if (pos == -1) return RID(-1,-1);
+  return rids[pos];
+}
+
 
 // return position if key already exists at position
 // return -1 if there was an error or if key does not exist

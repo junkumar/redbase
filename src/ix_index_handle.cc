@@ -3,23 +3,68 @@
 IX_IndexHandle::IX_IndexHandle()
 	:pfHandle(NULL), bFileOpen(false), bHdrChanged(false)
 {
+  
 }
 
 IX_IndexHandle::~IX_IndexHandle()
 {
 	if(pfHandle != NULL)
 		delete pfHandle;
+	if(root != NULL)
+		delete root;
+	if(path != NULL) {
+    // path[0] is root
+    for (int i = 1; i < hdr.height; i++) 
+      if(path[i] != NULL) delete path[i];
+    delete [] path;
+  }
 }
 
 RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 {
+  bool newLargest = false;
+  void * prevKey = NULL;
+  int level = hdr.height - 1;
+  BtreeNode* node = FindLeaf(pData);
+  
+  // largest key in tree
+  void * largest = NULL;
+  node->LargestKey(largest);
+  if (largest == NULL ||
+      node->CmpKey(pData, largest) > 0) {
+    newLargest = true;
+    prevKey = largest;
+  }
+
+  int result = node->Insert(pData, rid);
+  
+  if(newLargest) {
+    for(int i=0; i < hdr.height-1; i++) {
+      int pos = path[i]->FindKeyPosition((const void *&)prevKey);
+      path[i]->SetKey(pos, pData);
+    }
+  }
+
+  while(result == -1) // no room in node - deal with overflow
+  {
+
+  }
+  
+  if(level >= 0) {
+    // insertion done
+    return 0;
+  } else {
+    // root split happened
+    hdr.height++;
+    return 0;
+  }
 }
 
 RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 {
 }
 
-RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize)
+RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, PageNum rootPage)
 {
 	if(bFileOpen || pfHandle != NULL) {
 		return IX_HANDLEOPEN; 
@@ -37,21 +82,37 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize)
   // Needs to be called everytime GetThisPage is called.
 	pfHandle->UnpinPage(0); 
 
-	{ // testing
-			 char * pData;
-			 ph.GetData(pData);
-			 IX_FileHdr hdr;
-			 memcpy(&hdr, pData, sizeof(hdr));
-			 // std::cerr << "IX_FileHandle::Open inner hdr.numPages" << hdr.numPages << std::endl;
-	}
-
-	this->GetFileHeader(ph); // write into hdr
+	this->GetFileHeader(ph); // write into hdr member
 	// std::cerr << "IX_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
 
-	
+	PF_PageHandle rootph;
+
+  bool newPage = true;
+  if (hdr.height > 0) {
+    path = new BtreeNode* [hdr.height];
+    newPage = false;
+
+    RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph); 
+    if (rc != 0) return rc;
+  } else {
+    PageNum p;
+    RC rc = GetNewPage(p);
+    if (rc != 0) return rc;
+    rc = pfHandle->GetThisPage(p, rootph);
+    if (rc != 0) return rc;
+    hdr.height = 1;
+    hdr.rootPage = p;
+    hdr.numPages++;
+  }
+  
+  bool leaf = (hdr.height == 1 ? true : false);
+  root = new BtreeNode(hdr.attrType, hdr.attrLength,
+                       rootph, newPage,
+                       PF_PAGE_SIZE, hdr.dups,
+                       leaf, true);
+  hdr.order = root->GetMaxKeys();
 	bHdrChanged = true;
 	return 0;
-
 }
 
 // get header from the first page of a newly opened file
@@ -76,11 +137,11 @@ RC IX_IndexHandle::SetFileHeader(PF_PageHandle ph) const
 // from the buffer pool to disk.  Default value forces all pages.
 RC IX_IndexHandle::ForcePages ()
 {
-	assert(pfHandle != NULL);
+  assert(IsValid() == 0);
 	return pfHandle->ForcePages(ALL_PAGES);
 }
 
-RC IX_IndexHandle::IsValid ()
+RC IX_IndexHandle::IsValid () const
 {
   bool ret = true;
   ret = ret && (pfHandle != NULL);
@@ -88,7 +149,7 @@ RC IX_IndexHandle::IsValid ()
   return ret ? 0 : IX_BADIXPAGE;
 }
 
-RC IX_FileHandle::GetNewPage(PageNum& pageNum) 
+RC IX_IndexHandle::GetNewPage(PageNum& pageNum) 
 {
 	assert(IsValid() == 0);
 	PF_PageHandle ph;
@@ -110,4 +171,55 @@ RC IX_FileHandle::GetNewPage(PageNum& pageNum)
   assert(hdr.numPages > 1); // page 0 is this page in worst case
   bHdrChanged = true;
   return 0; // pageNum is set correctly
+}
+
+// return NULL if the key is bad
+// otherwise return a pointer to the leaf node where key might go
+// also populates the path member variable with the path
+BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
+{
+  assert(IsValid() == 0);
+  if (root == NULL || path == NULL) return NULL;
+  RID addr;
+  if(hdr.height == 1) {
+    path[0] = root;
+    return root;
+  }
+
+  for (int i = 1; i < hdr.height; i++) 
+  {
+    RID r = path[i-1]->FindAddrAtPosition(pData);
+    bool leaf = (hdr.height-1 == i ? true : false );
+    
+    PF_PageHandle ph;
+    pfHandle->GetThisPage(r.Page(), ph);
+
+    // start with a fresh path
+    delete path[i];
+
+    path[i] = new BtreeNode(hdr.attrType, hdr.attrLength,
+                            ph, false,
+                            PF_PAGE_SIZE, hdr.dups,
+                            leaf, false);
+  }
+  return path[hdr.height-1];
+}
+
+// Search an index entry
+// return -ve if error
+// 0 if found
+// IX_KEYNOTFOUND if not found
+// rid is populated if found
+RC IX_IndexHandle::Search(void *pData, RID &rid)
+{
+  assert(IsValid() == 0);
+  if(pData == NULL)
+    return IX_BADKEY;
+  BtreeNode * leaf = FindLeaf(pData);
+  if(leaf == NULL)
+    return IX_BADKEY;
+  rid = leaf->FindAddr((const void*&)pData);
+  if(rid == RID(-1, -1))
+    return IX_KEYNOTFOUND;
+  return 0;
 }

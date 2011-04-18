@@ -17,11 +17,13 @@
 //
 struct IX_FileHdr {
   int numPages;      // # of pages in the file
+  PageNum rootPage;      // addr of root page
   int pairSize;      // size of each (key, RID) pair in index
   int order;         // order of btree
   int height;        // height of btree
   AttrType attrType;
   int attrLength;
+  bool dups;         // are duplicate values allowed for index key
 };
 
 const int IX_PAGE_LIST_END = -1;
@@ -44,11 +46,17 @@ class IX_IndexHandle {
   // Delete a new index entry
   RC DeleteEntry(void *pData, const RID &rid);
   
+  // Search an index entry
+  // return -ve if error
+  // 0 if found
+  // IX_KEYNOTFOUND if not found
+  RC Search(void *pData, RID &rid);
+
   // Force index files to disk
   RC ForcePages();
 
  private:
-  RC Open(PF_FileHandle * pfh, int pairSize);
+  RC Open(PF_FileHandle * pfh, int pairSize, PageNum p);
   RC GetFileHeader(PF_PageHandle ph);
   // persist header into the first page of a file for later
   RC SetFileHeader(PF_PageHandle ph) const;
@@ -56,6 +64,12 @@ class IX_IndexHandle {
   bool HdrChanged() const { return bHdrChanged; }
   int GetNumPages() const { return hdr.numPages; }
   RC GetNewPage(PageNum& pageNum);
+  RC IsValid() const;
+
+  // return NULL if the key is bad
+  // otherwise return a pointer to the leaf node where key might go
+  // also populates the path member variable with the path
+  BtreeNode* FindLeaf(const void *pData);
 
  private:
   IX_FileHdr hdr;

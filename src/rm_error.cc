@@ -47,10 +47,6 @@ void RM_PrintError(RC rc)
   else if ((-rc >= -START_RM_ERR) && -rc < -RM_LASTERROR)
 	{
    // Print error
-		cerr << "rc was " << rc << endl;
-		cerr << "START_RM_ERR was " << START_RM_ERR << endl;
-		cerr << "RM_LASTERROR was " << RM_LASTERROR << endl;
-
     cerr << "RM error: " << RM_ErrorMsg[-rc + START_RM_ERR] << "\n";
 	}
   else if (rc == 0)
