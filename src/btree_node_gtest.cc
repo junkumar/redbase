@@ -268,4 +268,18 @@ TEST_F(BtreeNodeTest, Split) {
   }
   ASSERT_TRUE(r.isSorted());
 
+  for (int i = 21; i <= 29; i++) {
+    b.Insert(&i, RID());
+  }
+
+  ASSERT_EQ(14, b.GetNumKeys());
+  ASSERT_EQ(5, r.GetNumKeys());
+
+  r.Merge(&b);
+
+  ASSERT_EQ(0, b.GetNumKeys());
+  ASSERT_EQ(19, r.GetNumKeys());
+  ASSERT_TRUE(r.isSorted());
+
+
 }

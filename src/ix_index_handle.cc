@@ -28,11 +28,11 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
   void * prevKey = NULL;
   int level = hdr.height - 1;
   BtreeNode* node = FindLeaf(pData);
+  BtreeNode* newNode = NULL;
   assert(node != NULL);
 
   // largest key in tree
-  void * largest = NULL;
-  node->LargestKey(largest);
+  void * largest = node->LargestKey();
   if (largest == NULL ||
       node->CmpKey(pData, largest) > 0) {
     newLargest = true;
@@ -47,18 +47,76 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
       path[i]->SetKey(pos, pData);
     }
   }
-
-  while(result == -1) // no room in node - deal with overflow
+  
+  // no room in node - deal with overflow - non-root
+  while(result == -1) 
   {
-    return -1;
+    cerr << "non root overflow" << endl;
+    void * largestKey = node->LargestKey();
+    
+    // make new  node
+    PF_PageHandle ph;
+    PageNum p;
+    RC rc = GetNewPage(p);
+    if (rc != 0) return IX_PF;
+    rc = pfHandle->GetThisPage(p, ph);
+    if (rc != 0) return IX_PF;
+  
+    bool leaf = true;
+    newNode = new BtreeNode(hdr.attrType, hdr.attrLength,
+                            ph, true,
+                            PF_PAGE_SIZE, hdr.dups,
+                            leaf, true);
+    hdr.numPages++;
+    
+    // split into new node
+    node->Split(newNode);
+    
+    // go up to parent level and repeat
+    level--;
+    if(level < 0) break;
+
+    BtreeNode * parent = path[level];
+    // update old key - keep same addr
+    int pos = parent->FindKey((const void*&)largestKey);
+    cerr << "pos was " << pos << endl;
+    cerr << "largestKey was " << *(int*)largestKey  << endl;
+    cerr << "parent largestKey was " << *(int*)parent->LargestKey()  << endl;
+    result = parent->SetKey(pos, node->LargestKey());
+    // insert new key
+    PageNum pp; ph.GetPageNum(pp);
+    result = parent->Insert(newNode->LargestKey(), RID(pp,-1));
+    
+    // TODO - setup prev and next pointers for sibling nodes
+
+    // iterate for parent node and split if required
+    node = parent;
   }
   
   if(level >= 0) {
     // insertion done
     return 0;
   } else {
-    // root split happened
-    hdr.height++;
+    cerr << "root split happened" << endl;
+    // make new root node
+    PF_PageHandle ph;
+    PageNum p;
+    RC rc = GetNewPage(p);
+    if (rc != 0) return IX_PF;
+    rc = pfHandle->GetThisPage(p, ph);
+    if (rc != 0) return IX_PF;
+  
+    bool leaf = false;
+    RID oldRID = root->GetPageRID();
+    root = new BtreeNode(hdr.attrType, hdr.attrLength,
+                         ph, true,
+                         PF_PAGE_SIZE, hdr.dups,
+                         leaf, true);
+    root->Insert(node->LargestKey(), oldRID);
+    root->Insert(node->LargestKey(), newNode->GetPageRID());
+
+    hdr.numPages++;
+    SetHeight(hdr.height++);
     return 0;
   }
 }
@@ -92,20 +150,19 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, PageNum rootPage)
 
   bool newPage = true;
   if (hdr.height > 0) {
-    path = new BtreeNode* [hdr.height];
+    SetHeight(hdr.height); // do all other init
     newPage = false;
 
     RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph); 
     if (rc != 0) return rc;
   } else {
-    path = new BtreeNode* [1];
     PageNum p;
     RC rc = GetNewPage(p);
     if (rc != 0) return rc;
     rc = pfHandle->GetThisPage(p, rootph);
     if (rc != 0) return rc;
-    hdr.height = 1;
     hdr.rootPage = p;
+    SetHeight(1); // do all other init
   }
   
   bool leaf = (hdr.height == 1 ? true : false);
@@ -113,6 +170,7 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, PageNum rootPage)
                        rootph, newPage,
                        PF_PAGE_SIZE, hdr.dups,
                        leaf, true);
+  path[0] = root;
   hdr.order = root->GetMaxKeys();
 	bHdrChanged = true;
   assert(IsValid() == 0);
@@ -232,3 +290,19 @@ RC IX_IndexHandle::Search(void *pData, RID &rid)
     return IX_KEYNOTFOUND;
   return 0;
 }
+
+// get/set height
+int IX_IndexHandle::GetHeight() const
+{
+  return hdr.height;
+}
+void IX_IndexHandle::SetHeight(const int& h)
+{
+  delete [] path;
+  hdr.height = h;
+  path = new BtreeNode* [hdr.height];
+  for(int i=1;i < hdr.height; i++)
+    path[i] = NULL;
+  path[0] = root;
+}
+

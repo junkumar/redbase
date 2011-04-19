@@ -54,10 +54,13 @@ class BtreeNode {
   // print
   void Print(ostream & os);
 
+  // get/set pageRID
+  RID GetPageRID() const;
+  void SetPageRID(const RID&);
 
   int CmpKey(const void * k1, const void * k2) const;
   bool isSorted() const;
-  RC LargestKey(void *& key) const;
+  void* LargestKey() const;
 
  private:
   // serialized
@@ -72,6 +75,7 @@ class BtreeNode {
   bool dups; // Are duplicate values allowed for keys ?
   bool isRoot;
   bool isLeaf;
+  RID pageRID;
 };
 
 

@@ -28,8 +28,8 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
     return;
   }
 
-  // keys = new char[attrLength*(order+1)];
-  // rids = new RID[order+1];
+  PageNum p; ph.GetPageNum(p);
+  SetPageRID(RID(p, -1));
 
   keys = pData;
   rids = (RID*) (pData + attrLength*(order+1));
@@ -42,6 +42,16 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
     // or start fresh with 0 keys
     numKeys = 0;
   assert(IsValid() == 0);
+}
+
+// get/set pageRID
+RID BtreeNode::GetPageRID() const
+{
+  return pageRID;
+}
+void BtreeNode::SetPageRID(const RID& r)
+{
+  pageRID = r;
 }
 
 
@@ -76,15 +86,16 @@ int BtreeNode::GetMaxKeys() const
 
 // populate NULL if there are no keys
 // other populate largest key
-RC BtreeNode::LargestKey(void *& key) const
+void* BtreeNode::LargestKey() const
 {
   assert(IsValid() == 0);
+  void * key = NULL;
   if (numKeys > 0) {
     GetKey(numKeys-1, key);
-    return 0;
+    return key;
   } else {
-    key = NULL;
-    return 0;
+    assert("Largest Key called when numKey <= 0");
+    return NULL;
   }
 };
 

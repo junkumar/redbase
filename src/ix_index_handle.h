@@ -55,7 +55,6 @@ class IX_IndexHandle {
   // Force index files to disk
   RC ForcePages();
 
- private:
   RC Open(PF_FileHandle * pfh, int pairSize, PageNum p);
   RC GetFileHeader(PF_PageHandle ph);
   // persist header into the first page of a file for later
@@ -70,6 +69,10 @@ class IX_IndexHandle {
   // otherwise return a pointer to the leaf node where key might go
   // also populates the path member variable with the path
   BtreeNode* FindLeaf(const void *pData);
+
+  // get/set height
+  int GetHeight() const;
+  void SetHeight(const int&);
 
  private:
   IX_FileHdr hdr;
