@@ -33,15 +33,16 @@ IX_Manager::~IX_Manager()
 // Ret:  IX return code
 //
 RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
-                            AttrType attrType, int attrLength)
+                            AttrType attrType, int attrLength,
+                            int pageSize)
 {
-  if(attrLength >= PF_PAGE_SIZE - sizeof(RID))
+  if(attrLength >= pageSize - sizeof(RID))
     return IX_SIZETOOBIG;
 
   if(indexNo < 0 ||
      attrType < INT ||
      attrType > STRING ||
-     attrLength > PF_PAGE_SIZE - sizeof(RID) ||
+     attrLength > pageSize - sizeof(RID) ||
      fileName == NULL)
     return IX_FCREATEFAIL;
 
@@ -82,6 +83,7 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
   }
   IX_FileHdr hdr;
   hdr.numPages = 1; // header page
+  hdr.pageSize = pageSize;
   hdr.pairSize = attrLength + sizeof(RID);
   hdr.order = -1;
   hdr.height = 0;
@@ -167,7 +169,7 @@ RC IX_Manager::OpenIndex (const char *fileName, int indexNo, IX_IndexHandle &rmh
     return(rc);
   IX_FileHdr hdr;
   memcpy(&hdr, pData, sizeof(hdr));
-  rc = rmh.Open(&pfh, hdr.pairSize, hdr.rootPage);
+  rc = rmh.Open(&pfh, hdr.pairSize, hdr.rootPage, hdr.pageSize);
   if (rc < 0)
   {
     IX_PrintError(rc);

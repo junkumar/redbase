@@ -25,7 +25,8 @@ class IX_Manager {
 
   // Create a new Index
   RC CreateIndex(const char *fileName, int indexNo,
-                 AttrType attrType, int attrLength);
+                 AttrType attrType, int attrLength,
+                 int pageSize = PF_PAGE_SIZE);
 
   // Destroy and Index
   RC DestroyIndex(const char *fileName, int indexNo);

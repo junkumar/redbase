@@ -24,6 +24,8 @@ class BtreeNode {
   int GetNumKeys();
   RC GetKey(int pos, void* &key) const;
   int SetKey(int pos, const void* newkey);
+  int CopyKey(int pos, void* toKey) const;
+
 
   // return 0 if insert was successful
   // return -1 if there is no space

@@ -71,9 +71,14 @@ RC BtreeNode::IsValid() const
 
   bool ret = true;
   ret = ret && (keys != NULL);
+  assert(ret);
   ret = ret && (rids != NULL);
+  assert(ret);
   ret = ret && (numKeys >= 0);
-
+  assert(ret);
+  ret = ret && (numKeys <= order);
+  if(!ret)
+    cerr << "order was " << order << " numkeys was  " << numKeys << endl;
   return ret ? 0 : IX_BADIXPAGE;
 };
 
@@ -126,6 +131,30 @@ RC BtreeNode::GetKey(int pos, void* &key) const
     }
 }
 
+// copy key at location pos to the pointer provided
+// must be already allocated
+int BtreeNode::CopyKey(int pos, void* toKey) const
+{
+  assert(IsValid() == 0);
+  assert(pos >= 0 && pos <= order);
+  if(toKey == NULL)
+    return -1;
+  if (pos >= 0 && pos <= order) 
+    {
+      memcpy(toKey,
+             keys + attrLength*pos,
+             attrLength);
+      return 0;
+    } 
+  else 
+    {
+      return -1;
+    }
+}
+
+// set key at location pos with a copy of whatever pointer provided
+// points to
+// returns -1 on error
 int BtreeNode::SetKey(int pos, const void* newkey)
 {
   assert(IsValid() == 0);
@@ -203,7 +232,7 @@ RID BtreeNode::FindAddrAtPosition(const void* &key) const
 {
   assert(IsValid() == 0);
   int pos = FindKeyPosition(key);
-  if (pos == -1) return RID(-1,-1);
+  if (pos == -1 || pos >= numKeys) return RID(-1,-1);
   return rids[pos];
 }
 
@@ -219,7 +248,7 @@ int BtreeNode::FindKeyPosition(const void* &key) const
       return -1;
     if (CmpKey(key, k) >= 0)
       return i+1;
-  }
+   }
   return 0; // key is smaller than anything currently
 }
 
@@ -282,8 +311,8 @@ int BtreeNode::CmpKey(const void * a, const void * b) const
     if ( *(MyType*)a <  *(MyType*)b ) return -1;
   }
 
-  assert((false, "should never get here - bad attrtype"));
-  return 0;
+  assert("should never get here - bad attrtype");
+  return 0; // to satisfy gcc warnings
 }
 
 bool BtreeNode::isSorted() const
@@ -367,7 +396,6 @@ RC BtreeNode::Merge(BtreeNode* rhs) {
 }
 
 void BtreeNode::Print(ostream & os) {
-  os << "numKeys = " << numKeys << endl;
   os << "{";
   for (int pos = 0; pos < GetNumKeys(); pos++) {
     void * k = NULL; GetKey(pos, k);
@@ -382,5 +410,5 @@ void BtreeNode::Print(ostream & os) {
     os << "," 
        << GetAddr(pos) << "), ";
   }
-  os << "}" << endl;
+  os << "}\n";
 }

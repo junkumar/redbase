@@ -17,7 +17,8 @@
 //
 struct IX_FileHdr {
   int numPages;      // # of pages in the file
-  PageNum rootPage;      // addr of root page
+  int pageSize;      // size per index node - usually PF_PAGE_SIZE
+  PageNum rootPage;  // addr of root page
   int pairSize;      // size of each (key, RID) pair in index
   int order;         // order of btree
   int height;        // height of btree
@@ -55,7 +56,7 @@ class IX_IndexHandle {
   // Force index files to disk
   RC ForcePages();
 
-  RC Open(PF_FileHandle * pfh, int pairSize, PageNum p);
+  RC Open(PF_FileHandle * pfh, int pairSize, PageNum p, int pageSize);
   RC GetFileHeader(PF_PageHandle ph);
   // persist header into the first page of a file for later
   RC SetFileHeader(PF_PageHandle ph) const;
@@ -69,10 +70,14 @@ class IX_IndexHandle {
   // otherwise return a pointer to the leaf node where key might go
   // also populates the path member variable with the path
   BtreeNode* FindLeaf(const void *pData);
+  BtreeNode* FetchNode(RID r) const;
 
   // get/set height
   int GetHeight() const;
   void SetHeight(const int&);
+
+  const BtreeNode* GetRoot() const;
+  void Print(ostream&, int level = -1, RID r = RID(-1,-1)) const;
 
  private:
   IX_FileHdr hdr;
@@ -82,6 +87,7 @@ class IX_IndexHandle {
   BtreeNode * root; // root in turn points to the other nodes
   BtreeNode ** path; // list of nodes that is the path to leaf as a
                      // result of a search.
+  void * treeLargest; // largest key in the entire tree
 };
 
 #endif // #IX_FILE_HANDLE_H
