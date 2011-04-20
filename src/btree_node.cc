@@ -179,17 +179,30 @@ int BtreeNode::Insert(const void* newkey, const RID & rid)
   assert(IsValid() == 0);
   if(numKeys >= order) return -1;
   int i = -1;
+  void *prevKey = NULL;
+  void *currKey = NULL;
   for(i = numKeys-1; i >= 0; i--)
   {
-    void *p;
-    GetKey(i, p);    
-    if (CmpKey(newkey, p) > 0)
+    prevKey = currKey;
+    GetKey(i, currKey);    
+    if (CmpKey(newkey, currKey) >= 0)
       break; // go out and insert at i
     rids[i+1] = rids[i];
-    SetKey(i + 1, p);
+    SetKey(i + 1, currKey);
   }
+  // handle case where keys are equal
+  // can result only from a split an a newer page in a split will
+  // always have the higher pageNum
+  // if (prevKey != NULL && CmpKey(prevKey, currKey)) {
+  // TODO - not needed for now - trying >=
+  // }
+  // inserting at i
+
+
   rids[i+1] = rid;
   SetKey(i+1, newkey);
+
+  assert(isSorted());
   numKeys++;
   SetKey(order, &numKeys);
   return 0;
@@ -279,7 +292,7 @@ int BtreeNode::FindKey(const void* &key) const
 {
   assert(IsValid() == 0);
 
-  for(int i = 0; i < numKeys; i++)
+  for(int i = numKeys-1; i >= 0; i--)
   {
     void* k;
     if(GetKey(i, k) != 0)
@@ -363,6 +376,9 @@ RC BtreeNode::Split(BtreeNode* rhs)
     if(rc != 0) return rc;
   }
 
+  assert(isSorted());
+  assert(rhs->isSorted());
+
   assert(IsValid() == 0);
   assert(rhs->IsValid() == 0);
   return 0;
@@ -396,7 +412,7 @@ RC BtreeNode::Merge(BtreeNode* rhs) {
 }
 
 void BtreeNode::Print(ostream & os) {
-  os << "{";
+  os << pageRID.Page() << "{";
   for (int pos = 0; pos < GetNumKeys(); pos++) {
     void * k = NULL; GetKey(pos, k);
     os << "(";

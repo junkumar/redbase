@@ -129,7 +129,7 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
   int i = 680;
   RC rc = ifh.InsertEntry(&i, RID());
   ASSERT_EQ(rc, 0);
-  ASSERT_EQ(ifh.GetNumPages(), 5);
+  ASSERT_EQ(ifh.GetNumPages(), 6);
 }
 
 TEST_F(IX_IndexHandleTest, SmallPage) {
@@ -236,6 +236,36 @@ TEST_F(IX_IndexHandleTest, 4SmallPage) {
   
   // simple insert
   int i = 32;
+  RC rc = sifh.InsertEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ASSERT_EQ(sifh.GetHeight(), 3);
+
+}
+
+TEST_F(IX_IndexHandleTest, SmallDups) {
+  int ifh = 1; //masking
+
+  const BtreeNode * root = sifh.GetRoot();
+  ASSERT_EQ(root->GetMaxKeys(), 3);
+ 
+  // Simple insert - order 2
+  int entries[] = {31,30,31,30,11,5,3};
+  
+  for (int i = 0; i < 7; i++) {
+    RID r(0, 0);
+    RC rc;
+    cerr << "Inserting " << *(entries+i) << endl;
+    rc = sifh.InsertEntry(entries+i, r);
+    ASSERT_EQ(rc, 0);
+    sifh.Print(cerr);
+    cerr << endl << endl;
+  }
+  ASSERT_EQ(sifh.GetHeight(), 3);
+  
+  // simple insert
+  int i = 32;
+  cerr << "Inserting " << i << endl;
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
   sifh.Print(cerr);

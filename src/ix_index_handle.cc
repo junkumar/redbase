@@ -5,6 +5,7 @@ IX_IndexHandle::IX_IndexHandle()
 {
   root = NULL;
   path = NULL;
+  pathP = NULL;
   treeLargest = NULL;
 }
 
@@ -14,6 +15,8 @@ IX_IndexHandle::~IX_IndexHandle()
 		delete pfHandle;
 	if(root != NULL)
 		delete root;
+	if(pathP != NULL)
+		delete [] pathP;
 	if(path != NULL) {
     // path[0] is root
     for (int i = 1; i < hdr.height; i++) 
@@ -70,7 +73,11 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     // cerr << "non root overflow" << endl;
 
     char * charPtr = new char[hdr.attrLength];
-    void * oldLargest = charPtr; 
+    void * oldLargest = charPtr;
+    // pos at which parent stores a pointer to this node
+    int posAtParent = pathP[level-1];
+    cerr << "posAtParent was " << posAtParent << endl ;
+
     if(node->LargestKey() == NULL)
       oldLargest = NULL;
     else
@@ -95,13 +102,18 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
                             leaf, true);
     // split into new node
     node->Split(newNode);
-    
-    // put the new entry into one of the 2 now
-    if(node->CmpKey(pData, node->LargestKey()) > 0)
-      newNode->Insert(failedKey, failedRid);
-    else // <=
-      node->Insert(failedKey, failedRid);
 
+    BtreeNode * nodeInsertedInto = NULL;
+
+    // put the new entry into one of the 2 now
+    if(node->CmpKey(pData, node->LargestKey()) > 0) {
+      newNode->Insert(failedKey, failedRid);
+      nodeInsertedInto = newNode;
+    }
+    else { // <=
+      node->Insert(failedKey, failedRid);
+      nodeInsertedInto = node;
+    }
 
     // go up to parent level and repeat
     level--;
@@ -109,14 +121,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     BtreeNode * parent = path[level];
     // update old key - keep same addr
-    int pos = parent->FindKey((const void*&)oldLargest);
-    // cerr << "pos was " << pos << endl;
-    // cerr << "oldLargestKey was " << *(int*)oldLargest  << endl;
-    // cerr << "parent largestKey was " << *(int*)parent->LargestKey()  << endl
-      ;
-    if(pos != -1)
-      result = parent->SetKey(pos, node->LargestKey());
-    // else the special case would have handled this already
+    RID oldrid = parent->GetAddr(posAtParent);
+    parent->Remove(NULL, posAtParent);
+    result = parent->Insert((const void*)node->LargestKey(), oldrid);
     delete [] charPtr;
 
     // insert new key
@@ -127,7 +134,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     // iterate for parent node and split if required
     node = parent;
-    failedKey = newNode->LargestKey();
+    failedKey = nodeInsertedInto->LargestKey();
     failedRid = RID(pp,-1);
   }  
   if(level >= 0) {
@@ -299,6 +306,7 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
   for (int i = 1; i < hdr.height; i++) 
   {
     RID r = path[i-1]->FindAddrAtPosition(pData);
+    int pos = path[i-1]->FindKeyPosition(pData);
     if(r.Page() == -1) {
       // pData is bigger than any other key - return address of node
       // that largest key points to.
@@ -306,10 +314,12 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
       // cerr << "p was " << *(int*)p << endl;
       r = path[i-1]->FindAddr((const void*&)(p));
       // cerr << "r was " << r << endl;
+      pos = path[i-1]->FindKey((const void*&)(p));
     }
     // start with a fresh path
     delete path[i];
     path[i] = FetchNode(r);
+    pathP[i-1] = pos;
   }
   return path[hdr.height-1];
 }
@@ -362,6 +372,10 @@ void IX_IndexHandle::SetHeight(const int& h)
   for(int i=1;i < hdr.height; i++)
     path[i] = NULL;
   path[0] = root;
+
+  pathP = new int [hdr.height-1]; // leaves don't point
+  for(int i=0;i < hdr.height-1; i++)
+    pathP[i] = -1;
 }
 
 const BtreeNode* IX_IndexHandle::GetRoot() const

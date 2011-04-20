@@ -87,6 +87,9 @@ class IX_IndexHandle {
   BtreeNode * root; // root in turn points to the other nodes
   BtreeNode ** path; // list of nodes that is the path to leaf as a
                      // result of a search.
+  int* pathP; // the position in the parent in the path the points to
+              // the child node.
+
   void * treeLargest; // largest key in the entire tree
 };
 
