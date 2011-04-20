@@ -58,7 +58,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     memcpy(treeLargest,
            pData,
            hdr.attrLength);
-    cerr << "new treeLargest " << *(int*)treeLargest << endl;
+    // cerr << "new treeLargest " << *(int*)treeLargest << endl;
   }
   
   
@@ -67,7 +67,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
   RID failedRid = rid;
   while(result == -1) 
   {
-    cerr << "non root overflow" << endl;
+    // cerr << "non root overflow" << endl;
 
     char * charPtr = new char[hdr.attrLength];
     void * oldLargest = charPtr; 
@@ -77,8 +77,8 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
       node->CopyKey(node->GetNumKeys()-1, oldLargest);
 
 
-    cerr << "nro largestKey was " << *(int*)oldLargest  << endl;
-    cerr << "nro numKeys was " << node->GetNumKeys()  << endl;
+    // cerr << "nro largestKey was " << *(int*)oldLargest  << endl;
+    // cerr << "nro numKeys was " << node->GetNumKeys()  << endl;
 
     // make new  node
     PF_PageHandle ph;
@@ -93,8 +93,6 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
                             ph, true,
                             hdr.pageSize, hdr.dups,
                             leaf, true);
-    hdr.numPages++;
-    
     // split into new node
     node->Split(newNode);
     
@@ -112,9 +110,10 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     BtreeNode * parent = path[level];
     // update old key - keep same addr
     int pos = parent->FindKey((const void*&)oldLargest);
-    cerr << "pos was " << pos << endl;
-    cerr << "oldLargestKey was " << *(int*)oldLargest  << endl;
-    cerr << "parent largestKey was " << *(int*)parent->LargestKey()  << endl;
+    // cerr << "pos was " << pos << endl;
+    // cerr << "oldLargestKey was " << *(int*)oldLargest  << endl;
+    // cerr << "parent largestKey was " << *(int*)parent->LargestKey()  << endl
+      ;
     if(pos != -1)
       result = parent->SetKey(pos, node->LargestKey());
     // else the special case would have handled this already
@@ -135,7 +134,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     // insertion done
     return 0;
   } else {
-    cerr << "root split happened" << endl;
+    // cerr << "root split happened" << endl;
     // make new root node
     PF_PageHandle ph;
     PageNum p;
@@ -153,7 +152,6 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     root->Insert(node->LargestKey(), oldRID);
     root->Insert(newNode->LargestKey(), newNode->GetPageRID());
 
-    hdr.numPages++;
     SetHeight(++hdr.height);
     return 0;
   }
@@ -278,7 +276,7 @@ RC IX_IndexHandle::GetNewPage(PageNum& pageNum)
 //  (rc = pfHandle->MarkDirty(pageNum)) ||
     (rc = pfHandle->UnpinPage(pageNum)))
     return rc;
-  cerr << "GetNewPage called to get page " << pageNum << endl;
+  // cerr << "GetNewPage called to get page " << pageNum << endl;
   hdr.numPages++;
   assert(hdr.numPages > 1); // page 0 is this page in worst case
   bHdrChanged = true;
@@ -305,9 +303,9 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
       // pData is bigger than any other key - return address of node
       // that largest key points to.
       const void * p = path[i-1]->LargestKey();
-      cerr << "p was " << *(int*)p << endl;
+      // cerr << "p was " << *(int*)p << endl;
       r = path[i-1]->FindAddr((const void*&)(p));
-      cerr << "r was " << r << endl;
+      // cerr << "r was " << r << endl;
     }
     // start with a fresh path
     delete path[i];

@@ -107,8 +107,8 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
     rc = ifh.Search(&i, s);
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(r, s);
+    // cerr << "pages " << ifh.GetNumPages() << endl;
   }
-  cerr << "first 340 done" << endl;
   ASSERT_EQ(ifh.GetHeight(), 1);
   ASSERT_EQ(ifh.GetNumPages(), 2);
 
@@ -118,16 +118,18 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
     RID r(i, i);
     RC rc;
     rc = ifh.InsertEntry(&j, r);
-    // cerr << "insert of " << j << " done" << endl;
     ASSERT_EQ(rc, 0);
   }
-  cerr << "second 340 done" << endl;
-  ASSERT_EQ(ifh.GetHeight(), 1);
-  //TODO - failing - ASSERT_EQ(ifh.GetNumPages(), 3);
+  ASSERT_EQ(ifh.GetHeight(), 2);
+  // first split at 340 - 3 pages
+  // second split at 340 + 340/2  - 510 - 4 pages
+  // thir split at 510 + 340/2 - 680 - 5 pages
+  //ASSERT_EQ(ifh.GetNumPages(), 4);
 
   int i = 680;
   RC rc = ifh.InsertEntry(&i, RID());
   ASSERT_EQ(rc, 0);
+  ASSERT_EQ(ifh.GetNumPages(), 5);
 }
 
 TEST_F(IX_IndexHandleTest, SmallPage) {
