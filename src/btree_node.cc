@@ -10,17 +10,20 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
  attrLength(attrLength), attrType(attrType),
  dups(duplicates), isRoot(root), isLeaf(leaf)
 {
-  order = floor((pageSize) / (sizeof(RID) + attrLength)) - 1;
+
+  order = floor(
+    (pageSize + sizeof(numKeys) + 2*sizeof(PageNum)) / 
+    (sizeof(RID) + attrLength));
   // n + 1 pointers + n keys + 1 keyspace used for numKeys
-  while( ((order+1) * (attrLength + sizeof(RID)))
-         > (unsigned int) pageSize)
+  while( ((order) * (attrLength + sizeof(RID)))
+         > ((unsigned int) pageSize - sizeof(numKeys) - 2*sizeof(PageNum) ))
     order--;
-  assert( ((order+1) * (attrLength + sizeof(RID))) 
-          <= (unsigned int) pageSize);
-  
+  assert( ((order) * (attrLength + sizeof(RID))) 
+          <= (unsigned int) pageSize - sizeof(numKeys) - 2*sizeof(PageNum) );
+
   // Leaf Node - RID(i) points to the record associated with keys(i)
   // Intermediate Node - RID(i) points to the ix page associated with
-  // keys < keys(i)
+  // keys <= keys(i)
   char * pData = NULL;
   RC rc = ph.GetData(pData);
   if (rc != 0) {
@@ -32,17 +35,82 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
   SetPageRID(RID(p, -1));
 
   keys = pData;
-  rids = (RID*) (pData + attrLength*(order+1));
+  rids = (RID*) (pData + attrLength*(order));
   // if this is an existing page read number of keys from page
   if(!newPage) {
     numKeys = 0; //needs init value >=0
     GetNumKeys();
+    GetLeft();
+    GetRight();
   }
   else
     // or start fresh with 0 keys
     numKeys = 0;
+
   assert(IsValid() == 0);
+  //Layout
+    // n * keys - takes up n * attrLength
+    // n * RIds - takes up n * sizeof(RID)
+    // numKeys - takes up sizeof(int)
+    // left - takes up sizeof(PageNum)
+    // right - takes up sizeof(PageNum)
 }
+
+int BtreeNode::GetNumKeys() 
+{
+  assert(IsValid() == 0);
+  // get from page and store in local var
+  void * loc = (char*)rids + sizeof(RID)*order;
+  int * pi = (int *) loc;
+  numKeys = *pi;
+  return numKeys;
+};
+
+// sets number of keys
+// returns -1 on error
+int BtreeNode::SetNumKeys(int newNumKeys)
+{
+  assert(IsValid() == 0);
+  memcpy((char*)rids + sizeof(RID)*order,
+         &newNumKeys,
+         sizeof(int));
+  numKeys = newNumKeys; // conv variable
+  return 0;
+}
+
+PageNum BtreeNode::GetLeft() 
+{
+  assert(IsValid() == 0);
+  void * loc = (char*)rids + sizeof(RID)*order + sizeof(int);
+  return *((PageNum*) loc);
+};
+
+int BtreeNode::SetLeft(PageNum p)
+{
+  assert(IsValid() == 0);
+  memcpy((char*)rids + sizeof(RID)*order + sizeof(int),
+         &p,
+         sizeof(PageNum));
+  return 0;
+}
+
+PageNum BtreeNode::GetRight() 
+{
+  assert(IsValid() == 0);
+  void * loc = (char*)rids + sizeof(RID)*order + sizeof(int) + sizeof(PageNum);
+  return *((PageNum*) loc);
+};
+
+int BtreeNode::SetRight(PageNum p)
+{
+  assert(IsValid() == 0);
+  memcpy((char*)rids + sizeof(RID)*order + sizeof(int)  + sizeof(PageNum),
+         &p,
+         sizeof(PageNum));
+  return 0;
+}
+
+
 
 // get/set pageRID
 RID BtreeNode::GetPageRID() const
@@ -104,15 +172,6 @@ void* BtreeNode::LargestKey() const
   }
 };
 
-int BtreeNode::GetNumKeys() 
-{
-  assert(IsValid() == 0);
-  // get from page and store in local var
-  char * loc = keys + attrLength*order;
-  int * pi = (int *) loc;  
-  numKeys = *pi;
-  return numKeys;
-};
 
 // return 0 if key is found at position
 // return -1 if position is bad
@@ -136,10 +195,10 @@ RC BtreeNode::GetKey(int pos, void* &key) const
 int BtreeNode::CopyKey(int pos, void* toKey) const
 {
   assert(IsValid() == 0);
-  assert(pos >= 0 && pos <= order);
+  assert(pos >= 0 && pos < order);
   if(toKey == NULL)
     return -1;
-  if (pos >= 0 && pos <= order) 
+  if (pos >= 0 && pos < order) 
     {
       memcpy(toKey,
              keys + attrLength*pos,
@@ -158,8 +217,8 @@ int BtreeNode::CopyKey(int pos, void* toKey) const
 int BtreeNode::SetKey(int pos, const void* newkey)
 {
   assert(IsValid() == 0);
-  assert(pos >= 0 && pos <= order);
-  if (pos >= 0 && pos <= order) 
+  assert(pos >= 0 && pos < order);
+  if (pos >= 0 && pos < order) 
     {
       memcpy(keys + attrLength*pos,
              newkey,
@@ -173,7 +232,7 @@ int BtreeNode::SetKey(int pos, const void* newkey)
 }
 
 // return 0 if insert was successful
-// return -1 if there is no space
+// return -1 if there is no space - overflow
 int BtreeNode::Insert(const void* newkey, const RID & rid)
 {
   assert(IsValid() == 0);
@@ -203,8 +262,8 @@ int BtreeNode::Insert(const void* newkey, const RID & rid)
   SetKey(i+1, newkey);
 
   assert(isSorted());
-  numKeys++;
-  SetKey(order, &numKeys);
+//  numKeys++;
+  SetNumKeys(GetNumKeys()+1);
   return 0;
 }
 
@@ -234,8 +293,7 @@ int BtreeNode::Remove(const void* newkey, int kpos)
     SetKey(i, p);
     rids[i] = rids[i+1];
   }
-  numKeys--;
-  SetKey(order, &numKeys);
+  SetNumKeys(GetNumKeys()-1);
   return 0;
 }
 

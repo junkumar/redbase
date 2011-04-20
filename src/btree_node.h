@@ -21,7 +21,15 @@ class BtreeNode {
   friend class BtreeNodeTest;
   RC IsValid() const;
   int GetMaxKeys() const;
+  
+  // structural setters/getters - affect PF_page composition
   int GetNumKeys();
+  int SetNumKeys(int newNumKeys);
+  int GetLeft();
+  int SetLeft(PageNum p);
+  int GetRight();
+  int SetRight(PageNum p);
+
   RC GetKey(int pos, void* &key) const;
   int SetKey(int pos, const void* newkey);
   int CopyKey(int pos, void* toKey) const;

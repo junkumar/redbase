@@ -2,6 +2,7 @@
 #include "btree_node.h"
 #include "ix_index_manager.h"
 #include "gtest/gtest.h"
+#include "rm_error.h"
 
 #define STRLEN 29
 struct TestRec {
@@ -80,16 +81,24 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     ASSERT_EQ(r, s);
   }
 
+  ASSERT_EQ(ifh.GetRoot()->GetNumKeys(), 9);
+  ifh.GetRoot()->SetLeft(4);
+  ASSERT_EQ(ifh.GetRoot()->GetLeft(), 4);
+
   RC rc = ixm.CloseIndex(ifh);
   ASSERT_EQ(rc, 0);
 
   rc = ixm.OpenIndex("gtestfile", 0, ifh);
   ASSERT_EQ(rc, 0);
+  ASSERT_EQ(ifh.GetRoot()->GetLeft(), 4);
+  ASSERT_EQ(ifh.GetRoot()->GetNumKeys(), 9);
 
   for (int i = 0; i < 9; i++) {
     RID r(i, i);
     RID s;
     rc = ifh.Search(&i, s);
+    if(rc != 0)
+      PrintError(rc);
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(r, s);
   }
@@ -270,5 +279,33 @@ TEST_F(IX_IndexHandleTest, SmallDups) {
   ASSERT_EQ(rc, 0);
   sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
+
+}
+
+TEST_F(IX_IndexHandleTest, 2SmallDups) {
+  int ifh = 1; //masking
+
+  const BtreeNode * root = sifh.GetRoot();
+  ASSERT_EQ(root->GetMaxKeys(), 3);
+ 
+  // Simple insert - order 2
+  int entries[] = {31,31,31,31,31,31,31};
+  
+  for (int i = 0; i < 20; i++) {
+    RID r(0, 0);
+    RC rc;
+    cerr << "Inserting " << *(entries+0) << endl;
+    rc = sifh.InsertEntry(entries+0, r);
+    ASSERT_EQ(rc, 0);
+    sifh.Print(cerr);
+    cerr << endl << endl;
+  }
+  
+  // simple insert
+  int i = 32;
+  cerr << "Inserting " << i << endl;
+  RC rc = sifh.InsertEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
 
 }

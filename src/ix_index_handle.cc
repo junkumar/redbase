@@ -74,15 +74,11 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     char * charPtr = new char[hdr.attrLength];
     void * oldLargest = charPtr;
-    // pos at which parent stores a pointer to this node
-    int posAtParent = pathP[level-1];
-    cerr << "posAtParent was " << posAtParent << endl ;
 
     if(node->LargestKey() == NULL)
       oldLargest = NULL;
     else
       node->CopyKey(node->GetNumKeys()-1, oldLargest);
-
 
     // cerr << "nro largestKey was " << *(int*)oldLargest  << endl;
     // cerr << "nro numKeys was " << node->GetNumKeys()  << endl;
@@ -118,6 +114,11 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     // go up to parent level and repeat
     level--;
     if(level < 0) break;
+    // pos at which parent stores a pointer to this node
+    int posAtParent = pathP[level];
+    // cerr << "posAtParent was " << posAtParent << endl ;
+    // cerr << "level was " << level << endl ;
+
 
     BtreeNode * parent = path[level];
     // update old key - keep same addr
@@ -151,12 +152,11 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     if (rc != 0) return IX_PF;
   
     bool leaf = false;
-    RID oldRID = root->GetPageRID();
     root = new BtreeNode(hdr.attrType, hdr.attrLength,
                          ph, true,
                          hdr.pageSize, hdr.dups,
                          leaf, true);
-    root->Insert(node->LargestKey(), oldRID);
+    root->Insert(node->LargestKey(), node->GetPageRID());
     root->Insert(newNode->LargestKey(), newNode->GetPageRID());
 
     SetHeight(++hdr.height);
@@ -207,8 +207,8 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
     if (rc != 0) return rc;
     hdr.rootPage = p;
     SetHeight(1); // do all other init
-  }
-  
+  } 
+
   bool leaf = (hdr.height == 1 ? true : false);
   root = new BtreeNode(hdr.attrType, hdr.attrLength,
                        rootph, newPage,
@@ -305,6 +305,9 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
 
   for (int i = 1; i < hdr.height; i++) 
   {
+    // cerr << "i was " << i << endl;
+    // cerr << "pData was " << *(int*)pData << endl;
+
     RID r = path[i-1]->FindAddrAtPosition(pData);
     int pos = path[i-1]->FindKeyPosition(pData);
     if(r.Page() == -1) {
@@ -378,7 +381,7 @@ void IX_IndexHandle::SetHeight(const int& h)
     pathP[i] = -1;
 }
 
-const BtreeNode* IX_IndexHandle::GetRoot() const
+BtreeNode* IX_IndexHandle::GetRoot() const
 {
   return root;
 }

@@ -76,7 +76,7 @@ class IX_IndexHandle {
   int GetHeight() const;
   void SetHeight(const int&);
 
-  const BtreeNode* GetRoot() const;
+  BtreeNode* GetRoot() const;
   void Print(ostream&, int level = -1, RID r = RID(-1,-1)) const;
 
  private:

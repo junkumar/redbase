@@ -24,7 +24,7 @@ void IX_PrintError(RC rc);
 #define IX_HANDLEOPEN      (START_IX_ERR - 4)
 #define IX_BADOPEN         (START_IX_ERR - 5)
 #define IX_FNOTOPEN        (START_IX_ERR - 6)
-#define IX_BADRID         (START_IX_ERR - 7)
+#define IX_BADRID          (START_IX_ERR - 7)
 #define IX_BADKEY          (START_IX_ERR - 8)
 #define IX_EOF             (START_IX_ERR - 9)  // end of file
 

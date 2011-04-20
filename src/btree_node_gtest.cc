@@ -239,6 +239,40 @@ TEST_F(BtreeNodeTest, Sort) {
   ASSERT_FALSE(b.isSorted());
 }
 
+TEST_F(BtreeNodeTest, SetLeft) {
+  BtreeNode b(INT, sizeof(int), ph);
+//  b.SetNumKeys(4);
+
+  for (int i = 0; i <= 9; i++) {
+    b.Insert(&i, RID());
+    const int * pi = NULL;
+    b.GetKey(i, (void*&)pi);
+    ASSERT_EQ(i, *pi);
+  }
+  ASSERT_TRUE(b.isSorted());
+
+  b.SetLeft(4);
+  ASSERT_EQ(b.GetLeft(), 4);
+
+  b.SetRight(4);
+  ASSERT_EQ(b.GetRight(), 4);
+
+  ASSERT_EQ(b.GetNumKeys(), 10);
+
+  for (int i = 0; i <= 340; i++) {
+    int res = b.Insert(&i, RID());
+    // if(res != 0)
+    //   cerr << i << endl;
+//    ASSERT_EQ(res, 0);
+  }
+
+
+  ASSERT_EQ(b.GetLeft(), 4);
+  ASSERT_EQ(b.GetRight(), 4);
+  ASSERT_EQ(b.GetNumKeys(), 340);
+
+}
+
 TEST_F(BtreeNodeTest, Split) {
   BtreeNode b(INT, sizeof(int), ph);
   for (int i = 0; i <= 9; i++) {
