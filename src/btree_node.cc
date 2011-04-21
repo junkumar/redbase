@@ -43,10 +43,12 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
     GetLeft();
     GetRight();
   }
-  else
+  else {
     // or start fresh with 0 keys
-    numKeys = 0;
-
+    SetNumKeys(0);
+    SetLeft(-1); // node starts with no left or right 
+    SetRight(-1);
+  }
   assert(IsValid() == 0);
   //Layout
     // n * keys - takes up n * attrLength
@@ -70,11 +72,11 @@ int BtreeNode::GetNumKeys()
 // returns -1 on error
 int BtreeNode::SetNumKeys(int newNumKeys)
 {
-  assert(IsValid() == 0);
   memcpy((char*)rids + sizeof(RID)*order,
          &newNumKeys,
          sizeof(int));
   numKeys = newNumKeys; // conv variable
+  assert(IsValid() == 0);
   return 0;
 }
 
@@ -403,7 +405,7 @@ bool BtreeNode::isSorted() const
 }
 
 // return -1 on error, 0 on success
-// split or merge this node with rhs node
+// split this node with rhs node
 RC BtreeNode::Split(BtreeNode* rhs)
 {
   assert(IsValid() == 0);
@@ -415,7 +417,7 @@ RC BtreeNode::Split(BtreeNode* rhs)
   // this node is full
   // shift higher keys to rhs
   int firstMovedPos = (numKeys+1)/2;
-  int moveCount = (numKeys - firstMovedPos + 1);
+  int moveCount = (numKeys - firstMovedPos);
   // ensure that rhs wont overflow
   if( (rhs->GetNumKeys() + moveCount)
       > rhs->GetMaxKeys())
@@ -431,8 +433,13 @@ RC BtreeNode::Split(BtreeNode* rhs)
   // TODO use range remove - faster
   for (int i = 0; i < moveCount; i++) {
     RC rc = this->Remove(NULL, firstMovedPos);
-    if(rc != 0) return rc;
+    if(rc != 0) { 
+      return rc;
+    }
   }
+  
+  this->SetRight(rhs->GetPageRID().Page());
+  rhs->SetLeft(this->GetPageRID().Page());
 
   assert(isSorted());
   assert(rhs->isSorted());
@@ -443,29 +450,34 @@ RC BtreeNode::Split(BtreeNode* rhs)
 }
 
 // return -1 on error, 0 on success
-// merge this node with rhs node and put everything in this node
-RC BtreeNode::Merge(BtreeNode* rhs) {
+// merge this node with other node and put everything in this node
+RC BtreeNode::Merge(BtreeNode* other) {
   assert(IsValid() == 0);
-  assert(rhs->IsValid() == 0);
+  assert(other->IsValid() == 0);
 
-  if (numKeys + rhs->GetNumKeys() > order)
+  if (numKeys + other->GetNumKeys() > order)
     return -1; // overflow will result from merge
 
-  for (int pos = 0; pos < rhs->GetNumKeys(); pos++) {
-    void * k = NULL; rhs->GetKey(pos, k);
-    RID r = rhs->GetAddr(pos);
+  for (int pos = 0; pos < other->GetNumKeys(); pos++) {
+    void * k = NULL; other->GetKey(pos, k);
+    RID r = other->GetAddr(pos);
     RC rc = this->Insert(k, r);
     if(rc != 0) return rc;
   }
 
-  int moveCount = rhs->GetNumKeys();
+  int moveCount = other->GetNumKeys();
   for (int i = 0; i < moveCount; i++) {
-    RC rc = rhs->Remove(NULL, 0);
+    RC rc = other->Remove(NULL, 0);
     if(rc != 0) return rc;
   }
 
+  if(this->GetPageRID().Page() == other->GetLeft())
+    this->SetRight(other->GetRight());
+  else
+    this->SetLeft(other->GetLeft());
+
   assert(IsValid() == 0);
-  assert(rhs->IsValid() == 0);
+  assert(other->IsValid() == 0);
   return 0;
 }
 

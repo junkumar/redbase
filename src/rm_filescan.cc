@@ -1,5 +1,5 @@
 //
-// File:        rm_record.cc
+// File:        rm_filescan.cc
 //
 
 #include <cerrno>
@@ -9,92 +9,6 @@
 #include "rm.h"
 
 using namespace std;
-
-class Predicate {
-public:
-  Predicate() {}
-  ~Predicate() {}
-
-  Predicate(AttrType   attrTypeIn,       
-            int        attrLengthIn,
-            int        attrOffsetIn,
-            CompOp     compOpIn,
-            void       *valueIn,
-            ClientHint pinHintIn) 
-    {
-      attrType = attrTypeIn;       
-      attrLength = attrLengthIn;
-      attrOffset = attrOffsetIn;
-      compOp = compOpIn;
-      value = valueIn;
-      pinHint = pinHintIn;
-    }
-
-  bool eval(const char *buf, CompOp c) const {
-    if(c == NO_OP || value == NULL) {
-      return true;
-    }
-    const char * attr = buf + attrOffset;
-    
-    if(c == LT_OP) {
-      if(attrType == INT) {
-        return *attr < *((int *)value);
-      }
-      if(attrType == FLOAT) {
-        return *attr < *((float *)value);
-      }
-      if(attrType == STRING) {
-        return strncmp(attr, (char *)value, attrLength) < 0;
-      }
-    }
-    if(c == GT_OP) {
-      if(attrType == INT) {
-        return *attr > *((int *)value);
-      }
-      if(attrType == FLOAT) {
-        return *attr > *((float *)value);
-      }
-      if(attrType == STRING) {
-        return strncmp(attr, (char *)value, attrLength) > 0;
-      }
-    }
-    if(c == EQ_OP) {
-      if(attrType == INT) {
-        return *attr == *((int *)value);
-      }
-      if(attrType == FLOAT) {
-        return *attr == *((float *)value);
-      }
-      if(attrType == STRING) {
-        return strncmp(attr, (char *)value, attrLength) == 0;
-      }
-    }
-    if(c == LE_OP) {
-      return this->eval(buf, LT_OP) || this->eval(buf, EQ_OP); 
-    }
-    if(c == GE_OP) {
-      return this->eval(buf, GT_OP) || this->eval(buf, EQ_OP); 
-    }
-    if(c == NE_OP) {
-      return !this->eval(buf, EQ_OP);
-    }
-    assert("Bad value for c - should never get here.");
-    return true;
-  }
-
-  CompOp initOp() const { return compOp; }
-
-
-
-private:
-  AttrType   attrType;
-  int        attrLength;
-  int        attrOffset;
-  CompOp     compOp;
-  void*      value;
-  ClientHint pinHint;
-};
-
 
 RM_FileScan::RM_FileScan(): bOpen(false)
 {

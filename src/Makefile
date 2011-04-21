@@ -41,12 +41,12 @@ PF_SOURCES     = pf_buffermgr.cc pf_error.cc pf_filehandle.cc \
 RM_SOURCES     = statistics.cc rm_manager.cc rm_error.cc rm_filescan.cc \
                  rm_record.cc rm_filehandle.cc rm_record_gtest.cc \
 		 rm_filehandle_gtest.cc bitmap.cc bitmap_gtest.cc \
-		 pf_manager_gtest.cc 
+		 pf_manager_gtest.cc predicate.cc
 IX_SOURCES     = ix_index_handle.cc ix_index_handle_gtest.cc \
 		 ix_index_manager.cc ix_index_manager_gtest.cc \
 		 ix_index_scan.cc ix_index_scan_gtest.cc \
 		 btree_node.cc btree_node_gtest.cc \
-		 ix_error.cc statistics.cc
+		 ix_error.cc statistics.cc predicate.cc
 SM_SOURCES     = statistics.cc #sm_stub.cc printer.cc
 QL_SOURCES     = statistics.cc #ql_manager_stub.cc
 UTILS_SOURCES  = #dbcreate.cc dbdestroy.cc redbase.cc

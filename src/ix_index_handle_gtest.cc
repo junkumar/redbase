@@ -1,15 +1,9 @@
+#include "ix_index_scan.h"
 #include "ix_index_handle.h"
 #include "btree_node.h"
 #include "ix_index_manager.h"
 #include "gtest/gtest.h"
 #include "rm_error.h"
-
-#define STRLEN 29
-struct TestRec {
-    char  str[STRLEN];
-    int   num;
-    float r;
-};
 
 class IX_IndexHandleTest : public ::testing::Test {
 protected:
@@ -21,16 +15,19 @@ protected:
 		if(
 			(rc = ixm.CreateIndex("gtestfile", 0, INT, sizeof(int))) 
       || (rc =	ixm.OpenIndex("gtestfile", 0, ifh))
+//      || (rc =	is.OpenScan(ifh, NO_OP, NULL))
 			)
 			IX_PrintError(rc);
 
     // small size pages - 3 int keys per page
     int smallPage = (sizeof(RID) + sizeof(int))*(3+1);
 
+
     system("rm -f smallpagefile.0");
     if(
       (rc = ixm.CreateIndex("smallpagefile", 0, INT, sizeof(int), smallPage)) 
       || (rc =	ixm.OpenIndex("smallpagefile", 0, sifh))
+//      || (rc =	sis.OpenScan(sifh, NO_OP, NULL))
       )
       IX_PrintError(rc);
 	}
@@ -51,13 +48,37 @@ protected:
       IX_PrintError(rc);
 	}
 
+
   // Declares the variables your tests want to use.
   IX_Manager ixm;
   PF_Manager pfm;
   IX_IndexHandle ifh; // 340 int keys per page
   IX_IndexHandle sifh; // 3 int keys per page
-
 };
+
+// test if a leaf scan yields a sorted list of items with expected
+// count
+extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
+  IX_IndexScan s;
+  RC rc =	s.OpenScan(fh, NO_OP, NULL);
+  ASSERT_EQ(rc, 0);
+
+  RID r;
+  int prev = -100000;
+  void * k;
+  int count = 0;
+  while((s.GetNextEntry(k, r)) != IX_EOF) {
+    int curr = (*(int*)k);
+    ASSERT_LE(prev, curr);
+    // cerr << "IX Scan entry - " << curr << endl; 
+    prev = curr;
+    count++;
+  }
+  ASSERT_EQ(numEntries, count);
+
+  rc =	s.CloseScan();
+  ASSERT_EQ(rc, 0);
+}
 
 
 TEST_F(IX_IndexHandleTest, RootInsert) {
@@ -73,6 +94,8 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     ASSERT_EQ(r, s);
   }
 
+  ScanOrderedInt(ifh, 9);
+
   for (int i = 0; i < 9; i++) {
     RID r(i, i);
     RID s;
@@ -80,6 +103,8 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(r, s);
   }
+
+  ScanOrderedInt(ifh, 9);
 
   ASSERT_EQ(ifh.GetRoot()->GetNumKeys(), 9);
   ifh.GetRoot()->SetLeft(4);
@@ -102,6 +127,7 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(r, s);
   }
+  ScanOrderedInt(ifh, 9);
 }
 
 TEST_F(IX_IndexHandleTest, RootOverflow) {
@@ -121,6 +147,7 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
   ASSERT_EQ(ifh.GetHeight(), 1);
   ASSERT_EQ(ifh.GetNumPages(), 2);
 
+  // ScanOrderedInt(ifh, 340);
 
   for (int i = 0; i < 340; i++) {
     int j = i + 340;
@@ -135,10 +162,17 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
   // thir split at 510 + 340/2 - 680 - 5 pages
   //ASSERT_EQ(ifh.GetNumPages(), 4);
 
+  ifh.Print(cerr);
+  ScanOrderedInt(ifh, 680);
+
+
   int i = 680;
   RC rc = ifh.InsertEntry(&i, RID());
   ASSERT_EQ(rc, 0);
   ASSERT_EQ(ifh.GetNumPages(), 6);
+
+  ScanOrderedInt(ifh, 681);
+
 }
 
 TEST_F(IX_IndexHandleTest, SmallPage) {
@@ -166,6 +200,8 @@ TEST_F(IX_IndexHandleTest, SmallPage) {
   ASSERT_EQ(rc, 0);
   ASSERT_EQ(sifh.GetHeight(), 3);
   sifh.Print(cerr);
+
+  ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 2SmallPage) {
@@ -194,6 +230,7 @@ TEST_F(IX_IndexHandleTest, 2SmallPage) {
   sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
+  ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 3SmallPage) {
@@ -222,6 +259,7 @@ TEST_F(IX_IndexHandleTest, 3SmallPage) {
   sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
+  ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 4SmallPage) {
@@ -250,6 +288,7 @@ TEST_F(IX_IndexHandleTest, 4SmallPage) {
   sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
+  ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, SmallDups) {
@@ -280,6 +319,7 @@ TEST_F(IX_IndexHandleTest, SmallDups) {
   sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
+  ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 2SmallDups) {
@@ -308,4 +348,5 @@ TEST_F(IX_IndexHandleTest, 2SmallDups) {
   ASSERT_EQ(rc, 0);
   sifh.Print(cerr);
 
+  ScanOrderedInt(sifh, 21);
 }

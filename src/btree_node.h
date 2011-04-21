@@ -30,6 +30,7 @@ class BtreeNode {
   int GetRight();
   int SetRight(PageNum p);
 
+
   RC GetKey(int pos, void* &key) const;
   int SetKey(int pos, const void* newkey);
   int CopyKey(int pos, void* toKey) const;

@@ -97,7 +97,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
                             hdr.pageSize, hdr.dups,
                             leaf, true);
     // split into new node
-    node->Split(newNode);
+    rc = node->Split(newNode);
+    if (rc != 0) return IX_PF;
+    
 
     BtreeNode * nodeInsertedInto = NULL;
 
@@ -290,7 +292,38 @@ RC IX_IndexHandle::GetNewPage(PageNum& pageNum)
   return 0; // pageNum is set correctly
 }
 
-// return NULL if there is not root
+// return NULL if there is no root
+// otherwise return a pointer to the leaf node that is leftmost OR
+// smallest in value
+// also populates the path member variable with the path
+BtreeNode* IX_IndexHandle::FindSmallestLeaf()
+{
+  assert(IsValid() == 0);
+  if (root == NULL) return NULL;
+  RID addr;
+  if(hdr.height == 1) {
+    path[0] = root;
+    return root;
+  }
+
+  for (int i = 1; i < hdr.height; i++) 
+  {
+    RID r = path[i-1]->GetAddr(0);
+    if(r.Page() == -1) {
+      // no such position or other error
+      // no entries in node ?
+      assert("should not run into empty node");
+      return NULL;
+    }
+    // start with a fresh path
+    delete path[i];
+    path[i] = FetchNode(r);
+    pathP[i-1] = 0;
+  }
+  return path[hdr.height-1];
+}
+
+// return NULL if there is no root
 // otherwise return a pointer to the leaf node where key might go
 // also populates the path member variable with the path
 BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
@@ -327,11 +360,18 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
   return path[hdr.height-1];
 }
 
+// Get the BtreeNode at the PageNum specified within Btree
+// SlotNum in RID does not matter anyway
+BtreeNode* IX_IndexHandle::FetchNode(PageNum p) const
+{
+  return FetchNode(RID(p,-1));
+}
+
 // Get the BtreeNode at the RID specified within Btree
 BtreeNode* IX_IndexHandle::FetchNode(RID r) const
 {
   assert(IsValid() == 0);
-  assert(r.Page() >= 0);
+  if(r.Page() < 0) return NULL;
   PF_PageHandle ph;
   RC rc = pfHandle->GetThisPage(r.Page(), ph);
   if(rc!=0) return NULL;

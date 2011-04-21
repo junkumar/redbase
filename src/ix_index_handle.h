@@ -63,6 +63,9 @@ class IX_IndexHandle {
 
   bool HdrChanged() const { return bHdrChanged; }
   int GetNumPages() const { return hdr.numPages; }
+  AttrType GetAttrType() const { return hdr.attrType; }
+  int GetAttrLength() const { return hdr.attrLength; }
+
   RC GetNewPage(PageNum& pageNum);
   RC IsValid() const;
 
@@ -70,7 +73,10 @@ class IX_IndexHandle {
   // otherwise return a pointer to the leaf node where key might go
   // also populates the path member variable with the path
   BtreeNode* FindLeaf(const void *pData);
+  BtreeNode* FindSmallestLeaf();
+
   BtreeNode* FetchNode(RID r) const;
+  BtreeNode* FetchNode(PageNum p) const;
 
   // get/set height
   int GetHeight() const;

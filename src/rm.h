@@ -22,6 +22,7 @@
 #include "rm_error.h"
 #include "rm_rid.h"
 #include "pf.h"
+#include "predicate.h"
 
 //
 // RM_FileHdr: Header structure for files
@@ -184,7 +185,6 @@ private:
   bool bHdrChanged;                              // dirty flag for file hdr
 };
 
-class Predicate;
 //
 // RM_FileScan: condition-based scan of records in the file
 //
