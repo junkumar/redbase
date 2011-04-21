@@ -158,12 +158,24 @@ TEST_F(BtreeNodeTest, Find) {
   const void * pi = &i;
   ASSERT_EQ(10, b.FindKeyPosition(pi));
   i = 6;
-  ASSERT_EQ(7, b.FindKeyPosition(pi));
+  ASSERT_EQ(6, b.FindKeyPosition(pi));
   i = -3;
   ASSERT_EQ(0, b.FindKeyPosition(pi));
   i = 6;
   ASSERT_EQ(0, b.Remove(pi));
-  ASSERT_EQ(6, b.FindKeyPosition(pi));  
+  ASSERT_EQ(6, b.FindKeyPosition(pi));
+
+  //exact FindKey
+  i = -1;
+  ASSERT_EQ(0, b.Insert(pi, RID(100,100)));
+  // should be lowest key
+  ASSERT_EQ(0, b.FindKey(pi)); // no rid, key only
+
+  ASSERT_EQ(0, b.FindKey(pi, RID(100,100))); // right rid
+
+  ASSERT_EQ(-1, b.FindKey(pi, RID(2,2))); // wrong rid
+
+
 }
 
 TEST_F(BtreeNodeTest, Remove) {
@@ -178,7 +190,7 @@ TEST_F(BtreeNodeTest, Remove) {
 
   // non existent key
   int val = 1000; int *pval = &val;
-  ASSERT_EQ(-1, b.Remove(pval));
+  ASSERT_EQ(-2, b.Remove(pval));
 
   // smallest key
   val = 0;

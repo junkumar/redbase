@@ -270,7 +270,8 @@ int BtreeNode::Insert(const void* newkey, const RID & rid)
 }
 
 // return 0 if remove was successful
-// return -1 if key does not exist
+// return -2 if key does not exist
+// return -1 if key is the last one (lazy deletion) - underflow
 // kpos is optional - will remove from that position if specified
 // if kpos is specified newkey can be NULL
 int BtreeNode::Remove(const void* newkey, int kpos)
@@ -279,14 +280,14 @@ int BtreeNode::Remove(const void* newkey, int kpos)
   int pos = -1;
   if (kpos != -1) {
     if (kpos < 0 || kpos >= numKeys)
-      return -1;
+      return -2;
     pos = kpos;
   } 
   else {
     pos = FindKey(newkey);
     if (pos < 0)
-      return pos;
-    // shift all keys after this
+      return -2;
+    // shift all keys after this pos
   }
   for(int i = pos; i < numKeys-1; i++)
   {
@@ -296,6 +297,7 @@ int BtreeNode::Remove(const void* newkey, int kpos)
     rids[i] = rids[i+1];
   }
   SetNumKeys(GetNumKeys()-1);
+  if(numKeys == 0) return -1;
   return 0;
 }
 
@@ -319,7 +321,12 @@ int BtreeNode::FindKeyPosition(const void* &key) const
     void* k;
     if(GetKey(i, k) != 0)
       return -1;
-    if (CmpKey(key, k) >= 0)
+// added == condition so that FindLeaf can return exact match and not
+// the position to the right upon matches. this affects where inserts
+// will happen during dups.
+    if (CmpKey(key, k) == 0) 
+      return i;
+    if (CmpKey(key, k) > 0)
       return i+1;
    }
   return 0; // key is smaller than anything currently
@@ -347,8 +354,12 @@ RID BtreeNode::FindAddr(const void* &key) const
 
 
 // return position if key already exists at position
+// if there are dups - returns rightmost position unless an RID is
+// specified.
+// if RID is specified, will only return a position if both key and
+// RID match.
 // return -1 if there was an error or if key does not exist
-int BtreeNode::FindKey(const void* &key) const
+int BtreeNode::FindKey(const void* &key, const RID& r) const
 {
   assert(IsValid() == 0);
 
@@ -357,8 +368,14 @@ int BtreeNode::FindKey(const void* &key) const
     void* k;
     if(GetKey(i, k) != 0)
       return -1;
-    if (CmpKey(key, k) == 0)
-      return i;
+    if (CmpKey(key, k) == 0) {
+      if(r == RID(-1,-1))
+        return i;
+      else { // match RID as well
+        if (rids[i] == r)
+          return i;
+      }
+    }
   }
   return -1;
 }
@@ -433,14 +450,18 @@ RC BtreeNode::Split(BtreeNode* rhs)
   // TODO use range remove - faster
   for (int i = 0; i < moveCount; i++) {
     RC rc = this->Remove(NULL, firstMovedPos);
-    if(rc != 0) { 
+    if(rc < -1) { 
       return rc;
     }
   }
 
-  rhs->SetRight(this->GetRight());  
+  // other side will have to be set up on the outside
+  rhs->SetRight(this->GetRight());
+
   this->SetRight(rhs->GetPageRID().Page());
   rhs->SetLeft(this->GetPageRID().Page());
+  
+  
 
   assert(isSorted());
   assert(rhs->isSorted());
@@ -470,7 +491,7 @@ RC BtreeNode::Merge(BtreeNode* other) {
   int moveCount = other->GetNumKeys();
   for (int i = 0; i < moveCount; i++) {
     RC rc = other->Remove(NULL, 0);
-    if(rc != 0) return rc;
+    if(rc < -1) return rc;
   }
 
   if(this->GetPageRID().Page() == other->GetLeft())

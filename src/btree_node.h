@@ -46,8 +46,16 @@ class BtreeNode {
 // if kpos is specified newkey can be NULL
   int Remove(const void* newkey, int kpos = -1);
   
-  // exact match
-  int FindKey(const void* &key) const;
+  // exact match functions
+
+  // return position if key already exists at position
+  // if there are dups - returns rightmost position unless an RID is
+  // specified.
+  // if optional RID is specified, will only return a position if both
+  // key and RID match.
+  // return -1 if there was an error or if key does not exist
+  int FindKey(const void* &key, const RID& r = RID(-1,-1)) const;
+
   RID FindAddr(const void* &key) const;
   // get rid for given position
   // return (-1, -1) if there was an error or pos was not found

@@ -27,6 +27,9 @@ IX_IndexHandle::~IX_IndexHandle()
 		delete [] (char*) treeLargest;
 }
 
+// 0 indicates success
+// -1 indicates overflow
+// -2 indicates other errors
 RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 {
   assert(IsValid() == 0);
@@ -99,7 +102,11 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     // split into new node
     rc = node->Split(newNode);
     if (rc != 0) return IX_PF;
-    
+    // split adjustment
+    BtreeNode * currRight = FetchNode(newNode->GetRight());
+    if(currRight != NULL)
+      currRight->SetLeft(newNode->GetPageRID().Page());
+
 
     BtreeNode * nodeInsertedInto = NULL;
 
@@ -172,8 +179,65 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
   }
 }
 
+
+// 0 indicates success
+// -1 indicates underflow
+// -2 indicates other errors
 RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 {
+  assert(IsValid() == 0);
+  if(pData == NULL)
+    // bad input to method
+    return -2;
+
+  bool nodeLargest = false;
+  void * prevKey = NULL;
+  int level = hdr.height - 1;
+
+  BtreeNode* node = FindLeaf(pData);
+  assert(node != NULL);
+
+  int pos = node->FindKey((const void*&)pData, rid);
+  if(pos == -1)
+    // key does not exist - error
+    return -2;
+  else if(pos == node->GetNumKeys()-1)
+    nodeLargest = true;
+
+  BtreeNode* newNode = NULL;
+
+  // Handle special case of key being largest and rightmost in
+  // node. Means it is in parent and potentially whole path (every
+  // intermediate node)
+  if (nodeLargest) {
+    if(node->GetNumKeys() > 1) {
+      void * leftKey = NULL;
+      node->GetKey(node->GetNumKeys()-2, leftKey);
+      if(node->CmpKey(pData, leftKey) != 0) {
+        // replace this key with leftkey in every intermediate node
+        // where it appears
+        for(int i = hdr.height-2; i >= 0; i--) {
+          int pos = path[i]->FindKey((const void *&)pData);
+          if(pos != -1) {
+            // if level is lower than leaf-1 then make sure that this is
+            // the largest key
+            if((i == hdr.height-2) || // leaf's parent level
+               (pos == path[i]->GetNumKeys()-1) // largest at
+                                                // intermediate node too 
+              )
+              path[i]->SetKey(pos, leftKey);
+          }
+          else {
+          // do nothing
+          }
+        }
+      }
+      // else do nothing  
+    }
+  }
+
+  int result = node->Remove(pData, pos); // pos is the param that counts
+  return result;
 }
 
 RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, 
@@ -442,7 +506,6 @@ void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
   }
   else {
     if(level < 1) {
-      os << endl;
       return;
     }
     else
@@ -460,5 +523,7 @@ void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
       Print(os, level-1, newr);
     }
   } 
-
+  // else level == 1 - recursion ends
+  if(level == 1 && node->GetRight() == -1)
+    os << endl; //blank after rightmost leaf
 }
