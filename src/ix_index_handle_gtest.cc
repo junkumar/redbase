@@ -70,9 +70,10 @@ extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
   while((s.GetNextEntry(k, r)) != IX_EOF) {
     int curr = (*(int*)k);
     ASSERT_LE(prev, curr);
-    // cerr << "IX Scan entry - " << curr << endl; 
     prev = curr;
     count++;
+    // cerr << "IX Scan entry - " << curr 
+    //      << " Count " << count << endl; 
   }
   ASSERT_EQ(numEntries, count);
 
@@ -162,7 +163,7 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
   // thir split at 510 + 340/2 - 680 - 5 pages
   //ASSERT_EQ(ifh.GetNumPages(), 4);
 
-  ifh.Print(cerr);
+  // ifh.Print(cerr);
   ScanOrderedInt(ifh, 680);
 
 
@@ -176,8 +177,6 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
 }
 
 TEST_F(IX_IndexHandleTest, SmallPage) {
-  int ifh = 1; //masking
-
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
  
@@ -189,8 +188,9 @@ TEST_F(IX_IndexHandleTest, SmallPage) {
     RC rc;
     rc = sifh.InsertEntry(entries+i, r);
     ASSERT_EQ(rc, 0);
-    sifh.Print(cerr);
-    cerr << endl << endl;
+    // sifh.Print(cerr);
+    ScanOrderedInt(sifh, i+1);
+    // cerr << endl << endl;
   }
   ASSERT_EQ(sifh.GetHeight(), 3);
   
@@ -199,14 +199,12 @@ TEST_F(IX_IndexHandleTest, SmallPage) {
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
   ASSERT_EQ(sifh.GetHeight(), 3);
-  sifh.Print(cerr);
+  // sifh.Print(cerr);
 
   ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 2SmallPage) {
-  int ifh = 1; //masking
-
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
  
@@ -218,8 +216,8 @@ TEST_F(IX_IndexHandleTest, 2SmallPage) {
     RC rc;
     rc = sifh.InsertEntry(entries+i, r);
     ASSERT_EQ(rc, 0);
-    sifh.Print(cerr);
-    cerr << endl << endl;
+    // sifh.Print(cerr);
+    // cerr << endl << endl;
   }
   ASSERT_EQ(sifh.GetHeight(), 2);
   
@@ -227,15 +225,13 @@ TEST_F(IX_IndexHandleTest, 2SmallPage) {
   int i = 32;
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
-  sifh.Print(cerr);
+  // sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
   ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 3SmallPage) {
-  int ifh = 1; //masking
-
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
  
@@ -247,8 +243,8 @@ TEST_F(IX_IndexHandleTest, 3SmallPage) {
     RC rc;
     rc = sifh.InsertEntry(entries+i, r);
     ASSERT_EQ(rc, 0);
-    sifh.Print(cerr);
-    cerr << endl << endl;
+    // sifh.Print(cerr);
+    // cerr << endl << endl;
   }
   ASSERT_EQ(sifh.GetHeight(), 2);
   
@@ -256,15 +252,13 @@ TEST_F(IX_IndexHandleTest, 3SmallPage) {
   int i = 32;
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
-  sifh.Print(cerr);
+  // sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
   ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 4SmallPage) {
-  int ifh = 1; //masking
-
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
  
@@ -276,8 +270,8 @@ TEST_F(IX_IndexHandleTest, 4SmallPage) {
     RC rc;
     rc = sifh.InsertEntry(entries+i, r);
     ASSERT_EQ(rc, 0);
-    sifh.Print(cerr);
-    cerr << endl << endl;
+    // sifh.Print(cerr);
+    // cerr << endl << endl;
   }
   ASSERT_EQ(sifh.GetHeight(), 3);
   
@@ -285,15 +279,13 @@ TEST_F(IX_IndexHandleTest, 4SmallPage) {
   int i = 32;
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
-  sifh.Print(cerr);
+  // sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
   ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, SmallDups) {
-  int ifh = 1; //masking
-
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
  
@@ -303,28 +295,26 @@ TEST_F(IX_IndexHandleTest, SmallDups) {
   for (int i = 0; i < 7; i++) {
     RID r(0, 0);
     RC rc;
-    cerr << "Inserting " << *(entries+i) << endl;
+    // cerr << "Inserting " << *(entries+i) << endl;
     rc = sifh.InsertEntry(entries+i, r);
     ASSERT_EQ(rc, 0);
-    sifh.Print(cerr);
-    cerr << endl << endl;
+    // sifh.Print(cerr);
+    // cerr << endl << endl;
   }
   ASSERT_EQ(sifh.GetHeight(), 3);
   
   // simple insert
   int i = 32;
-  cerr << "Inserting " << i << endl;
+  // cerr << "Inserting " << i << endl;
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
-  sifh.Print(cerr);
+  // sifh.Print(cerr);
   ASSERT_EQ(sifh.GetHeight(), 3);
 
   ScanOrderedInt(sifh, 8);
 }
 
 TEST_F(IX_IndexHandleTest, 2SmallDups) {
-  int ifh = 1; //masking
-
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
  
@@ -334,19 +324,20 @@ TEST_F(IX_IndexHandleTest, 2SmallDups) {
   for (int i = 0; i < 20; i++) {
     RID r(0, 0);
     RC rc;
-    cerr << "Inserting " << *(entries+0) << endl;
+    // cerr << "Inserting " << *(entries+0) << endl;
     rc = sifh.InsertEntry(entries+0, r);
     ASSERT_EQ(rc, 0);
-    sifh.Print(cerr);
-    cerr << endl << endl;
+    // // sifh.Print(cerr);
+    ScanOrderedInt(sifh, i+1);
+    // cerr << endl << endl;
   }
   
   // simple insert
   int i = 32;
-  cerr << "Inserting " << i << endl;
+  // cerr << "Inserting " << i << endl;
   RC rc = sifh.InsertEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
-  sifh.Print(cerr);
+  // // sifh.Print(cerr);
 
   ScanOrderedInt(sifh, 21);
 }

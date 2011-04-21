@@ -437,7 +437,8 @@ RC BtreeNode::Split(BtreeNode* rhs)
       return rc;
     }
   }
-  
+
+  rhs->SetRight(this->GetRight());  
   this->SetRight(rhs->GetPageRID().Page());
   rhs->SetLeft(this->GetPageRID().Page());
 
@@ -451,6 +452,7 @@ RC BtreeNode::Split(BtreeNode* rhs)
 
 // return -1 on error, 0 on success
 // merge this node with other node and put everything in this node
+// "other" node has to be a neighbour
 RC BtreeNode::Merge(BtreeNode* other) {
   assert(IsValid() == 0);
   assert(other->IsValid() == 0);
@@ -482,7 +484,8 @@ RC BtreeNode::Merge(BtreeNode* other) {
 }
 
 void BtreeNode::Print(ostream & os) {
-  os << pageRID.Page() << "{";
+  os << GetLeft() << "<--"
+     << pageRID.Page() << "{";
   for (int pos = 0; pos < GetNumKeys(); pos++) {
     void * k = NULL; GetKey(pos, k);
     os << "(";
@@ -496,5 +499,6 @@ void BtreeNode::Print(ostream & os) {
     os << "," 
        << GetAddr(pos) << "), ";
   }
-  os << "}\n";
+  os << "\b\b}" 
+     << "-->" << GetRight() << "\n";
 }

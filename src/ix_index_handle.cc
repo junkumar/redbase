@@ -1,7 +1,7 @@
 #include "ix_index_handle.h"
 
 IX_IndexHandle::IX_IndexHandle()
-	:pfHandle(NULL), bFileOpen(false), bHdrChanged(false)
+	:bFileOpen(false), pfHandle(NULL), bHdrChanged(false)
 {
   root = NULL;
   path = NULL;
@@ -103,12 +103,17 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     BtreeNode * nodeInsertedInto = NULL;
 
-    // put the new entry into one of the 2 now
-    if(node->CmpKey(pData, node->LargestKey()) > 0) {
+    // put the new entry into one of the 2 now.
+    // In the comparison,
+    // > takes care of normal cases
+    // = is a hack for dups - this results in affinity for preserving
+    // RID ordering for children - more balanced tree when all keys
+    // are the same.
+    if(node->CmpKey(pData, node->LargestKey()) >= 0) {
       newNode->Insert(failedKey, failedRid);
       nodeInsertedInto = newNode;
     }
-    else { // <=
+    else { // <
       node->Insert(failedKey, failedRid);
       nodeInsertedInto = node;
     }
@@ -124,22 +129,23 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     BtreeNode * parent = path[level];
     // update old key - keep same addr
-    RID oldrid = parent->GetAddr(posAtParent);
     parent->Remove(NULL, posAtParent);
-    result = parent->Insert((const void*)node->LargestKey(), oldrid);
+    result = parent->Insert((const void*)node->LargestKey(),
+                            node->GetPageRID());
+    // this result should always be good - we removed first before
+    // inserting to prevent overflow.
     delete [] charPtr;
 
     // insert new key
-    PageNum pp; ph.GetPageNum(pp);
-    result = parent->Insert(newNode->LargestKey(), RID(pp,-1));
+    result = parent->Insert(newNode->LargestKey(), newNode->GetPageRID());
     
-    // TODO - setup prev and next pointers for sibling nodes
-
     // iterate for parent node and split if required
     node = parent;
-    failedKey = nodeInsertedInto->LargestKey();
-    failedRid = RID(pp,-1);
-  }  
+    failedKey = newNode->LargestKey(); // failure cannot be in node -
+                                       // something was removed first.
+    failedRid = newNode->GetPageRID();
+  }
+
   if(level >= 0) {
     // insertion done
     return 0;
