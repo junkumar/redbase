@@ -485,6 +485,37 @@ BtreeNode* IX_IndexHandle::FindSmallestLeaf()
 }
 
 // return NULL if there is no root
+// otherwise return a pointer to the leaf node that is rightmost AND
+// largest in value
+// also populates the path member variable with the path
+BtreeNode* IX_IndexHandle::FindLargestLeaf()
+{
+  assert(IsValid() == 0);
+  if (root == NULL) return NULL;
+  RID addr;
+  if(hdr.height == 1) {
+    path[0] = root;
+    return root;
+  }
+
+  for (int i = 1; i < hdr.height; i++) 
+  {
+    RID r = path[i-1]->GetAddr(path[i-1]->GetNumKeys() - 1);
+    if(r.Page() == -1) {
+      // no such position or other error
+      // no entries in node ?
+      assert("should not run into empty node");
+      return NULL;
+    }
+    // start with a fresh path
+    delete path[i];
+    path[i] = FetchNode(r);
+    pathP[i-1] = 0;
+  }
+  return path[hdr.height-1];
+}
+
+// return NULL if there is no root
 // otherwise return a pointer to the leaf node where key might go
 // also populates the path member variable with the path
 BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)

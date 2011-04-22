@@ -76,6 +76,8 @@ class IX_IndexHandle {
   // also populates the path member variable with the path
   BtreeNode* FindLeaf(const void *pData);
   BtreeNode* FindSmallestLeaf();
+  BtreeNode* FindLargestLeaf();
+
 
   BtreeNode* FetchNode(RID r) const;
   BtreeNode* FetchNode(PageNum p) const;

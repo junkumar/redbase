@@ -28,7 +28,8 @@ class IX_IndexScan {
   RC OpenScan(const IX_IndexHandle &indexHandle,
               CompOp compOp,
               void *value,
-              ClientHint  pinHint = NO_HINT);
+              ClientHint  pinHint = NO_HINT,
+              bool desc = false);
 
   // Get the next matching entry return IX_EOF if no more matching
   // entries.
@@ -44,6 +45,7 @@ class IX_IndexScan {
   BtreeNode* currNode;
   int currPos;
   bool bOpen;
+  bool desc; // Is scan order ascending(def) or descending ?
 };
 
 

@@ -8,7 +8,7 @@
 
 using namespace std;
 
-IX_IndexScan::IX_IndexScan(): bOpen(false)
+IX_IndexScan::IX_IndexScan(): bOpen(false), desc(false)
 {
   pred = NULL;
   pixh = NULL;
@@ -24,7 +24,8 @@ IX_IndexScan::~IX_IndexScan()
 RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
                           CompOp     compOp,
                           void       *value,
-                          ClientHint pinHint) 
+                          ClientHint pinHint,
+                          bool desc) 
 {
   if (bOpen)
   {
@@ -43,6 +44,8 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
     return IX_FCREATEFAIL;
 
   bOpen = true;
+  if(desc) 
+    this->desc = true;
 
   pred = new Predicate(pixh->GetAttrType(),
                        pixh->GetAttrLength(),
@@ -62,49 +65,84 @@ RC IX_IndexScan::GetNextEntry     (RID &rid)
 
 RC IX_IndexScan::GetNextEntry(void *& k, RID &rid)
 {
-  assert(pixh != NULL && pred != NULL && bOpen);
   if(!bOpen)
     return IX_FNOTOPEN;
+  assert(pixh != NULL && pred != NULL && bOpen);
 
   // first time in
   if(currNode == NULL && currPos == -1) {
-    currNode = pixh->FindSmallestLeaf();
-    currPos = -1;
+    if(!desc) {
+      currNode = pixh->FindSmallestLeaf();
+      currPos = -1;
+    } else {
+      currNode = pixh->FindLargestLeaf();
+      currPos = currNode->GetNumKeys(); // 1 past
+    }
   }
   
   for( BtreeNode* j = currNode;
        j != NULL;
-       j = pixh->FetchNode(j->GetRight()) ) 
+       /* see end of loop */ ) 
   {
     // cerr << "GetNextEntry j's RID was " << j->GetPageRID() << endl;
     int i = -1;
-    if(currNode == j) // first time in for loop ?
-      i = currPos+1;
-    else {
-      i = 0;
-      currNode = j; // save Node in object state for later.
-    }
+    if(!desc) {
+      if(currNode == j) // first time in for loop ?
+        i = currPos+1;
+      else {
+        i = 0;
+        currNode = j; // save Node in object state for later.
+      }
 
-    for (; i < currNode->GetNumKeys(); i++) 
-    {
-      currPos = i; // save Node in object state for later.
+      for (; i < currNode->GetNumKeys(); i++) 
+      {
+        currPos = i; // save Node in object state for later.
 
-      // std::cerr << "GetNextRec ret pos " << currPos << std::endl;
-      char* key = NULL;
-      int ret = currNode->GetKey(i, (void*&)key);
-      if(ret == -1) 
-        return IX_PF; // TODO better error
+        // std::cerr << "GetNextRec ret pos " << currPos << std::endl;
+        char* key = NULL;
+        int ret = currNode->GetKey(i, (void*&)key);
+        if(ret == -1) 
+          return IX_PF; // TODO better error
       
-      if(pred->eval(key, pred->initOp())) {
-        // std::cerr << "GetNextRec pred match for RID " << current << std::endl;
-        k = key;
-        rid = currNode->GetAddr(i);
-        return 0;
-      } else {
-        // get next entry
+        if(pred->eval(key, pred->initOp())) {
+          // std::cerr << "GetNextRec pred match for RID " << current << std::endl;
+          k = key;
+          rid = currNode->GetAddr(i);
+          return 0;
+        }
+      }
+    } else { // Descending
+      if(currNode == j) // first time in for loop ?
+        i = currPos-1;
+      else {
+        currNode = j; // save Node in object state for later.
+        i = currNode->GetNumKeys()-1;
+      }
+
+      for (; i >= 0; i--) 
+      {
+        currPos = i; // save Node in object state for later.
+
+        // std::cerr << "GetNextRec ret pos " << currPos << std::endl;
+        char* key = NULL;
+        int ret = currNode->GetKey(i, (void*&)key);
+        if(ret == -1) 
+          return IX_PF; // TODO better error
+      
+        if(pred->eval(key, pred->initOp())) {
+          // std::cerr << "GetNextRec pred match for RID " << current << std::endl;
+          k = key;
+          rid = currNode->GetAddr(i);
+          return 0;
+        }
       }
 
     }
+    // Advance j
+    if(!desc)
+      j = pixh->FetchNode(j->GetRight());
+    else
+      j = pixh->FetchNode(j->GetLeft());
   }
 
   return IX_EOF;

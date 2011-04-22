@@ -79,6 +79,25 @@ extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
 
   rc =	s.CloseScan();
   ASSERT_EQ(rc, 0);
+
+  // Desc
+  rc =	s.OpenScan(fh, NO_OP, NULL, NO_HINT, true);
+  ASSERT_EQ(rc, 0);
+
+  prev = 999999999;
+  count = 0;
+  while((s.GetNextEntry(k, r)) != IX_EOF) {
+    int curr = (*(int*)k);
+    ASSERT_GE(prev, curr);
+    prev = curr;
+    count++;
+    // cerr << "IX Scan entry - " << curr 
+    //      << " Count " << count << endl; 
+  }
+  ASSERT_EQ(numEntries, count);
+
+  rc =	s.CloseScan();
+  ASSERT_EQ(rc, 0);
 }
 
 
@@ -148,7 +167,7 @@ TEST_F(IX_IndexHandleTest, RootOverflow) {
   ASSERT_EQ(ifh.GetHeight(), 1);
   ASSERT_EQ(ifh.GetNumPages(), 2);
 
-  // ScanOrderedInt(ifh, 340);
+  ScanOrderedInt(ifh, 340);
 
   for (int i = 0; i < 340; i++) {
     int j = i + 340;
