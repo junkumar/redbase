@@ -36,15 +36,15 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
                             AttrType attrType, int attrLength,
                             int pageSize)
 {
-  if(attrLength >= pageSize - (int)sizeof(RID))
-    return IX_SIZETOOBIG;
-
   if(indexNo < 0 ||
      attrType < INT ||
      attrType > STRING ||
-     attrLength > pageSize - (int)sizeof(RID) ||
      fileName == NULL)
     return IX_FCREATEFAIL;
+
+  if(attrLength >= pageSize - (int)sizeof(RID) ||
+     attrLength <= 0)
+    return IX_INVALIDSIZE;
 
   stringstream newname;
   newname << fileName << "." << indexNo;
@@ -204,10 +204,21 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &rfileHandle)
   {
     // write header to disk
     PF_PageHandle ph;
-    rfileHandle.pfHandle->GetThisPage(0, ph);
-    rfileHandle.SetFileHeader(ph); // write hdr into file
+    RC rc = rfileHandle.pfHandle->GetThisPage(0, ph);
+    if (rc < 0)
+    {
+      PF_PrintError(rc);
+      return rc;
+    }
 
-    RC rc = rfileHandle.pfHandle->MarkDirty(0);
+    rc = rfileHandle.SetFileHeader(ph); // write hdr into file
+    if (rc < 0)
+    {
+      PF_PrintError(rc);
+      return rc;
+    }
+
+    rc = rfileHandle.pfHandle->MarkDirty(0);
     if (rc < 0)
     {
       PF_PrintError(rc);

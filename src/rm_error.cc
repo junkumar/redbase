@@ -17,6 +17,7 @@ using namespace std;
 // Error table
 //
 const char *RM_WarnMsg[] = {
+  (char*)"bad record size <= 0",
 };
 
 const char *RM_ErrorMsg[] = {
@@ -25,7 +26,7 @@ const char *RM_ErrorMsg[] = {
   (char*)"record null",
   (char*)"record size mismatch",
   (char*)"attempt to open already open file handle",
-  (char*)"bad parameters specified to RM open file handle",
+  (char*)"bad parameters specified to RM open/create file handle",
   (char*)"file is not open",
   (char*)"Bad RID - invalid page num or slot num",
   (char*)"end of file",

@@ -23,7 +23,8 @@ class IX_IndexScan {
   IX_IndexScan();
   ~IX_IndexScan();
 
-  // Open index scan
+  // It is assumed that IX component clients will not close the
+  // corresponding open index while a scan is underway.
   RC OpenScan(const IX_IndexHandle &indexHandle,
               CompOp compOp,
               void *value,

@@ -88,6 +88,9 @@ class IX_IndexHandle {
   void Print(ostream&, int level = -1, RID r = RID(-1,-1)) const;
 
  private:
+  //Unpinning version that will unpin after every call correctly
+  RC GetThisPage(PageNum p, PF_PageHandle& ph) const;
+
   IX_FileHdr hdr;
   bool bFileOpen;
   PF_FileHandle * pfHandle;

@@ -49,11 +49,14 @@ RC RM_Manager::CreateFile (const char *fileName, int recordSize)
    if(recordSize >= PF_PAGE_SIZE - (int)sizeof(RM_PageHdr))
       return RM_SIZETOOBIG;
 
+   if(recordSize <= 0)
+      return RM_BADRECSIZE;
+
    int RC = pfm.CreateFile(fileName);
    if (RC < 0)
    {
       PF_PrintError(RC);
-      return RM_PF;
+      return RC;
    }
    
    PF_FileHandle pfh;
@@ -61,7 +64,7 @@ RC RM_Manager::CreateFile (const char *fileName, int recordSize)
    if (RC < 0)
    {
       PF_PrintError(RC);
-      return RM_PF;
+      return RC;
    }
    
    PF_PageHandle headerPage;

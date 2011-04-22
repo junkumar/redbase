@@ -6,7 +6,7 @@
 #define REDBASE_H
 
 // Please DO NOT include any other files in this file.
-#include <iostream> //TODO
+#include <iostream>
 #include <cmath>
 #include <cassert>
 

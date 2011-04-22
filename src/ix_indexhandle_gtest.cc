@@ -549,3 +549,18 @@ TEST_F(IX_IndexHandleTest, DelDups) {
   int entries[] = {31,31,31,31,31,31,31};
   DeleteTestDups(entries, sifh);
 }
+
+TEST_F(IX_IndexHandleTest, over40pages) {
+  for( int page = 1; page < 49; page++) 
+  {
+    RID rid;
+    for ( int entry = 0; entry < ifh.GetRoot()->GetMaxKeys(); entry++ )
+    {
+      int t = 10;
+      RC rc = ifh.InsertEntry((char *)&t, RID(page, entry));
+      if(rc != 0)
+        cerr << "Page " << page << " Entry " << entry << endl;
+      ASSERT_EQ(rc, 0);
+    }
+  }
+}

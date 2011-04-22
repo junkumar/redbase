@@ -163,6 +163,8 @@ public:
   int GetNumPages() const { return hdr.numPages; }
   int GetNumSlots() const;
 
+  RC IsValid() const;
+
 private:
   bool IsValidPageNum (const PageNum pageNum) const;
   bool IsValidRID(const RID rid) const;

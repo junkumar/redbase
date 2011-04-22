@@ -17,10 +17,10 @@ using namespace std;
 //
 const char *IX_WarnMsg[] = {
   (char*)"key was not found in btree",
+  (char*)"key attribute size is too small(<=0) or too big for a page",
 };
 
 const char *IX_ErrorMsg[] = {
-  (char*)"key attribute size is too big for a page",
   (char*)"error is in the PF component",
   (char*)"Index page with btree node is no longer valid",
   (char*)"Index file creation failed",

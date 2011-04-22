@@ -32,7 +32,7 @@ RC RM_FileHandle::Open(PF_FileHandle* pfh, int size)
 	}
 	if(pfh == NULL ||
 		 size <= 0) {
-		return RM_BADOPEN;
+		return RM_FCREATEFAIL;
 	}
 	bFileOpen = true;
   pfHandle = new PF_FileHandle;
@@ -56,18 +56,22 @@ RC RM_FileHandle::Open(PF_FileHandle* pfh, int size)
 
 	
 	bHdrChanged = true;
+  RC invalid = IsValid(); if(invalid) return invalid; 
+
 	return 0;
 }
 
 RC RM_FileHandle::GetPF_FileHandle(PF_FileHandle &lvalue) const
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	lvalue = *pfHandle;
 	return 0;
 }
 
 RC RM_FileHandle::GetNextFreeSlot(PF_PageHandle & ph, PageNum& pageNum, SlotNum& slotNum)
 {
+  RC invalid = IsValid(); if(invalid) return invalid; 
+
 	RM_PageHdr pHdr(this->GetNumSlots());
 	RC rc;
 	
@@ -92,7 +96,7 @@ RC RM_FileHandle::GetNextFreeSlot(PF_PageHandle & ph, PageNum& pageNum, SlotNum&
 
 RC RM_FileHandle::GetNextFreePage(PageNum& pageNum) 
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	PF_PageHandle ph;
 	RM_PageHdr pHdr(this->GetNumSlots());
 
@@ -215,7 +219,7 @@ RC RM_FileHandle::SetFileHeader(PF_PageHandle ph) const
 
 RC RM_FileHandle::GetSlotPointer(PF_PageHandle ph, SlotNum s, char *& pData) const
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	RC rc = ph.GetData(pData);
 	if (rc >= 0 ) {
 		bitmap b(this->GetNumSlots());
@@ -228,7 +232,6 @@ RC RM_FileHandle::GetSlotPointer(PF_PageHandle ph, SlotNum s, char *& pData) con
  
 int RM_FileHandle::GetNumSlots() const
 {
-	assert(pfHandle != NULL);
 	if(this->fullRecordSize() != 0) {
 		int bytes_available = PF_PAGE_SIZE - sizeof(RM_PageHdr);
 		int slots = floor(1.0 * bytes_available/ (this->fullRecordSize() + 1/8));
@@ -251,7 +254,7 @@ int RM_FileHandle::GetNumSlots() const
 		// 					<<	std::endl;
 		return slots;
 	} else {
-		return -1; //TODO better error 
+		return RM_RECSIZEMISMATCH;
 	}
 }
 
@@ -264,7 +267,7 @@ RM_FileHandle::~RM_FileHandle()
 // Given a RID, return the record
 RC RM_FileHandle::GetRec     (const RID &rid, RM_Record &rec) const 
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	if(!this->IsValidRID(rid))
 		return RM_BAD_RID;
 	PageNum p;
@@ -288,8 +291,9 @@ RC RM_FileHandle::GetRec     (const RID &rid, RM_Record &rec) const
 
 RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 {
-	assert(pfHandle != NULL);
-	assert(pData != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
+	if(pData == NULL)
+    return RM_NULLRECORD;
 
 	PF_PageHandle ph;
 	RM_PageHdr pHdr(this->GetNumSlots());
@@ -326,7 +330,7 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
 
 RC RM_FileHandle::DeleteRec  (const RID &rid)
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	if(!this->IsValidRID(rid))
 		return RM_BAD_RID;
 	PageNum p;
@@ -365,7 +369,7 @@ RC RM_FileHandle::DeleteRec  (const RID &rid)
 // TODO write insert in terms of update
 RC RM_FileHandle::UpdateRec  (const RM_Record &rec)
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	RID rid;
 	rec.GetRid(rid);
 	PageNum p;
@@ -399,7 +403,7 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec)
 // from the buffer pool to disk.  Default value forces all pages.
 RC RM_FileHandle::ForcePages (PageNum pageNum)
 {
-	assert(pfHandle != NULL);
+  RC invalid = IsValid(); if(invalid) return invalid; 
 	if(!this->IsValidPageNum(pageNum) && pageNum != ALL_PAGES)
 		return RM_BAD_RID;
 	return pfHandle->ForcePages(pageNum);
@@ -434,4 +438,12 @@ bool RM_FileHandle::IsValidRID(const RID rid) const
 	return IsValidPageNum(p) &&
 		s >= 0 &&
 		s < this->GetNumSlots();
+}
+
+RC RM_FileHandle::IsValid() const {
+  if((pfHandle == NULL) || !bFileOpen)
+    return RM_FNOTOPEN;
+  if(GetNumSlots() <= 0)
+    return RM_RECSIZEMISMATCH;
+  return 0;
 }

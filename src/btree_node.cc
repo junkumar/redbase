@@ -149,7 +149,7 @@ void BtreeNode::SetPageRID(const RID& r)
 RC BtreeNode::IsValid() const
 {
   if (order <= 0)
-    return IX_SIZETOOBIG;
+    return IX_INVALIDSIZE;
 
   bool ret = true;
   ret = ret && (keys != NULL);
@@ -232,6 +232,10 @@ int BtreeNode::SetKey(int pos, const void* newkey)
 {
   assert(IsValid() == 0);
   assert(pos >= 0 && pos < order);
+  // assert(newkey != (keys + attrLength*pos));
+  if(newkey == (keys + attrLength*pos))
+    return 0; // TODO - should never happen
+
   if (pos >= 0 && pos < order) 
     {
       memcpy(keys + attrLength*pos,

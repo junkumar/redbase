@@ -90,7 +90,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     PageNum p;
     RC rc = GetNewPage(p);
     if (rc != 0) return IX_PF;
-    rc = pfHandle->GetThisPage(p, ph);
+    rc = GetThisPage(p, ph);
     if (rc != 0) return IX_PF;
   
     bool leaf = true;
@@ -162,7 +162,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     PageNum p;
     RC rc = GetNewPage(p);
     if (rc != 0) return IX_PF;
-    rc = pfHandle->GetThisPage(p, ph);
+    rc = GetThisPage(p, ph);
     if (rc != 0) return IX_PF;
   
     bool leaf = false;
@@ -304,6 +304,16 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   }
 }
 
+//Unpinning version that will unpin after every call correctly
+RC IX_IndexHandle::GetThisPage(PageNum p, PF_PageHandle& ph) const {
+  RC rc = pfHandle->GetThisPage(p, ph); 
+    if (rc != 0) return rc;
+    // Needs to be called everytime GetThisPage is called.
+    rc = pfHandle->UnpinPage(p);
+    if (rc != 0) return rc;
+    return 0;
+}
+
 RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, 
                         PageNum rootPage, int pageSize)
 {
@@ -319,9 +329,7 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
 	*pfHandle = *pfh ;
 
 	PF_PageHandle ph;
-	pfHandle->GetThisPage(0, ph);
-  // Needs to be called everytime GetThisPage is called.
-	pfHandle->UnpinPage(0); 
+	GetThisPage(0, ph);
 
 	this->GetFileHeader(ph); // write into hdr member
 	// std::cerr << "IX_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
@@ -333,13 +341,14 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
     SetHeight(hdr.height); // do all other init
     newPage = false;
 
-    RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph); 
+    RC rc = GetThisPage(hdr.rootPage, rootph); 
     if (rc != 0) return rc;
+
   } else {
     PageNum p;
     RC rc = GetNewPage(p);
     if (rc != 0) return rc;
-    rc = pfHandle->GetThisPage(p, rootph);
+    rc = GetThisPage(p, rootph);
     if (rc != 0) return rc;
     hdr.rootPage = p;
     SetHeight(1); // do all other init
@@ -363,8 +372,10 @@ RC IX_IndexHandle::GetFileHeader(PF_PageHandle ph)
 {
 	char * buf;
 	RC rc = ph.GetData(buf);
+  if (rc != 0)
+    return rc;
 	memcpy(&hdr, buf, sizeof(hdr));
-	return rc;
+	return 0;
 }
 
 // persist header into the first page of a file for later
@@ -372,8 +383,10 @@ RC IX_IndexHandle::SetFileHeader(PF_PageHandle ph) const
 {
 	char * buf;
 	RC rc = ph.GetData(buf);
+  if (rc != 0)
+    return rc;
 	memcpy(buf, &hdr, sizeof(hdr));
-	return rc;
+	return 0;
 }
 
 // Forces a page (along with any contents stored in this class)
@@ -521,7 +534,7 @@ BtreeNode* IX_IndexHandle::FetchNode(RID r) const
   assert(IsValid() == 0);
   if(r.Page() < 0) return NULL;
   PF_PageHandle ph;
-  RC rc = pfHandle->GetThisPage(r.Page(), ph);
+  RC rc = GetThisPage(r.Page(), ph);
   if(rc!=0) return NULL;
 
   //TODO remove isleaf & isroot

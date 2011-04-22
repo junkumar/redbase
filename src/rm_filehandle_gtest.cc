@@ -43,6 +43,23 @@ TEST_F(RM_FileHandleTest, FullSize) {
 	ASSERT_EQ(101, fh.GetNumSlots());
 }
 
+TEST_F(RM_FileHandleTest, ZeroRec) {
+	RM_FileHandle sfh;
+	RC rc;
+ 	system("rm -f gtestfilesmall");
+  (rc = rmm.CreateFile("gtestfilesmall", 0));
+  ASSERT_EQ(rc, RM_BADRECSIZE);
+
+	(rc =	rmm.OpenFile("gtestfilesmall", sfh));
+  ASSERT_LT(rc, 0);
+
+	rc = rmm.CloseFile(sfh);
+  ASSERT_LT(rc, 0);
+
+	rc = rmm.DestroyFile("gtestfilesmall");
+  ASSERT_LT(rc, 0);
+}
+
 TEST_F(RM_FileHandleTest, SmallRec) {
 	struct SmallRec {
 		int i;
@@ -100,7 +117,8 @@ TEST_F(RM_FileHandleTest, FreeList) {
 	for( int i = 0; i < fh.GetNumSlots() + 5; i++)
 	{
 		t.num = i;
-		fh.InsertRec((char*) &t, p2rid);
+		RC rc = fh.InsertRec((char*) &t, p2rid);
+    ASSERT_EQ(rc, 0);
 		// std::cerr << "p2 RID was " << p2rid << std::endl;
 	}
 	// p1 should be full

@@ -31,8 +31,18 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
     // scan is already open
     return IX_HANDLEOPEN;
   }
-  bOpen = true;
+
+  if((compOp < NO_OP) ||
+      compOp > GE_OP)
+    return IX_FCREATEFAIL;
+
+
   pixh = const_cast<IX_IndexHandle*>(&fileHandle);
+  if((pixh == NULL) ||
+     pixh->IsValid() != 0)
+    return IX_FCREATEFAIL;
+
+  bOpen = true;
 
   pred = new Predicate(pixh->GetAttrType(),
                        pixh->GetAttrLength(),
