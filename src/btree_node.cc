@@ -73,8 +73,9 @@ int BtreeNode::Destroy()
   if(numKeys != 0)
     return -1;
 
-  keys == NULL;
-  rids == NULL; 
+  keys = NULL;
+  rids = NULL;
+  return 0;
 }
 
 int BtreeNode::GetNumKeys() 
@@ -525,9 +526,10 @@ void BtreeNode::Print(ostream & os) {
       os << *((int*)k);
     if( attrType == FLOAT )
       os << *((float*)k);
-    if( attrType == STRING )
-      os << *((char*)k);
-      
+    if( attrType == STRING ) {
+      for(int i=0; i < attrLength; i++)
+        os << ((char*)k)[i];
+    }
     os << "," 
        << GetAddr(pos) << "), ";
   }

@@ -1,6 +1,6 @@
 #include "btree_node.h"
-#include "ix_index_manager.h"
-#include "ix_index_handle.h"
+#include "ix_manager.h"
+#include "ix_indexhandle.h"
 #include "gtest/gtest.h"
 
 #define STRLEN 29
@@ -275,7 +275,7 @@ TEST_F(BtreeNodeTest, SetLeft) {
     int res = b.Insert(&i, RID());
     // if(res != 0)
     //   cerr << i << endl;
-//    ASSERT_EQ(res, 0);
+    ASSERT_EQ(res, 0);
   }
 
 

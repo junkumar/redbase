@@ -1,4 +1,4 @@
-#include "ix_index_handle.h"
+#include "ix_indexhandle.h"
 
 IX_IndexHandle::IX_IndexHandle()
 	:bFileOpen(false), pfHandle(NULL), bHdrChanged(false)
@@ -191,7 +191,6 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     return -2;
 
   bool nodeLargest = false;
-  void * prevKey = NULL;
 
   BtreeNode* node = FindLeaf(pData);
   assert(node != NULL);
@@ -202,8 +201,6 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     return -2;
   else if(pos == node->GetNumKeys()-1)
     nodeLargest = true;
-
-  BtreeNode* newNode = NULL;
 
   // Handle special case of key being largest and rightmost in
   // node. Means it is in parent and potentially whole path (every
@@ -578,6 +575,7 @@ BtreeNode* IX_IndexHandle::GetRoot() const
 }
 
 void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
+  assert(IsValid() == 0);
   // level -1 signals first call to recursive function - root
   // os << "Print called with level " << level << endl;
   BtreeNode * node = NULL;

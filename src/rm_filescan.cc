@@ -92,7 +92,7 @@ RC RM_FileScan::GetNextRec     (RM_Record &rec)
 
 RC RM_FileScan::CloseScan()
 {
-  assert(prmh != NULL && pred != NULL && bOpen);
+  assert(prmh != NULL && pred != NULL);
   if(!bOpen)
     return RM_FNOTOPEN;
   bOpen = false;

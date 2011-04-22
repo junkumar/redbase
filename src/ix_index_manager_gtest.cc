@@ -1,4 +1,4 @@
-#include "ix_index_manager.h"
+#include "ix_manager.h"
 #include "btree_node.h"
 #include "gtest/gtest.h"
 

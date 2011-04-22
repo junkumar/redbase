@@ -10,6 +10,17 @@
 
 using namespace std;
 
+bool AlmostEqualRelative(float A, float B, float maxRelativeError=0.000001)
+{
+    if (A == B)
+        return true;
+    float relativeError = fabs((A - B) / B);
+    if (relativeError <= maxRelativeError)
+        return true;
+    return false;
+}
+
+
 bool Predicate::eval(const char *buf, CompOp c) const {
   if(c == NO_OP || value == NULL) {
     return true;
@@ -18,10 +29,10 @@ bool Predicate::eval(const char *buf, CompOp c) const {
     
   if(c == LT_OP) {
     if(attrType == INT) {
-      return *attr < *((int *)value);
+      return *((int *)attr) < *((int *)value);
     }
     if(attrType == FLOAT) {
-      return *attr < *((float *)value);
+      return *((float *)attr) < *((float *)value);
     }
     if(attrType == STRING) {
       return strncmp(attr, (char *)value, attrLength) < 0;
@@ -29,10 +40,10 @@ bool Predicate::eval(const char *buf, CompOp c) const {
   }
   if(c == GT_OP) {
     if(attrType == INT) {
-      return *attr > *((int *)value);
+      return *((int *)attr) > *((int *)value);
     }
     if(attrType == FLOAT) {
-      return *attr > *((float *)value);
+      return *((float *)attr) > *((float *)value);
     }
     if(attrType == STRING) {
       return strncmp(attr, (char *)value, attrLength) > 0;
@@ -40,10 +51,11 @@ bool Predicate::eval(const char *buf, CompOp c) const {
   }
   if(c == EQ_OP) {
     if(attrType == INT) {
-      return *attr == *((int *)value);
+      return *((int *)attr) == *((int *)value);
     }
     if(attrType == FLOAT) {
-      return *attr == *((float *)value);
+      return *((float *)attr) == *((float *)value);
+      // return AlmostEqualRelative(*((float *)attr), *((float *)value));
     }
     if(attrType == STRING) {
       return strncmp(attr, (char *)value, attrLength) == 0;

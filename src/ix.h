@@ -13,8 +13,8 @@
 #include "rm_rid.h"  // Please don't change these lines
 #include "pf.h"
 #include "ix_error.h"
-#include "ix_index_handle.h"
-#include "ix_index_manager.h"
-#include "ix_index_scan.h"
+#include "ix_indexhandle.h"
+#include "ix_manager.h"
+#include "ix_indexscan.h"
 
 #endif // IX_H

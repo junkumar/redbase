@@ -1,5 +1,5 @@
 //
-// ix_index_scan.h
+// ix_indexscan.h
 //
 //   Index Manager Component Interface
 //
@@ -12,7 +12,7 @@
 #include "redbase.h"  // Please don't change these lines
 #include "rm_rid.h"  // Please don't change these lines
 #include "pf.h"
-#include "ix_index_handle.h"
+#include "ix_indexhandle.h"
 #include "predicate.h"
 
 //

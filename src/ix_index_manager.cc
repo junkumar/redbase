@@ -1,5 +1,5 @@
-#include "ix_index_manager.h"
-#include "ix_index_handle.h"
+#include "ix_manager.h"
+#include "ix_indexhandle.h"
 #include <sstream>
 
 //
@@ -36,13 +36,13 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
                             AttrType attrType, int attrLength,
                             int pageSize)
 {
-  if(attrLength >= pageSize - sizeof(RID))
+  if(attrLength >= pageSize - (int)sizeof(RID))
     return IX_SIZETOOBIG;
 
   if(indexNo < 0 ||
      attrType < INT ||
      attrType > STRING ||
-     attrLength > pageSize - sizeof(RID) ||
+     attrLength > pageSize - (int)sizeof(RID) ||
      fileName == NULL)
     return IX_FCREATEFAIL;
 

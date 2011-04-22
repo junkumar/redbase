@@ -42,9 +42,9 @@ RM_SOURCES     = statistics.cc rm_manager.cc rm_error.cc rm_filescan.cc \
                  rm_record.cc rm_filehandle.cc rm_record_gtest.cc \
 		 rm_filehandle_gtest.cc bitmap.cc bitmap_gtest.cc \
 		 pf_manager_gtest.cc predicate.cc
-IX_SOURCES     = ix_index_handle.cc ix_index_handle_gtest.cc \
-		 ix_index_manager.cc ix_index_manager_gtest.cc \
-		 ix_index_scan.cc ix_index_scan_gtest.cc \
+IX_SOURCES     = ix_indexhandle.cc ix_index_handle_gtest.cc \
+		 ix_manager.cc ix_index_manager_gtest.cc \
+		 ix_indexscan.cc ix_index_scan_gtest.cc \
 		 btree_node.cc btree_node_gtest.cc \
 		 ix_error.cc statistics.cc predicate.cc
 SM_SOURCES     = statistics.cc #sm_stub.cc printer.cc
@@ -98,7 +98,8 @@ testers: all $(TESTS)
 test: testers gtest
 #	./pf_test1
 	./rm_test
-	gtest
+	./ix_test
+	./gtest
 
 tag tags: 
 	find . -type f | grep -v "\.git" | grep -v docs | xargs etags

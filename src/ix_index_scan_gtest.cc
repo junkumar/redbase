@@ -1,7 +1,7 @@
-#include "ix_index_scan.h"
-#include "ix_index_handle.h"
+#include "ix_indexscan.h"
+#include "ix_indexhandle.h"
 #include "btree_node.h"
-#include "ix_index_manager.h"
+#include "ix_manager.h"
 #include "gtest/gtest.h"
 #include "rm_error.h"
 

@@ -1,6 +1,6 @@
 //
 //
-#include "ix_index_scan.h"
+#include "ix_indexscan.h"
 #include <cerrno>
 #include <cassert>
 #include <cstdio>
