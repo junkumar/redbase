@@ -26,7 +26,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
                           void       *value,
                           ClientHint pinHint) 
 {
-  if (pixh != NULL || pred != NULL || bOpen)
+  if (bOpen)
   {
     // scan is already open
     return IX_HANDLEOPEN;
@@ -52,7 +52,7 @@ RC IX_IndexScan::GetNextEntry     (RID &rid)
 
 RC IX_IndexScan::GetNextEntry(void *& k, RID &rid)
 {
-  assert(pixh != NULL || pred != NULL || bOpen);
+  assert(pixh != NULL && pred != NULL && bOpen);
   if(!bOpen)
     return IX_FNOTOPEN;
 
@@ -108,5 +108,7 @@ RC IX_IndexScan::CloseScan()
   bOpen = false;
   if (pred != NULL)
     delete pred;
+  currNode = NULL;
+  currPos = -1;
   return 0;
 }

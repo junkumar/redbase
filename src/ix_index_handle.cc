@@ -28,7 +28,6 @@ IX_IndexHandle::~IX_IndexHandle()
 }
 
 // 0 indicates success
-// -1 indicates overflow
 // -2 indicates other errors
 RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 {
@@ -181,8 +180,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
 
 // 0 indicates success
-// -1 indicates underflow
 // -2 indicates other errors
+// Implements lazy deletion - underflow is defined as 0 keys for all
+// non-root nodes.
 RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 {
   assert(IsValid() == 0);
@@ -210,30 +210,34 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   // intermediate node)
   if (nodeLargest) {
     cerr << "node largest" << endl;
-    if(node->GetNumKeys() > 1) {
-      void * leftKey = NULL;
-      node->GetKey(node->GetNumKeys()-2, leftKey);
-      cerr << " left key " << *(int*)leftKey << endl;
-      if(node->CmpKey(pData, leftKey) != 0) {
+      // void * leftKey = NULL;
+      // node->GetKey(node->GetNumKeys()-2, leftKey);
+      // cerr << " left key " << *(int*)leftKey << endl;
+      // if(node->CmpKey(pData, leftKey) != 0) {
         // replace this key with leftkey in every intermediate node
         // where it appears
-        for(int i = hdr.height-2; i >= 0; i--) {
-          int pos = path[i]->FindKey((const void *&)pData);
-          if(pos != -1) {
-            // if level is lower than leaf-1 then make sure that this is
-            // the largest key
-            if((i == hdr.height-2) || // leaf's parent level
-               (pos == path[i]->GetNumKeys()-1) // largest at
-                                                // intermediate node too 
-              )
-              path[i]->SetKey(pos, leftKey);
+    for(int i = hdr.height-2; i >= 0; i--) {
+      int pos = path[i]->FindKey((const void *&)pData);
+      if(pos != -1) {
+        
+        void * leftKey = NULL;
+        leftKey = path[i+1]->LargestKey();
+        if(node->CmpKey(pData, leftKey) == 0) {
+          int pos = path[i+1]->GetNumKeys()-2;
+          if(pos < 0) {
+            continue; //underflow will happen
           }
-          else {
-          // do nothing
-          }
+          path[i+1]->GetKey(path[i+1]->GetNumKeys()-2, leftKey);
         }
+        
+        // if level is lower than leaf-1 then make sure that this is
+        // the largest key
+        if((i == hdr.height-2) || // leaf's parent level
+           (pos == path[i]->GetNumKeys()-1) // largest at
+           // intermediate node too 
+          )
+          path[i]->SetKey(pos, leftKey);
       }
-      // else do nothing  
     }
   }
 
@@ -256,7 +260,21 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     result = parent->Remove(NULL, posAtParent);
     // root is considered underflow even it is left with a single key
     if(level == 0 && parent->GetNumKeys() == 1 && result == 0)
-      result == -1;
+      result = -1;
+
+    // adjust L/R pointers because a node is going to be destroyed
+    BtreeNode* left = FetchNode(node->GetLeft());
+    BtreeNode* right = FetchNode(node->GetRight());
+    if(left != NULL)
+      if(right != NULL)
+        left->SetRight(right->GetPageRID().Page());
+      else
+        left->SetRight(-1);
+    if(right != NULL)
+      if(left != NULL)
+        right->SetLeft(left->GetPageRID().Page());
+      else
+        right->SetLeft(-1);
 
     node->Destroy();
     RC rc = DisposePage(node->GetPageRID().Page());
@@ -271,10 +289,14 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     // deletion done
     return 0;
   } else {
-    // root underflow
+    cerr << "root underflow" << endl;
     
+    if(hdr.height == 1) { // root is also leaf
+      return 0; //leave empty leaf-root around.
+    }
+
     // new root is only child
-    root = path[1];
+    root = FetchNode(root->GetAddr(0));
     node->Destroy();
     RC rc = DisposePage(node->GetPageRID().Page());
     if (rc < 0)

@@ -30,7 +30,7 @@ using namespace std;
 //
 // Defines
 //
-#define FILENAME     "testrel"        // test file name
+const char* FILENAME = "testrel";        // test file name
 #define BADFILE      "/abc/def/xyz"   // bad file name
 #define STRLEN       39               // length of strings to index
 #define FEW_ENTRIES  20
@@ -60,7 +60,7 @@ RC Test3(void);
 RC Test4(void);
 
 void PrintError(RC rc);
-void LsFiles(char *fileName);
+void LsFiles(const char *fileName);
 void ran(int n);
 RC InsertIntEntries(IX_IndexHandle &ih, int nEntries);
 RC InsertFloatEntries(IX_IndexHandle &ih, int nEntries);
@@ -75,7 +75,7 @@ RC PrintIndex(IX_IndexHandle &ih);
 //
 // Array of pointers to the test functions
 //
-#define NUM_TESTS       3               // number of tests
+#define NUM_TESTS       4               // number of tests
 int (*tests[])() =                      // RC doesn't work on some compilers
 {
    Test1,
@@ -148,24 +148,6 @@ int main(int argc, char *argv[])
    return (0);
 }
 
-//
-// PrintError
-//
-// Desc: Print an error message by calling the proper component-specific
-//       print-error function
-//
-void PrintError(RC rc)
-{
-   if (abs(rc) <= END_PF_WARN)
-      PF_PrintError(rc);
-   else if (abs(rc) <= END_RM_WARN)
-      RM_PrintError(rc);
-   else if (abs(rc) <= END_IX_WARN)
-      IX_PrintError(rc);
-   else
-      cerr << "Error code out of range: " << rc << "\n";
-}
-
 ////////////////////////////////////////////////////////////////////
 // The following functions may be useful in tests that you devise //
 ////////////////////////////////////////////////////////////////////
@@ -175,7 +157,7 @@ void PrintError(RC rc)
 //
 // Desc: list the filename's directory entry
 //
-void LsFiles(char *fileName)
+void LsFiles(const char *fileName)
 {
    char command[80];
 

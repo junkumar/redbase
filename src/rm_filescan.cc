@@ -29,7 +29,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
                          void       *value,
                          ClientHint pinHint) 
 {
-  if (prmh != NULL || pred != NULL || bOpen)
+  if (bOpen)
   {
     // scan is already open
     return RM_HANDLEOPEN;
@@ -47,7 +47,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
 
 RC RM_FileScan::GetNextRec     (RM_Record &rec)
 {
-  assert(prmh != NULL || pred != NULL || bOpen);
+  assert(prmh != NULL && pred != NULL && bOpen);
   if(!bOpen)
     return RM_FNOTOPEN;
 
@@ -92,11 +92,12 @@ RC RM_FileScan::GetNextRec     (RM_Record &rec)
 
 RC RM_FileScan::CloseScan()
 {
-  assert(prmh != NULL || pred != NULL || bOpen);
+  assert(prmh != NULL && pred != NULL && bOpen);
   if(!bOpen)
     return RM_FNOTOPEN;
   bOpen = false;
   if (pred != NULL)
     delete pred;
+  current = RID(1,-1);
   return 0;
 }

@@ -531,6 +531,8 @@ void BtreeNode::Print(ostream & os) {
     os << "," 
        << GetAddr(pos) << "), ";
   }
-  os << "\b\b}" 
+  if(numKeys > 0)
+    os << "\b\b";
+  os << "}" 
      << "-->" << GetRight() << "\n";
 }

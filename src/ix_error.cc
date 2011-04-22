@@ -45,7 +45,7 @@ void IX_PrintError(RC rc)
     // Print warning
     cerr << "IX warning: " << IX_WarnMsg[rc - START_IX_WARN] << "\n";
   // Error codes are negative, so invert everything
-  else if ((-rc >= -START_IX_ERR) && -rc < -IX_LASTERROR)
+  else if ((-rc >= -START_IX_ERR) && -rc <= -IX_LASTERROR)
 	{
    // Print error
     cerr << "IX error: " << IX_ErrorMsg[-rc + START_IX_ERR] << "\n";

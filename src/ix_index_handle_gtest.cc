@@ -342,14 +342,10 @@ TEST_F(IX_IndexHandleTest, 2SmallDups) {
   ScanOrderedInt(sifh, 21);
 }
 
-
-TEST_F(IX_IndexHandleTest, DelSimple) {
+void DeleteTest(int * entries, IX_IndexHandle& sifh) {
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
- 
-  // Simple insert - order 2
-  int entries[] = {102,100,31,30,11,5,3};
-  
+
   for (int i = 0; i < 7; i++) {
     RID r(0, 0);
     RC rc;
@@ -431,88 +427,125 @@ TEST_F(IX_IndexHandleTest, DelSimple) {
   sifh.Print(cerr);
   ScanOrderedInt(sifh, 1);
 
+  // underflow delete - last key - root
+  i = 30;
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 0);
 }
 
-TEST_F(IX_IndexHandleTest, DelUnderflow) {
-  const BtreeNode * root = sifh.GetRoot();
-  ASSERT_EQ(root->GetMaxKeys(), 3);
- 
-  // Simple insert - order 2
-  int entries[] = {31,31,31,31,31,31,31};
-  
-  for (int i = 0; i < 20; i++) {
-    RID r(0, 0);
-    RC rc;
-    // cerr << "Inserting " << *(entries+0) << endl;
-    rc = sifh.InsertEntry(entries+0, r);
-    ASSERT_EQ(rc, 0);
-    // // sifh.Print(cerr);
-    ScanOrderedInt(sifh, i+1);
-    // cerr << endl << endl;
-  }
-  
-  // simple insert
-  int i = 32;
-  // cerr << "Inserting " << i << endl;
-  RC rc = sifh.InsertEntry(&i, RID(0,0));
-  ASSERT_EQ(rc, 0);
-  // // sifh.Print(cerr);
+TEST_F(IX_IndexHandleTest, DelOrder1) {
 
-  ScanOrderedInt(sifh, 21);
+  // Simple insert - order 1
+  int entries[] = {102,100,31,30,11,5,3};
+  DeleteTest(entries, sifh);
 }
 
-TEST_F(IX_IndexHandleTest, DelMultiUnderflow) {
-  const BtreeNode * root = sifh.GetRoot();
-  ASSERT_EQ(root->GetMaxKeys(), 3);
- 
-  // Simple insert - order 2
-  int entries[] = {31,31,31,31,31,31,31};
-  
-  for (int i = 0; i < 20; i++) {
-    RID r(0, 0);
-    RC rc;
-    // cerr << "Inserting " << *(entries+0) << endl;
-    rc = sifh.InsertEntry(entries+0, r);
-    ASSERT_EQ(rc, 0);
-    // // sifh.Print(cerr);
-    ScanOrderedInt(sifh, i+1);
-    // cerr << endl << endl;
-  }
-  
-  // simple insert
-  int i = 32;
-  // cerr << "Inserting " << i << endl;
-  RC rc = sifh.InsertEntry(&i, RID(0,0));
-  ASSERT_EQ(rc, 0);
-  // // sifh.Print(cerr);
+TEST_F(IX_IndexHandleTest, DelOrder2) {
 
-  ScanOrderedInt(sifh, 21);
+  // Simple insert - order 2
+  int entries[] = {3,5,11,30,31,100,102};
+  DeleteTest(entries, sifh);
 }
 
-TEST_F(IX_IndexHandleTest, DelMultiUnderflowDups) {
+
+TEST_F(IX_IndexHandleTest, DelOrder3) {
+
+  // Simple insert - order 3
+  int entries[] = {31,102,100,30,3,11,5};
+  DeleteTest(entries, sifh);
+}
+
+void DeleteTestDups(int * entries, IX_IndexHandle& sifh) {
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);
- 
-  // Simple insert - order 2
-  int entries[] = {31,31,31,31,31,31,31};
-  
-  for (int i = 0; i < 20; i++) {
+
+  for (int i = 0; i < 7; i++) {
     RID r(0, 0);
     RC rc;
-    // cerr << "Inserting " << *(entries+0) << endl;
-    rc = sifh.InsertEntry(entries+0, r);
+    // cerr << "Inserting " << *(entries+i) << endl;
+    rc = sifh.InsertEntry(entries+i, r);
     ASSERT_EQ(rc, 0);
-    // // sifh.Print(cerr);
+    sifh.Print(cerr);
     ScanOrderedInt(sifh, i+1);
-    // cerr << endl << endl;
+    cerr << endl << endl;
   }
   
-  // simple insert
-  int i = 32;
-  // cerr << "Inserting " << i << endl;
-  RC rc = sifh.InsertEntry(&i, RID(0,0));
+  // simple delete
+  int i = entries[0];
+  cerr << "Deleting " << i << endl;
+  RC rc = sifh.DeleteEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
-  // // sifh.Print(cerr);
+  sifh.Print(cerr);
 
-  ScanOrderedInt(sifh, 21);
+  ScanOrderedInt(sifh, 6);
+
+  // simple delete - largest key in leaf node
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+
+  ScanOrderedInt(sifh, 5);
+
+  // simple delete - largest key in leaf node + dup
+  rc = sifh.InsertEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 5);
+
+  // simple delete - diff RID + dup
+  int j = 32;
+  rc = sifh.InsertEntry(&j, RID(11,11));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 5);
+
+  // underflow delete
+  cerr << "Deleting " << j << endl;
+  rc = sifh.DeleteEntry(&j, RID(11,11));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 4);
+
+  // underflow delete - multi-level
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 3);
+
+  // underflow delete - multi-level - root
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 1);
+
+  // underflow delete - last key - root
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 0);
+}
+
+TEST_F(IX_IndexHandleTest, DelDups) {
+  int entries[] = {31,31,31,31,31,31,31};
+  DeleteTestDups(entries, sifh);
 }
