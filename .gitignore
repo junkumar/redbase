@@ -1,5 +1,6 @@
 src/pf_test*
 src/rm_test
+src/ix_test
 src/gtest
 src/TAGS
 build/
