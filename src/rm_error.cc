@@ -69,7 +69,7 @@ void RM_PrintError(RC rc)
 // Desc: Send a message whether it is a RM or a PF return code to cerr
 // In:   rc - return code for which a message is desired
 //
-void PrintError(RC rc)
+void PrintErrorAll(RC rc)
 {
   // Check the return code is within proper limits
   if ((rc >= START_RM_WARN && rc <= RM_LASTWARN)

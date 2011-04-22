@@ -143,7 +143,7 @@ TEST_F(IX_IndexHandleTest, RootInsert) {
     RID s;
     rc = ifh.Search(&i, s);
     if(rc != 0)
-      PrintError(rc);
+      PrintErrorAll(rc);
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(r, s);
   }

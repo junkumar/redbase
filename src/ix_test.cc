@@ -61,7 +61,7 @@ RC Test4(void);
 RC Test5(void);
 RC Test6(void);
 
-void PrintError(RC rc);
+void PrintErrorAll(RC rc);
 void LsFiles(const char *fileName);
 void ran(int n);
 RC InsertIntEntries(IX_IndexHandle &ih, int nEntries);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
       for (testNum = 0; testNum < NUM_TESTS; testNum++)
          if ((rc = (tests[testNum])())) {
             // Print the error and exit
-            PrintError(rc);
+            PrintErrorAll(rc);
             return (1);
          }
    }
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
          // Perform the test
          if ((rc = (tests[testNum - 1])())) {
             // Print the error and exit
-            PrintError(rc);
+            PrintErrorAll(rc);
             return (1);
          }
       }

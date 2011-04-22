@@ -11,7 +11,7 @@
 // Print-error function
 //
 void RM_PrintError(RC rc);
-void PrintError(RC rc);
+void PrintErrorAll(RC rc);
 
 #define RM_BADRECSIZE      (START_RM_WARN + 0)  // rec size invalid <= 0
 

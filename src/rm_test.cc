@@ -64,7 +64,7 @@ RM_Manager rmm(pfm);
 RC Test1(void);
 RC Test2(void);
 
-void PrintError(RC rc);
+void PrintErrorAll(RC rc);
 void LsFile(char *fileName);
 void PrintRecord(TestRec &recBuf);
 RC AddRecs(RM_FileHandle &fh, int numRecs);
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
             if ((rc = (tests[testNum])())) {
 
                 // Print the error and exit
-                PrintError(rc);
+                PrintErrorAll(rc);
                 return (1);
             }
     }
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
             if ((rc = (tests[testNum - 1])())) {
 
                 // Print the error and exit
-                PrintError(rc);
+                PrintErrorAll(rc);
                 return (1);
             }
         }
