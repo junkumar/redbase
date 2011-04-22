@@ -127,7 +127,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     // go up to parent level and repeat
     level--;
-    if(level < 0) break;
+    if(level < 0) break; // root !
     // pos at which parent stores a pointer to this node
     int posAtParent = pathP[level];
     // cerr << "posAtParent was " << posAtParent << endl ;
@@ -151,7 +151,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     failedKey = newNode->LargestKey(); // failure cannot be in node -
                                        // something was removed first.
     failedRid = newNode->GetPageRID();
-  }
+  } // while
 
   if(level >= 0) {
     // insertion done
@@ -192,7 +192,6 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 
   bool nodeLargest = false;
   void * prevKey = NULL;
-  int level = hdr.height - 1;
 
   BtreeNode* node = FindLeaf(pData);
   assert(node != NULL);
@@ -210,9 +209,11 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   // node. Means it is in parent and potentially whole path (every
   // intermediate node)
   if (nodeLargest) {
+    cerr << "node largest" << endl;
     if(node->GetNumKeys() > 1) {
       void * leftKey = NULL;
       node->GetKey(node->GetNumKeys()-2, leftKey);
+      cerr << " left key " << *(int*)leftKey << endl;
       if(node->CmpKey(pData, leftKey) != 0) {
         // replace this key with leftkey in every intermediate node
         // where it appears
@@ -237,7 +238,51 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   }
 
   int result = node->Remove(pData, pos); // pos is the param that counts
-  return result;
+
+  int level = hdr.height - 1; // leaf level
+  while (result == -1) {
+
+    // go up to parent level and repeat
+    level--;
+    if(level < 0) break; // root !
+
+    // pos at which parent stores a pointer to this node
+    int posAtParent = pathP[level];
+    // cerr << "posAtParent was " << posAtParent << endl ;
+    // cerr << "level was " << level << endl ;
+
+
+    BtreeNode * parent = path[level];
+    result = parent->Remove(NULL, posAtParent);
+    // root is considered underflow even it is left with a single key
+    if(level == 0 && parent->GetNumKeys() == 1 && result == 0)
+      result == -1;
+
+    node->Destroy();
+    RC rc = DisposePage(node->GetPageRID().Page());
+    if (rc < 0)
+      return IX_PF;
+
+    node = parent;
+  } // end of while result == -1
+  
+
+  if(level >= 0) {
+    // deletion done
+    return 0;
+  } else {
+    // root underflow
+    
+    // new root is only child
+    root = path[1];
+    node->Destroy();
+    RC rc = DisposePage(node->GetPageRID().Page());
+    if (rc < 0)
+      return IX_PF;
+
+    SetHeight(--hdr.height); // do all other init
+    return 0;
+  }
 }
 
 RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, 
@@ -358,6 +403,20 @@ RC IX_IndexHandle::GetNewPage(PageNum& pageNum)
   // cerr << "GetNewPage called to get page " << pageNum << endl;
   hdr.numPages++;
   assert(hdr.numPages > 1); // page 0 is this page in worst case
+  bHdrChanged = true;
+  return 0; // pageNum is set correctly
+}
+
+RC IX_IndexHandle::DisposePage(const PageNum& pageNum) 
+{
+	assert(IsValid() == 0);
+
+  RC rc;
+  if ((rc = pfHandle->DisposePage(pageNum)))
+    return(rc);
+  
+  hdr.numPages--;
+  assert(hdr.numPages > 0); // page 0 is this page in worst case
   bHdrChanged = true;
   return 0; // pageNum is set correctly
 }

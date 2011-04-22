@@ -388,6 +388,7 @@ TEST_F(IX_IndexHandleTest, DelSimple) {
   rc = sifh.DeleteEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
   sifh.Print(cerr);
+  ScanOrderedInt(sifh, 5);
 
   // simple delete - diff RID + dup
   i = 5;
@@ -398,6 +399,37 @@ TEST_F(IX_IndexHandleTest, DelSimple) {
   rc = sifh.DeleteEntry(&i, RID(0,0));
   ASSERT_EQ(rc, 0);
   sifh.Print(cerr);
+  ScanOrderedInt(sifh, 5);
+
+  // underflow delete
+  i = 5;
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(11,11));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 4);
+
+  // underflow delete - multi-level
+  i = 102;
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 3);
+
+  // underflow delete - multi-level - root
+  i = 100;
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+
+  i = 31;
+  cerr << "Deleting " << i << endl;
+  rc = sifh.DeleteEntry(&i, RID(0,0));
+  ASSERT_EQ(rc, 0);
+  sifh.Print(cerr);
+  ScanOrderedInt(sifh, 1);
 
 }
 

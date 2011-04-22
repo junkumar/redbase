@@ -18,6 +18,8 @@ class BtreeNode {
             int pageSize = PF_PAGE_SIZE, bool duplicates = false, 
             bool leaf = false, bool root = false);
   ~BtreeNode();
+  int Destroy();
+
   friend class BtreeNodeTest;
   RC IsValid() const;
   int GetMaxKeys() const;

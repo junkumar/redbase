@@ -107,7 +107,7 @@ tags-clean:
 	rm -f TAGS
 
 val:
-	valgrind --suppressions=valgrind.supp ./gtest --gtest_filter=*RootInsert
+	valgrind --suppressions=valgrind.supp ./gtest --gtest_filter=*
 
 
 #

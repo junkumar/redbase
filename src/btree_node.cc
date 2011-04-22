@@ -58,6 +58,25 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
     // right - takes up sizeof(PageNum)
 }
 
+BtreeNode::~BtreeNode()
+{
+};
+
+
+// Only works if node is empty
+// ret -1 if node is not empty
+// 0 on success
+// Object can no longer be used after this point.
+int BtreeNode::Destroy()
+{
+  assert(IsValid() == 0);
+  if(numKeys != 0)
+    return -1;
+
+  keys == NULL;
+  rids == NULL; 
+}
+
 int BtreeNode::GetNumKeys() 
 {
   assert(IsValid() == 0);
@@ -124,14 +143,6 @@ void BtreeNode::SetPageRID(const RID& r)
   pageRID = r;
 }
 
-
-BtreeNode::~BtreeNode()
-{
-  // if (keys != NULL)
-  //   delete [] keys;
-  // if(rids != NULL)
-  //   delete [] rids;
-};
 
 
 RC BtreeNode::IsValid() const

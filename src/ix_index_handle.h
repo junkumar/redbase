@@ -67,6 +67,8 @@ class IX_IndexHandle {
   int GetAttrLength() const { return hdr.attrLength; }
 
   RC GetNewPage(PageNum& pageNum);
+  RC DisposePage(const PageNum& pageNum);
+
   RC IsValid() const;
 
   // return NULL if the key is bad
