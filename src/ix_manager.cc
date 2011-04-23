@@ -46,6 +46,14 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
      attrLength <= 0)
     return IX_INVALIDSIZE;
 
+  if((attrType == INT && (unsigned int)attrLength != sizeof(int)) ||
+     (attrType == FLOAT && (unsigned int)attrLength != sizeof(float))
+     ||
+     (attrType == STRING && 
+      ((unsigned int)attrLength <= 0 || 
+       (unsigned int)attrLength > MAXSTRINGLEN)))
+      return IX_FCREATEFAIL;
+
   stringstream newname;
   newname << fileName << "." << indexNo;
 

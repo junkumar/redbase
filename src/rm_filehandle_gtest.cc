@@ -107,6 +107,47 @@ TEST_F(RM_FileHandleTest, Persist) {
 }
 
 
+TEST_F(RM_FileHandleTest, WrongDelGet) {
+	TestRec t;
+	RID rid;
+  RC rc;
+  RM_Record rec;
+
+	rc = fh.DeleteRec(RID(100,100));
+  ASSERT_NE(0, rc);
+
+	rc = fh.InsertRec((char*) &t, rid);
+  ASSERT_EQ(0, rc);
+  
+	rc = fh.DeleteRec(rid);
+  ASSERT_EQ(0, rc); // first ok
+
+	rc = fh.DeleteRec(rid);
+  ASSERT_NE(0, rc); // second should fail
+
+  rec.Set((char*)&t, sizeof(t), rid);
+	rc = fh.UpdateRec(rec);
+  ASSERT_NE(0, rc); // update should also fail
+
+	rc = fh.GetRec(rid, rec);
+  ASSERT_NE(0, rc); // update should also fail
+
+  rec.Set((char*)&t, sizeof(t), RID(1000, 1000));
+	rc = fh.UpdateRec(rec);
+  ASSERT_NE(0, rc); // should fail
+
+	rc = fh.InsertRec((char*) &t, rid);
+  ASSERT_EQ(0, rc);
+
+  rec.Set((char*)&t, sizeof(t), rid);
+	rc = fh.UpdateRec(rec);
+  ASSERT_EQ(0, rc);
+
+	rc = fh.UpdateRec(rec);
+  ASSERT_EQ(0, rc); // 2nd should work too
+
+}
+
 TEST_F(RM_FileHandleTest, FreeList) {
 	TestRec t;
 	RID p1rid;

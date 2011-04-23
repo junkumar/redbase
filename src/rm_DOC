@@ -153,3 +153,51 @@ transferred from the cache back to the header. This is another
 assumption in my code regarding how files are opened. My test cases
 include tests for explicitly opening the file multiple times and
 checking integrity of the stored information.
+
+--- 
+
+failed tests
+
+1- add records, verify , update , verify
+2nd verify fails.  duplicate record found.
+
+*** 20 Update Records Test: PASS
+
+Verifying file contents
+VerifyFile: duplicate record = [a3999, 3999, 3999.000000]
+
+
+2- add records, scan, verify the added records
+Test 12 starting **************************************************
+
+Adding 100 records
+50 100 
+
+*** File Scan INT EQ_OP Test over misaligned field: PASS
+*** Verifying the result: No Good
+
+Test expects value 50 but after scan result is not 50.
+
+3- deletion while scanning - insert, openscan, delete, close scan
+*** 46 Record Deletion Test : FAIL
+
+adding 1000 records
+50  100  150  200  250  300  350  400  450  500  550  600  650  700  750  800  850  900  950  1000  
+
+4- delete, add , count # of scanned records
+*** 48 Reuse Space (Verify) Test: FAIL
+
+
+----------FOOUND AND FIXED
+
+-*- removing nonexistent record
+DeleteRec should not have succeeded
+PF_PrintError called with return code of 0
+
+-*- attr fails
+*** 44 Filescan wrong type length test : FAIL 
+send a string of length 300
+
+*** 45 Filescan wrong type length test : FAIL 
+send an int as attrType but provide 7 as attrLength
+

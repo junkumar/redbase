@@ -41,7 +41,7 @@ PF_SOURCES     = pf_buffermgr.cc pf_error.cc pf_filehandle.cc \
 RM_SOURCES     = statistics.cc rm_manager.cc rm_error.cc rm_filescan.cc \
                  rm_record.cc rm_filehandle.cc rm_record_gtest.cc \
 		 rm_filehandle_gtest.cc bitmap.cc bitmap_gtest.cc \
-		 pf_manager_gtest.cc predicate.cc
+		 pf_manager_gtest.cc predicate.cc rm_filescan_gtest.cc
 IX_SOURCES     = ix_indexhandle.cc ix_indexhandle_gtest.cc \
 		 ix_manager.cc ix_manager_gtest.cc \
 		 ix_indexscan.cc ix_indexscan_gtest.cc \

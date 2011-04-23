@@ -52,9 +52,18 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
      attrLength <= 0)
     return RM_RECSIZEMISMATCH;
 
+  if((attrType == INT && (unsigned int)attrLength != sizeof(int)) ||
+     (attrType == FLOAT && (unsigned int)attrLength != sizeof(float))
+     ||
+     (attrType == STRING && 
+      ((unsigned int)attrLength <= 0 || 
+       (unsigned int)attrLength > MAXSTRINGLEN)))
+      return RM_FCREATEFAIL;
+
+
   if((attrOffset >= prmh->fullRecordSize()) ||
      attrOffset < 0)
-    return RM_RECSIZEMISMATCH;
+    return RM_FCREATEFAIL;
 
   bOpen = true;
   pred = new Predicate(attrType,       
@@ -68,9 +77,9 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
 
 RC RM_FileScan::GetNextRec     (RM_Record &rec)
 {
-  assert(prmh != NULL && pred != NULL && bOpen);
   if(!bOpen)
     return RM_FNOTOPEN;
+  assert(prmh != NULL && pred != NULL && bOpen);
 
   PF_PageHandle ph;
   RM_PageHdr pHdr(prmh->GetNumSlots());
@@ -113,9 +122,9 @@ RC RM_FileScan::GetNextRec     (RM_Record &rec)
 
 RC RM_FileScan::CloseScan()
 {
-  assert(prmh != NULL && pred != NULL);
   if(!bOpen)
     return RM_FNOTOPEN;
+  assert(prmh != NULL && pred != NULL);
   bOpen = false;
   if (pred != NULL)
     delete pred;

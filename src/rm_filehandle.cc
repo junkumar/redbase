@@ -276,10 +276,18 @@ RC RM_FileHandle::GetRec     (const RID &rid, RM_Record &rec) const
 	rid.GetSlotNum(s);
 	RC rc = 0;
 	PF_PageHandle ph;
-	if((rc = pfHandle->GetThisPage(p, ph))
+	RM_PageHdr pHdr(this->GetNumSlots());
+	if((rc = pfHandle->GetThisPage(p, ph)) ||
      // Needs to be called everytime GetThisPage is called.
-     || (rc = pfHandle->UnpinPage(p)))
+     (rc = pfHandle->UnpinPage(p)) ||
+		 (rc = this->GetPageHeader(ph, pHdr))
+		)
 		return rc;
+	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
+
+  if(b.test(s)) // already free
+    return RM_NORECATRID;
+
 	char * pData = NULL;
 	if(RC rc = this->GetSlotPointer(ph, s, pData))
 		return rc;
@@ -348,6 +356,10 @@ RC RM_FileHandle::DeleteRec  (const RID &rid)
 		return rc;
 
 	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
+
+  if(b.test(s)) // already free
+    return RM_NORECATRID;
+
 	// TODO considering zero-ing record - IOs though
 	b.set(s); // s is now free
 	if(pHdr.numFreeSlots == 0)
@@ -383,10 +395,18 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec)
 	PF_PageHandle ph;
 	char * pSlot;
   RC rc;
-	if((rc = pfHandle->GetThisPage(p, ph))
+	RM_PageHdr pHdr(this->GetNumSlots());
+	if((rc = pfHandle->GetThisPage(p, ph)) ||
      // Needs to be called everytime GetThisPage is called.
-     || (rc = pfHandle->UnpinPage(p)))
+     (rc = pfHandle->UnpinPage(p)) ||
+		 (rc = this->GetPageHeader(ph, pHdr))
+		)
 		return rc;
+
+	bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
+
+  if(b.test(s)) // free - cannot update
+    return RM_NORECATRID;
 
 	char * pData = NULL;
 	rec.GetData(pData);

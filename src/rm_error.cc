@@ -18,6 +18,7 @@ using namespace std;
 //
 const char *RM_WarnMsg[] = {
   (char*)"bad record size <= 0",
+  (char*)"This rid has no record",
 };
 
 const char *RM_ErrorMsg[] = {
