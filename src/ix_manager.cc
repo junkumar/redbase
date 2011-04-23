@@ -135,6 +135,10 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
 //
 RC IX_Manager::DestroyIndex (const char *fileName, int indexNo)
 {
+  if(indexNo < 0 ||
+     fileName == NULL)
+    return IX_FCREATEFAIL;
+
   stringstream newname;
   newname << fileName << "." << indexNo;
 
@@ -157,8 +161,12 @@ RC IX_Manager::DestroyIndex (const char *fileName, int indexNo)
 //       buffer manager object
 // Ret:  PF_FILEOPEN or other RM return code
 //
-RC IX_Manager::OpenIndex (const char *fileName, int indexNo, IX_IndexHandle &rmh)
+RC IX_Manager::OpenIndex (const char *fileName, int indexNo, IX_IndexHandle &ixh)
 {
+  if(indexNo < 0 ||
+     fileName == NULL)
+    return IX_FCREATEFAIL;
+
   PF_FileHandle pfh;
   stringstream newname;
   newname << fileName << "." << indexNo;
@@ -177,7 +185,7 @@ RC IX_Manager::OpenIndex (const char *fileName, int indexNo, IX_IndexHandle &rmh
     return(rc);
   IX_FileHdr hdr;
   memcpy(&hdr, pData, sizeof(hdr));
-  rc = rmh.Open(&pfh, hdr.pairSize, hdr.rootPage, hdr.pageSize);
+  rc = ixh.Open(&pfh, hdr.pairSize, hdr.rootPage, hdr.pageSize);
   if (rc < 0)
   {
     IX_PrintError(rc);
@@ -203,44 +211,44 @@ RC IX_Manager::OpenIndex (const char *fileName, int indexNo, IX_IndexHandle &rmh
 //                    this function modifies local var's in fileHandle
 // Ret:  RM return code
 //
-RC IX_Manager::CloseIndex(IX_IndexHandle &rfileHandle)
+RC IX_Manager::CloseIndex(IX_IndexHandle &ixh)
 {
-  if(!rfileHandle.bFileOpen || rfileHandle.pfHandle == NULL)
+  if(!ixh.bFileOpen || ixh.pfHandle == NULL)
     return IX_FNOTOPEN;
 
-  if(rfileHandle.HdrChanged())
+  if(ixh.HdrChanged())
   {
     // write header to disk
     PF_PageHandle ph;
-    RC rc = rfileHandle.pfHandle->GetThisPage(0, ph);
+    RC rc = ixh.pfHandle->GetThisPage(0, ph);
     if (rc < 0)
     {
       PF_PrintError(rc);
       return rc;
     }
 
-    rc = rfileHandle.SetFileHeader(ph); // write hdr into file
+    rc = ixh.SetFileHeader(ph); // write hdr into file
     if (rc < 0)
     {
       PF_PrintError(rc);
       return rc;
     }
 
-    rc = rfileHandle.pfHandle->MarkDirty(0);
+    rc = ixh.pfHandle->MarkDirty(0);
     if (rc < 0)
     {
       PF_PrintError(rc);
       return rc;
     }
 
-    rc = rfileHandle.pfHandle->UnpinPage(0);
+    rc = ixh.pfHandle->UnpinPage(0);
     if (rc < 0)
     {
       PF_PrintError(rc);
       return rc;
     }
 
-    rc = rfileHandle.ForcePages();
+    rc = ixh.ForcePages();
     if (rc < 0)
     {
       IX_PrintError(rc);
@@ -248,14 +256,14 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &rfileHandle)
     }
   }
       
-  RC rc2 = pfm.CloseFile(*rfileHandle.pfHandle);
+  RC rc2 = pfm.CloseFile(*ixh.pfHandle);
   if (rc2 < 0) {
     PF_PrintError(rc2);
     return rc2;
   }
   // TODO - is there a cleaner way than reaching into innards like this ?
-  delete rfileHandle.pfHandle;
-  rfileHandle.pfHandle = NULL;
-  rfileHandle.bFileOpen = false;
+  delete ixh.pfHandle;
+  ixh.pfHandle = NULL;
+  ixh.bFileOpen = false;
   return 0;
 }

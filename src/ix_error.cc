@@ -18,6 +18,8 @@ using namespace std;
 const char *IX_WarnMsg[] = {
   (char*)"key was not found in btree",
   (char*)"key attribute size is too small(<=0) or too big for a page",
+  (char*)"key,rid already exists in index",
+  (char*)"key,rid combination does not exist in index",
 };
 
 const char *IX_ErrorMsg[] = {

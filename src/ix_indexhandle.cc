@@ -28,16 +28,21 @@ IX_IndexHandle::~IX_IndexHandle()
 }
 
 // 0 indicates success
-// -2 indicates other errors
 RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return invalid;
+  if(pData == NULL) return IX_BADKEY;
+
   bool newLargest = false;
   void * prevKey = NULL;
   int level = hdr.height - 1;
   BtreeNode* node = FindLeaf(pData);
   BtreeNode* newNode = NULL;
   assert(node != NULL);
+
+  int pos2 = node->FindKey((const void*&)pData, rid);
+  if((pos2 != -1))
+    return IX_ENTRYEXISTS;
 
   // largest key in tree is in every intermediate root from root
   // onwards !
@@ -56,7 +61,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
         path[i]->SetKey(pos, pData);
       else {
         assert("largest key should be everywhere\n");
-        return IX_PF;
+        return IX_BADKEY;
       }
     }
     // copy from pData into new treeLargest
@@ -89,15 +94,13 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     PF_PageHandle ph;
     PageNum p;
     RC rc = GetNewPage(p);
-    if (rc != 0) return IX_PF;
+    if (rc != 0) return rc;
     rc = GetThisPage(p, ph);
-    if (rc != 0) return IX_PF;
+    if (rc != 0) return rc;
   
-    bool leaf = true;
     newNode = new BtreeNode(hdr.attrType, hdr.attrLength,
                             ph, true,
-                            hdr.pageSize, hdr.dups,
-                            leaf, true);
+                            hdr.pageSize);
     // split into new node
     rc = node->Split(newNode);
     if (rc != 0) return IX_PF;
@@ -165,11 +168,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     rc = GetThisPage(p, ph);
     if (rc != 0) return IX_PF;
   
-    bool leaf = false;
     root = new BtreeNode(hdr.attrType, hdr.attrLength,
                          ph, true,
-                         hdr.pageSize, hdr.dups,
-                         leaf, true);
+                         hdr.pageSize);
     root->Insert(node->LargestKey(), node->GetPageRID());
     root->Insert(newNode->LargestKey(), newNode->GetPageRID());
 
@@ -178,17 +179,50 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
   }
 }
 
+// return NULL if key, rid is not found
+BtreeNode* IX_IndexHandle::DupScanLeftFind(BtreeNode* right, void *pData, const RID& rid)
+{
+
+  BtreeNode* currNode = FetchNode(right->GetLeft());
+  int currPos = -1;
+
+  for( BtreeNode* j = currNode;
+       j != NULL;
+       j = FetchNode(j->GetLeft()))
+  {
+    currNode = j;
+    int i = currNode->GetNumKeys()-1;
+
+    for (; i >= 0; i--) 
+    {
+      currPos = i; // save Node in object state for later.
+      char* key = NULL;
+      int ret = currNode->GetKey(i, (void*&)key);
+      if(ret == -1) 
+        break;
+      if(currNode->CmpKey(pData, key) < 0)
+        return NULL;
+      if(currNode->CmpKey(pData, key) > 0)
+        return NULL; // should never happen
+      if(currNode->CmpKey(pData, key) == 0) {
+        if(currNode->GetAddr(currPos) == rid)
+          return currNode;
+      }
+    }
+  }
+  return NULL;
+}
+
 
 // 0 indicates success
-// -2 indicates other errors
 // Implements lazy deletion - underflow is defined as 0 keys for all
 // non-root nodes.
 RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 {
-  assert(IsValid() == 0);
   if(pData == NULL)
     // bad input to method
-    return -2;
+    return IX_BADKEY;
+  RC invalid = IsValid(); if(invalid) return invalid;
 
   bool nodeLargest = false;
 
@@ -196,9 +230,25 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   assert(node != NULL);
 
   int pos = node->FindKey((const void*&)pData, rid);
-  if(pos == -1)
-    // key does not exist - error
-    return -2;
+  if(pos == -1) {
+    
+    // make sure that there are no dups (keys) left of this node that might
+    // have this rid.
+    int p = node->FindKey((const void*&)pData, RID(-1,-1));
+    if(p != -1) {
+      BtreeNode * other = DupScanLeftFind(node, pData, rid);
+      if(other != NULL) {
+        int pos = other->FindKey((const void*&)pData, rid);
+        other->Remove(pData, pos); // ignore result - not dealing with
+                                   // underflow here 
+        return 0;
+      }
+    }
+
+    // key/rid does not exist - error
+    return IX_NOSUCHENTRY;
+  }
+
   else if(pos == node->GetNumKeys()-1)
     nodeLargest = true;
 
@@ -262,17 +312,18 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     // adjust L/R pointers because a node is going to be destroyed
     BtreeNode* left = FetchNode(node->GetLeft());
     BtreeNode* right = FetchNode(node->GetRight());
-    if(left != NULL)
+    if(left != NULL) {
       if(right != NULL)
         left->SetRight(right->GetPageRID().Page());
       else
         left->SetRight(-1);
-    if(right != NULL)
+    }
+    if(right != NULL) {
       if(left != NULL)
         right->SetLeft(left->GetPageRID().Page());
       else
         right->SetLeft(-1);
-
+    }
     node->Destroy();
     RC rc = DisposePage(node->GetPageRID().Page());
     if (rc < 0)
@@ -354,16 +405,20 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
     SetHeight(1); // do all other init
   } 
 
-  bool leaf = (hdr.height == 1 ? true : false);
   root = new BtreeNode(hdr.attrType, hdr.attrLength,
                        rootph, newPage,
-                       hdr.pageSize, hdr.dups,
-                       leaf, true);
+                       hdr.pageSize);
   path[0] = root;
-  treeLargest = (void*) new char[hdr.attrLength];
   hdr.order = root->GetMaxKeys();
 	bHdrChanged = true;
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return invalid;
+  treeLargest = (void*) new char[hdr.attrLength];
+  if(!newPage) {
+    BtreeNode * node = FindLargestLeaf();
+    // set treeLargest
+    if(node->GetNumKeys() > 0)
+      node->CopyKey(node->GetNumKeys()-1, treeLargest);
+  }
 	return 0;
 }
 
@@ -393,31 +448,27 @@ RC IX_IndexHandle::SetFileHeader(PF_PageHandle ph) const
 // from the buffer pool to disk.  Default value forces all pages.
 RC IX_IndexHandle::ForcePages ()
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return invalid;
 	return pfHandle->ForcePages(ALL_PAGES);
 }
 
+// Users will call - RC invalid = IsValid(); if(invalid) return invalid; 
 RC IX_IndexHandle::IsValid () const
 {
   bool ret = true;
   ret = ret && (pfHandle != NULL);
-  assert(ret);
   if(hdr.height > 0) {
     ret = ret && (hdr.rootPage > 0); // 0 is for file header
-    assert(ret);
     ret = ret && (hdr.numPages >= hdr.height + 1);
-    assert(ret);
     ret = ret && (root != NULL);
-    assert(ret);
     ret = ret && (path != NULL);
-    assert(ret);
   }
   return ret ? 0 : IX_BADIXPAGE;
 }
 
 RC IX_IndexHandle::GetNewPage(PageNum& pageNum) 
 {
-	assert(IsValid() == 0);
+	RC invalid = IsValid(); if(invalid) return invalid;
 	PF_PageHandle ph;
 
   RC rc;
@@ -441,7 +492,7 @@ RC IX_IndexHandle::GetNewPage(PageNum& pageNum)
 
 RC IX_IndexHandle::DisposePage(const PageNum& pageNum) 
 {
-	assert(IsValid() == 0);
+	RC invalid = IsValid(); if(invalid) return invalid;
 
   RC rc;
   if ((rc = pfHandle->DisposePage(pageNum)))
@@ -459,7 +510,7 @@ RC IX_IndexHandle::DisposePage(const PageNum& pageNum)
 // also populates the path member variable with the path
 BtreeNode* IX_IndexHandle::FindSmallestLeaf()
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return NULL;
   if (root == NULL) return NULL;
   RID addr;
   if(hdr.height == 1) {
@@ -490,7 +541,7 @@ BtreeNode* IX_IndexHandle::FindSmallestLeaf()
 // also populates the path member variable with the path
 BtreeNode* IX_IndexHandle::FindLargestLeaf()
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return NULL;
   if (root == NULL) return NULL;
   RID addr;
   if(hdr.height == 1) {
@@ -517,10 +568,15 @@ BtreeNode* IX_IndexHandle::FindLargestLeaf()
 
 // return NULL if there is no root
 // otherwise return a pointer to the leaf node where key might go
-// also populates the path member variable with the path
+// also populates the path[] member variable with the path
+// if there are dups (keys) along the path, the rightmost path will be
+// chosen
+// TODO - add a random parameter to this which will be used during
+// inserts - this is prevent pure rightwards growth when inserting a
+// dup value continuously.
 BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return NULL;
   if (root == NULL) return NULL;
   RID addr;
   if(hdr.height == 1) {
@@ -562,17 +618,15 @@ BtreeNode* IX_IndexHandle::FetchNode(PageNum p) const
 // Get the BtreeNode at the RID specified within Btree
 BtreeNode* IX_IndexHandle::FetchNode(RID r) const
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return NULL;
   if(r.Page() < 0) return NULL;
   PF_PageHandle ph;
   RC rc = GetThisPage(r.Page(), ph);
   if(rc!=0) return NULL;
 
-  //TODO remove isleaf & isroot
   return new BtreeNode(hdr.attrType, hdr.attrLength,
                        ph, false,
-                       hdr.pageSize, hdr.dups,
-                       false, false);
+                       hdr.pageSize);
 }
 
 // Search an index entry
@@ -582,7 +636,7 @@ BtreeNode* IX_IndexHandle::FetchNode(RID r) const
 // rid is populated if found
 RC IX_IndexHandle::Search(void *pData, RID &rid)
 {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) return invalid;
   if(pData == NULL)
     return IX_BADKEY;
   BtreeNode * leaf = FindLeaf(pData);
@@ -619,7 +673,7 @@ BtreeNode* IX_IndexHandle::GetRoot() const
 }
 
 void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
-  assert(IsValid() == 0);
+  RC invalid = IsValid(); if(invalid) assert(invalid);
   // level -1 signals first call to recursive function - root
   // os << "Print called with level " << level << endl;
   BtreeNode * node = NULL;

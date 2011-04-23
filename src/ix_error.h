@@ -14,8 +14,12 @@ void IX_PrintError(RC rc);
 
 #define IX_KEYNOTFOUND    (START_IX_WARN + 0)  // cannot find key
 #define IX_INVALIDSIZE    (START_IX_WARN + 1)  // invalid entry size
-#define IX_LASTWARN IX_INVALIDSIZE
+#define IX_ENTRYEXISTS    (START_IX_WARN + 2)  // key,rid already
+                                               // exists in index
+#define IX_NOSUCHENTRY    (START_IX_WARN + 3)  // key,rid combination
+                                               // does not exist in index
 
+#define IX_LASTWARN IX_ENTRYEXISTS
 
 
 #define IX_SIZETOOBIG      (START_IX_ERR - 0)  // key size too big

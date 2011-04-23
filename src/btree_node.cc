@@ -4,11 +4,9 @@
 
 BtreeNode::BtreeNode(AttrType attrType, int attrLength,
                      PF_PageHandle& ph, bool newPage,
-                     int pageSize, bool duplicates,
-                     bool leaf, bool root)
+                     int pageSize)
 :keys(NULL), rids(NULL),
- attrLength(attrLength), attrType(attrType),
- dups(duplicates), isRoot(root), isLeaf(leaf)
+ attrLength(attrLength), attrType(attrType)
 {
 
   order = floor(
@@ -317,8 +315,10 @@ int BtreeNode::Remove(const void* newkey, int kpos)
   return 0;
 }
 
+// inexact
 // return position if key will fit in a particular position
 // return (-1, -1) if there was an error
+// if there are dups - this will return rightmost position
 RID BtreeNode::FindAddrAtPosition(const void* &key) const
 {
   assert(IsValid() == 0);
@@ -327,8 +327,10 @@ RID BtreeNode::FindAddrAtPosition(const void* &key) const
   return rids[pos];
 }
 
+// inexact
 // return position if key will fit in a particular position
 // return -1 if there was an error
+// if there are dups - this will return rightmost position
 int BtreeNode::FindKeyPosition(const void* &key) const
 {
   assert(IsValid() == 0);
@@ -348,6 +350,7 @@ int BtreeNode::FindKeyPosition(const void* &key) const
   return 0; // key is smaller than anything currently
 }
 
+// exact
 // get rid for given position
 // return (-1, -1) if there was an error or pos was not found
 RID BtreeNode::GetAddr(const int pos) const
@@ -358,6 +361,7 @@ RID BtreeNode::GetAddr(const int pos) const
   return rids[pos];
 }
 
+// exact
 // return rid for exact key match
 // return (-1, -1) if there was an error or key was not found
 RID BtreeNode::FindAddr(const void* &key) const
@@ -369,6 +373,7 @@ RID BtreeNode::FindAddr(const void* &key) const
 }
 
 
+// exact
 // return position if key already exists at position
 // if there are dups - returns rightmost position unless an RID is
 // specified.

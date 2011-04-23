@@ -77,7 +77,9 @@ class IX_IndexHandle {
   BtreeNode* FindLeaf(const void *pData);
   BtreeNode* FindSmallestLeaf();
   BtreeNode* FindLargestLeaf();
-
+  BtreeNode* DupScanLeftFind(BtreeNode* right,
+                             void *pData,
+                             const RID& rid);
 
   BtreeNode* FetchNode(RID r) const;
   BtreeNode* FetchNode(PageNum p) const;

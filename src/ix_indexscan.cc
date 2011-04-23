@@ -150,9 +150,9 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid)
 
 RC IX_IndexScan::CloseScan()
 {
-  assert(pixh != NULL || pred != NULL || bOpen);
   if(!bOpen)
     return IX_FNOTOPEN;
+  assert(pixh != NULL || pred != NULL || bOpen);
   bOpen = false;
   if (pred != NULL)
     delete pred;

@@ -15,8 +15,7 @@ class BtreeNode {
   // existing btree node, otherwise a fresh node is assumed.
   BtreeNode(AttrType attrType, int attrLength,
             PF_PageHandle& ph, bool newPage = true,
-            int pageSize = PF_PAGE_SIZE, bool duplicates = false, 
-            bool leaf = false, bool root = false);
+            int pageSize = PF_PAGE_SIZE);
   ~BtreeNode();
   int Destroy();
 
