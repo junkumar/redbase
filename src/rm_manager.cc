@@ -192,31 +192,31 @@ RC RM_Manager::CloseFile(RM_FileHandle &rfileHandle)
    if(rfileHandle.hdrChanged())
    {
       // write header to disk
-		 PF_PageHandle ph;
-		 rfileHandle.pfHandle->GetThisPage(0, ph);
-		 rfileHandle.SetFileHeader(ph); // write hdr into file
+     PF_PageHandle ph;
+     rfileHandle.pfHandle->GetThisPage(0, ph);
+     rfileHandle.SetFileHeader(ph); // write hdr into file
 
-		 RC rc = rfileHandle.pfHandle->MarkDirty(0);
-		 if (rc < 0)
-		 {
-			 PF_PrintError(rc);
-			 return rc;
-		 }
+     RC rc = rfileHandle.pfHandle->MarkDirty(0);
+     if (rc < 0)
+     {
+       PF_PrintError(rc);
+       return rc;
+     }
 
-		 rc = rfileHandle.pfHandle->UnpinPage(0);
-		 if (rc < 0)
-		 {
-			 PF_PrintError(rc);
-			 return rc;
-		 }
+     rc = rfileHandle.pfHandle->UnpinPage(0);
+     if (rc < 0)
+     {
+       PF_PrintError(rc);
+       return rc;
+     }
 
-		 rc = rfileHandle.ForcePages();
-		 if (rc < 0)
-		 {
-			 RM_PrintError(rc);
-			 return rc;
-		 }
-	 }
+     rc = rfileHandle.ForcePages();
+     if (rc < 0)
+     {
+       RM_PrintError(rc);
+       return rc;
+     }
+   }
       
    //PF_FileHandle pfh;
    // RC rc = rfileHandle.GetPF_FileHandle(pfh);
@@ -229,9 +229,9 @@ RC RM_Manager::CloseFile(RM_FileHandle &rfileHandle)
       PF_PrintError(rc2);
       return rc2;
    }
-	 // TODO - is there a cleaner way than reaching into innards like this ?
-	 delete rfileHandle.pfHandle;
-	 rfileHandle.pfHandle = NULL;
+   // TODO - is there a cleaner way than reaching into innards like this ?
+   delete rfileHandle.pfHandle;
+   rfileHandle.pfHandle = NULL;
    rfileHandle.bFileOpen = false;
    return 0;
 }

@@ -86,13 +86,7 @@ class BtreeNode {
   // serialized
   char * keys; // should not be accessed directly as keys[] but with SetKey()
   RID * rids;
-  int numKeys; // stored in keys[order] - no real page header
-  // not serialized - common to all ix pages
-  int attrLength;
-  AttrType attrType;
-  int order;
-  // not serialized - convenience
-  bool dups; // Are duplicate values allowed for keys ?
+  int numKeys;
   bool isRoot;
   bool isLeaf;
   RID pageRID;

@@ -10,48 +10,67 @@ nandu@cs.stanford.edu
 
 Overall Design:
 
-    
-    Layout -
+    An index entry is composed of a key and an RID that points to the
+    data location on a RM file. A B+tree implementation is used to
+    keep an ordered index on the data. This B+tree is built with a <=
+    assumption. Any pointer in an intermediate node points to a child
+    node one level below it such that they key in the intermediate
+    node is the child's largest key.
+
+    B+tree Layout -
+    Simplified to use the same, size and structure for intermediate
+    and leaf nodes. Intermediate nodes do not use the SlotID part of
+    the RID but the same structure was maintained for simplicity.
+    Also simplified to store an (implied) key in the last location on
+    each intermediate node.
+    Additional left and right pointers (PageIDs) are also stored on
+    each node - intermediate as well as leaf.
+    The leaf level is also strictly maintained in an ordered manner so
+    that an index scan can be used to read the data in a sorted way in
+    either direction.
 
     Duplicate Handling -
+    My design handles the presence of duplicate keys in each B+tree
+    node. This is done by writing several methods that make a
+    "right-most match" guarantee and by implementing all these methods
+    so that they are aware of duplicates. I decided that this would
+    provide better IO benefits than bucket page maintenance.
 
     Deletion Algorithm -
-
+    A lazy deletion algorithm was used. An underflow is implemented as
+    a node (intermediate or leaf) which has 0 keys left.
 
     Scan Optimizations - 
-
-
-
-    The code is organized based on functionality. The RM's interface
-    is fully specified in rm.h using a series of different
-    classes. Each of these classes has a separate implementation file
-    (rm_filehandle.cc, rm_record.cc...) as well as a unit test file
-    (rm_filehandle_gtest.cc, rm_record_gtest.cc...). The *_gtest.cc
-    files contain google-test style unit tests with rm_test.cc has a
-    slightly modified version of the provided test.
+    The index is expected to primarily be used via the scan
+    interface. Several optimizations use logarithmic B+Tree lookups to
+    set-up a starting and ending point for the eventual scan so that
+    the number of leaf nodes scanned is minimized based on the
+    operation. As an example, OpenScan() with EQ_OP on a non-existent
+    key will set GetNextEntry() up to return EOF when it is called the
+    first time itself. Also, the Scan class supports both descending
+    and ascending (default) scans and uses the right one based on the
+    user's request or optimizations.
+    State of the scan is maintained via current leaf node and
+    current position in leaf node (position just scanned). Additional
+    state like last node/position are also used to optimize the
+    start/end points of the scan.
 
 
 ---------------------------------------
 
 Key Data Structures:
 
->    Within an index page the list of keys is always maintained in
->    sorted order. So binary search algos can be used everywhere.
+    Within a B+tree(node) page the list of keys is always maintained
+    in sorted order. So binary search algorithms can be used everywhere.
 
-    The Page Header (RM_PageHdr) contains a bitmap to track the free
-    slots within a page. This packed data structure provides a
-    space-efficient way to track the slots that are free.
-   
+    There is no Page Header but each Page node also keeps track of
+    left/right PageIDs as well as the number of keys and serializes
+    this into the page.
 
-    The FileHeader (RM_FileHdr) uses a free list approach to keep
-    track of free pages much like the header in the PF component. This
-    works well because traversing the list is never required and a
-    single access to the front of the linked list is good enough for
-    all changes. This is currently in a whole page all by itself so
-    that all pages with records can be treated symmetrically. The
-    first free page is tracked using a page number in the FileHeader
-    while the PageHeader in each page tracks the next free page after
-    this one.
+    The FileHeader (RM_FileHdr) keeps track of the root page and the
+    number of pages in the B+Tree. It also maintains the height of the
+    tree and its order along with other treewide information like
+    attrType and length.
 
 
     
@@ -59,106 +78,19 @@ Key Data Structures:
 
 Testing:
 
-   Automated unit tests were used to test each class that was built
-   individually. A popular test harness - google-test, which is in the
+   Automated unit tests were used to test each class. A popular test
+   harness - google-test, which is in the
    same style as JUnit was used to make testing fast and automatic.
-   Additionally, the pf_test* and rm_test (modified to also do scans)
-   were also used to test correctness of the data. The harness will
-   verify test correctness so that human interactivity is not needed.
-   The google-test source code and the test cases will be submitted.
-   Special care was taken to ensure that writes were available across
-   opens/closes.
-   Different record sizes were tested.
-   Testing large number of operations in order to use multiple pages
-   was also done.
+   Additionally, the ix_test (modified slightly)
+   was also used to test correctness of the data.
+   Different page sizes were tested as well so that insertion/deletion
+   could be tested with the class/paper examples in the test cases.
+   The tests also contain the B+tree invariants used to ensure that a
+   balanced and correct tree resulted from each operation.
 
 ---------------------------------------
 
 Bugs/Known Issues:
     
     Marked under several places in the code with //TODO.
-    Always returning an error code in methods is very limiting in
-    terms of writing good interfaces. Typed exceptions with simple
-    tracing would have served this project much better.
-    The limitation of not #including other headers resulted in rm.h
-    being a huge header with several class declarations making it
-    unwieldy.
-    The stored record in the disk currently contains the RID as a
-    suffix - there is no real need for this and it should be cleaned
-    out in the interest of saving some IOs.
 
----------------------------------------
-
-1) Give your formula for determining how many record slots can fit on
-each data page of a given RM file. Make sure to point to the code that
-implements this formula.
-
-Code is at rm_filehandle.cc:211
-int RM_FileHandle::GetNumSlots() const
-
-
-There are three parts that make up the each data page
-1. page header static portion
-2. page header - packed bits for the bitmap
-3. records
-
-1 is fixed while both 2&3 depend on the size of each record.
-
-An initial number of slots is picked based on assuming that it takes
-1/8 bytes (1 bit) additional per record. But this does not account for
-the fact that we can only use full bytes. The number is recalculated
-after testing if this #slots can be used to fit in all the records and
-the bitmap.
-
-
-2) Describe how your RM_FileScan maintains the "state" of the scan.
-For example, does it keep a reference to the previous record returned,
-the next record to be returned, or something else? Briefly discuss
-possible advantages or disadvantages of your approach in the context
-of RedBase.
-
-Code is at rm_filescan.cc:133
-RC RM_FileScan::GetNextRec     (RM_Record &rec)
-
-A reference to the record just returned is always maintained. This is
-in a data member of the RM_FileScan class called
-"current". GetNextRec() is an iterator-style interface and users will
-only make forward, sequential accesses. We can take advantage of this
-limited access pattern and optimize it by not having to read any
-pieces of information again - both data (records) or metadata like the
-page headers.
-
-A potential disadvantage is the fact that this access pattern returns
-incorrect or missing data if any new records are inserted or updated
-while a scan is in progress.
-
-3) Do you use in-memory data structures to cache copies of file
-headers? If so, briefly outline your caching scheme. Make sure to
-explain how changes to file header information are handled, and what
-happens when files are opened multiple times. State any assumptions
-that are required for the correct working of your scheme. If you
-decided not to use in-memory data structures to cache copies of file
-headers, explain your rationale, including the advantages and
-disadvantages of your approach.
-
-Code is at rm.h:180
-Class RM_FileHandle, members
-       RM_FileHdr hdr
-       bool bHdrChanged
-
-A copy of the file header is cached in memory in my implementation. I
-cache it in the RM_FileHandle object. Every new open handle to a file
-has a copy of the header cached. This way header information like
-record size or the first free page can be extracted quickly without IO
-operations. A potential disadvantage is when changes to the header are
-made concurrently through different file handles, effectively
-invalidating the cached version of the header. My assumptions are that
-this never happens. A flag (bHdrChanged) is used to track whether the
-header cache needs to be written back to disk or not.
-
-If a file is opened multiple times then as long as a close is called
-between the open calls, all information in the header is cleanly
-transferred from the cache back to the header. This is another
-assumption in my code regarding how files are opened. My test cases
-include tests for explicitly opening the file multiple times and
-checking integrity of the stored information.

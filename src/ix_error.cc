@@ -48,18 +48,18 @@ void IX_PrintError(RC rc)
     cerr << "IX warning: " << IX_WarnMsg[rc - START_IX_WARN] << "\n";
   // Error codes are negative, so invert everything
   else if ((-rc >= -START_IX_ERR) && -rc <= -IX_LASTERROR)
-	{
+  {
    // Print error
     cerr << "IX error: " << IX_ErrorMsg[-rc + START_IX_ERR] << "\n";
-	}
+  }
   else if (rc == 0)
     cerr << "IX_PrintError called with return code of 0\n";
   else
-	{
+  {
    // Print error
-		cerr << "rc was " << rc << endl;
-		cerr << "START_IX_ERR was " << START_IX_ERR << endl;
-		cerr << "IX_LASTERROR was " << IX_LASTERROR << endl;
+    cerr << "rc was " << rc << endl;
+    cerr << "START_IX_ERR was " << START_IX_ERR << endl;
+    cerr << "IX_LASTERROR was " << IX_LASTERROR << endl;
     cerr << "IX error: " << rc << " is out of bounds\n";
-	}
+  }
 }

@@ -47,20 +47,20 @@ void RM_PrintError(RC rc)
     cerr << "RM warning: " << RM_WarnMsg[rc - START_RM_WARN] << "\n";
   // Error codes are negative, so invert everything
   else if ((-rc >= -START_RM_ERR) && -rc <= -RM_LASTERROR)
-	{
+  {
    // Print error
     cerr << "RM error: " << RM_ErrorMsg[-rc + START_RM_ERR] << "\n";
-	}
+  }
   else if (rc == 0)
     cerr << "RM_PrintError called with return code of 0\n";
   else
-	{
+  {
    // Print error
-		cerr << "rc was " << rc << endl;
-		cerr << "START_RM_ERR was " << START_RM_ERR << endl;
-		cerr << "RM_LASTERROR was " << RM_LASTERROR << endl;
+    cerr << "rc was " << rc << endl;
+    cerr << "START_RM_ERR was " << START_RM_ERR << endl;
+    cerr << "RM_LASTERROR was " << RM_LASTERROR << endl;
     cerr << "RM error: " << rc << " is out of bounds\n";
-	}
+  }
 }
 
 
@@ -85,13 +85,13 @@ void PrintErrorAll(RC rc)
   else if (rc == 0)
     cerr << "PrintError called with return code of 0\n";
   else
-	{
+  {
    // Print error
-		cerr << "rc was " << rc << endl;
-		cerr << "Out of bounds for both RM, IX and PF err/warn" << endl;
+    cerr << "rc was " << rc << endl;
+    cerr << "Out of bounds for both RM, IX and PF err/warn" << endl;
     cerr << "START_IX_ERR was " << START_IX_ERR 
          << "IX_LASTERROR was "
          << IX_LASTERROR << endl;
 
-	}
+  }
 }

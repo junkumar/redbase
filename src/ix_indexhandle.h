@@ -24,7 +24,6 @@ struct IX_FileHdr {
   int height;        // height of btree
   AttrType attrType;
   int attrLength;
-  bool dups;         // are duplicate values allowed for index key
 };
 
 const int IX_PAGE_LIST_END = -1;

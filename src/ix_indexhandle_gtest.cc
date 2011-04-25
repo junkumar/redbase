@@ -8,16 +8,16 @@
 class IX_IndexHandleTest : public ::testing::Test {
 protected:
   IX_IndexHandleTest(): ixm(pfm) {}
-	virtual void SetUp() 
-	{
+  virtual void SetUp() 
+  {
     RC rc;
-		system("rm -f gtestfile.0");
-		if(
-			(rc = ixm.CreateIndex("gtestfile", 0, INT, sizeof(int))) 
-      || (rc =	ixm.OpenIndex("gtestfile", 0, ifh))
-//      || (rc =	is.OpenScan(ifh, NO_OP, NULL))
-			)
-			IX_PrintError(rc);
+    system("rm -f gtestfile.0");
+    if(
+      (rc = ixm.CreateIndex("gtestfile", 0, INT, sizeof(int))) 
+      || (rc =  ixm.OpenIndex("gtestfile", 0, ifh))
+//      || (rc =  is.OpenScan(ifh, NO_OP, NULL))
+      )
+      IX_PrintError(rc);
 
     // small size pages - 3 int keys per page
     int smallPage = (sizeof(RID) + sizeof(int))*(3+1);
@@ -26,27 +26,27 @@ protected:
     system("rm -f smallpagefile.0");
     if(
       (rc = ixm.CreateIndex("smallpagefile", 0, INT, sizeof(int), smallPage)) 
-      || (rc =	ixm.OpenIndex("smallpagefile", 0, sifh))
-//      || (rc =	sis.OpenScan(sifh, NO_OP, NULL))
+      || (rc =  ixm.OpenIndex("smallpagefile", 0, sifh))
+//      || (rc =  sis.OpenScan(sifh, NO_OP, NULL))
       )
       IX_PrintError(rc);
-	}
+  }
 
-	virtual void TearDown() 
+  virtual void TearDown() 
   {
     RC rc;
-		if(
-      (rc =	ixm.CloseIndex(ifh))
-			|| (rc = ixm.DestroyIndex("gtestfile", 0)) 
-			)
-			IX_PrintError(rc);
-	
     if(
-      (rc =	ixm.CloseIndex(sifh))
+      (rc =  ixm.CloseIndex(ifh))
+      || (rc = ixm.DestroyIndex("gtestfile", 0)) 
+      )
+      IX_PrintError(rc);
+  
+    if(
+      (rc =  ixm.CloseIndex(sifh))
       || (rc = ixm.DestroyIndex("smallpagefile", 0)) 
       )
       IX_PrintError(rc);
-	}
+  }
 
 
   // Declares the variables your tests want to use.
@@ -60,7 +60,7 @@ protected:
 // count
 extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
   IX_IndexScan s;
-  RC rc =	s.OpenScan(fh, NO_OP, NULL);
+  RC rc =  s.OpenScan(fh, NO_OP, NULL);
   ASSERT_EQ(rc, 0);
 
   RID r;
@@ -78,11 +78,11 @@ extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
   }
   ASSERT_EQ(numEntries, count);
 
-  rc =	s.CloseScan();
+  rc =  s.CloseScan();
   ASSERT_EQ(rc, 0);
 
   // Desc
-  rc =	s.OpenScan(fh, NO_OP, NULL, NO_HINT, true);
+  rc =  s.OpenScan(fh, NO_OP, NULL, NO_HINT, true);
   ASSERT_EQ(rc, 0);
 
   prev = 999999999;
@@ -97,7 +97,7 @@ extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
   }
   ASSERT_EQ(numEntries, count);
 
-  rc =	s.CloseScan();
+  rc =  s.CloseScan();
   ASSERT_EQ(rc, 0);
 }
 

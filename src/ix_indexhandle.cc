@@ -1,7 +1,7 @@
 #include "ix_indexhandle.h"
 
 IX_IndexHandle::IX_IndexHandle()
-	:bFileOpen(false), pfHandle(NULL), bHdrChanged(false)
+  :bFileOpen(false), pfHandle(NULL), bHdrChanged(false)
 {
   root = NULL;
   path = NULL;
@@ -11,20 +11,20 @@ IX_IndexHandle::IX_IndexHandle()
 
 IX_IndexHandle::~IX_IndexHandle()
 {
-	if(pfHandle != NULL)
-		delete pfHandle;
-	if(root != NULL)
-		delete root;
-	if(pathP != NULL)
-		delete [] pathP;
-	if(path != NULL) {
+  if(pfHandle != NULL)
+    delete pfHandle;
+  if(root != NULL)
+    delete root;
+  if(pathP != NULL)
+    delete [] pathP;
+  if(path != NULL) {
     // path[0] is root
     for (int i = 1; i < hdr.height; i++) 
       if(path[i] != NULL) delete path[i];
     delete [] path;
   }
-	if(treeLargest != NULL)
-		delete [] (char*) treeLargest;
+  if(treeLargest != NULL)
+    delete [] (char*) treeLargest;
 }
 
 // 0 indicates success
@@ -257,12 +257,12 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   // intermediate node)
   if (nodeLargest) {
     cerr << "node largest" << endl;
-      // void * leftKey = NULL;
-      // node->GetKey(node->GetNumKeys()-2, leftKey);
-      // cerr << " left key " << *(int*)leftKey << endl;
-      // if(node->CmpKey(pData, leftKey) != 0) {
-        // replace this key with leftkey in every intermediate node
-        // where it appears
+    // void * leftKey = NULL;
+    // node->GetKey(node->GetNumKeys()-2, leftKey);
+    // cerr << " left key " << *(int*)leftKey << endl;
+    // if(node->CmpKey(pData, leftKey) != 0) {
+    // replace this key with leftkey in every intermediate node
+    // where it appears
     for(int i = hdr.height-2; i >= 0; i--) {
       int pos = path[i]->FindKey((const void *&)pData);
       if(pos != -1) {
@@ -358,34 +358,34 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 //Unpinning version that will unpin after every call correctly
 RC IX_IndexHandle::GetThisPage(PageNum p, PF_PageHandle& ph) const {
   RC rc = pfHandle->GetThisPage(p, ph); 
-    if (rc != 0) return rc;
-    // Needs to be called everytime GetThisPage is called.
-    rc = pfHandle->UnpinPage(p);
-    if (rc != 0) return rc;
-    return 0;
+  if (rc != 0) return rc;
+  // Needs to be called everytime GetThisPage is called.
+  rc = pfHandle->UnpinPage(p);
+  if (rc != 0) return rc;
+  return 0;
 }
 
 RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize, 
                         PageNum rootPage, int pageSize)
 {
-	if(bFileOpen || pfHandle != NULL) {
-		return IX_HANDLEOPEN; 
-	}
-	if(pfh == NULL ||
-		 pairSize <= 0) {
-		return IX_BADOPEN;
-	}
-	bFileOpen = true;
+  if(bFileOpen || pfHandle != NULL) {
+    return IX_HANDLEOPEN; 
+  }
+  if(pfh == NULL ||
+     pairSize <= 0) {
+    return IX_BADOPEN;
+  }
+  bFileOpen = true;
   pfHandle = new PF_FileHandle;
-	*pfHandle = *pfh ;
+  *pfHandle = *pfh ;
 
-	PF_PageHandle ph;
-	GetThisPage(0, ph);
+  PF_PageHandle ph;
+  GetThisPage(0, ph);
 
-	this->GetFileHeader(ph); // write into hdr member
-	// std::cerr << "IX_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
+  this->GetFileHeader(ph); // write into hdr member
+  // std::cerr << "IX_FileHandle::Open hdr.numPages" << hdr.numPages << std::endl;
 
-	PF_PageHandle rootph;
+  PF_PageHandle rootph;
 
   bool newPage = true;
   if (hdr.height > 0) {
@@ -410,7 +410,7 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
                        hdr.pageSize);
   path[0] = root;
   hdr.order = root->GetMaxKeys();
-	bHdrChanged = true;
+  bHdrChanged = true;
   RC invalid = IsValid(); if(invalid) return invalid;
   treeLargest = (void*) new char[hdr.attrLength];
   if(!newPage) {
@@ -419,29 +419,29 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
     if(node->GetNumKeys() > 0)
       node->CopyKey(node->GetNumKeys()-1, treeLargest);
   }
-	return 0;
+  return 0;
 }
 
 // get header from the first page of a newly opened file
 RC IX_IndexHandle::GetFileHeader(PF_PageHandle ph)
 {
-	char * buf;
-	RC rc = ph.GetData(buf);
+  char * buf;
+  RC rc = ph.GetData(buf);
   if (rc != 0)
     return rc;
-	memcpy(&hdr, buf, sizeof(hdr));
-	return 0;
+  memcpy(&hdr, buf, sizeof(hdr));
+  return 0;
 }
 
 // persist header into the first page of a file for later
 RC IX_IndexHandle::SetFileHeader(PF_PageHandle ph) const 
 {
-	char * buf;
-	RC rc = ph.GetData(buf);
+  char * buf;
+  RC rc = ph.GetData(buf);
   if (rc != 0)
     return rc;
-	memcpy(buf, &hdr, sizeof(hdr));
-	return 0;
+  memcpy(buf, &hdr, sizeof(hdr));
+  return 0;
 }
 
 // Forces a page (along with any contents stored in this class)
@@ -449,7 +449,7 @@ RC IX_IndexHandle::SetFileHeader(PF_PageHandle ph) const
 RC IX_IndexHandle::ForcePages ()
 {
   RC invalid = IsValid(); if(invalid) return invalid;
-	return pfHandle->ForcePages(ALL_PAGES);
+  return pfHandle->ForcePages(ALL_PAGES);
 }
 
 // Users will call - RC invalid = IsValid(); if(invalid) return invalid; 
@@ -468,8 +468,8 @@ RC IX_IndexHandle::IsValid () const
 
 RC IX_IndexHandle::GetNewPage(PageNum& pageNum) 
 {
-	RC invalid = IsValid(); if(invalid) return invalid;
-	PF_PageHandle ph;
+  RC invalid = IsValid(); if(invalid) return invalid;
+  PF_PageHandle ph;
 
   RC rc;
   if ((rc = pfHandle->AllocatePage(ph)) ||
@@ -492,7 +492,7 @@ RC IX_IndexHandle::GetNewPage(PageNum& pageNum)
 
 RC IX_IndexHandle::DisposePage(const PageNum& pageNum) 
 {
-	RC invalid = IsValid(); if(invalid) return invalid;
+  RC invalid = IsValid(); if(invalid) return invalid;
 
   RC rc;
   if ((rc = pfHandle->DisposePage(pageNum)))
