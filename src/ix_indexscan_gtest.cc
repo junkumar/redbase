@@ -79,3 +79,414 @@ protected:
 //   ASSERT_EQ(rc, 0);
 // }
 
+TEST_F(IX_IndexScanTest, DeleteDuring) {
+	IX_IndexScan fs;
+	RC rc;
+
+  RID r;
+	std::vector<RID> vec;
+	int count = 400;
+	for( int i = 0; i < count; i++)
+	{
+    r = RID(i,i);
+		ifh.InsertEntry((char*) &i, r);
+		vec.push_back(r);
+	}
+
+  (rc=fs.OpenScan(ifh, NO_OP, NULL, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  int numRecs = 0;
+  while(numRecs < count/2) {
+    RID rid; 
+    rc = fs.GetNextEntry(rid);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    EXPECT_EQ(vec[numRecs], rid);
+    // cerr << pBuf->num << "\t" << rid << endl;
+    numRecs++;
+  }
+
+// Delete from second half
+	for( int i = 0; i < 10; i++)
+	{
+    int j = random() % count/2;
+    j += count/2;
+    // cerr << "Deleting " << "\t" << j << endl;
+    int key = vec[j].Page();
+    rc = ifh.DeleteEntry(&key, vec[j]);
+    EXPECT_EQ(0, rc);
+
+    RID result;
+    rc = ifh.Search(&key, result);
+    EXPECT_NE(0, rc); // entry should no longer be returned.
+
+    vec[j] = RID(-1,-1);
+  }
+
+  while(1) {
+    RID result; 
+    rc = fs.GetNextEntry(result);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    EXPECT_EQ(vec[result.Page()], result);
+    // cerr << pBuf->num << "\t" << rid << endl;
+
+    numRecs++;
+  }
+
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, count-10);
+
+}
+
+TEST_F(IX_IndexScanTest, OpOptimizeAsc) {
+	IX_IndexScan fs;
+	RC rc;
+
+  RID r;
+	int count = 400;
+  int numScanned = 0;
+  void * null = NULL;
+
+	for( int i = 1; i <= count; i++)
+	{
+    r = RID(i,i);
+		ifh.InsertEntry((char*) &i, r);
+    r = RID(i,2*i);
+		ifh.InsertEntry((char*) &i, r);
+	}
+
+  // cerr << "per btree node " << ifh.GetRoot()->GetMaxKeys() << endl;
+
+  // cerr << "EQ_OP non-existent " << endl;
+
+  int val = count + 20;
+  (rc=fs.OpenScan(ifh, EQ_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  int numRecs = 0;
+  numScanned = 0;
+  while(1) {
+    RID rid;
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, 0);
+  ASSERT_EQ(numScanned, 0);
+
+  // cerr << "EQ_OP " << endl;
+
+  val = 20;
+  (rc=fs.OpenScan(ifh, EQ_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  EXPECT_EQ(numRecs, 2);
+  // EXPECT_EQ(numScanned, (val-0)*2);
+  EXPECT_LT(numScanned, (count)*2);
+
+
+  // cerr << "LT_OP " << endl;
+
+  val = 60;
+  (rc=fs.OpenScan(ifh, LT_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (val-1)*2);
+  // EXPECT_EQ(numScanned, (val-0)*2);
+  EXPECT_LT(numScanned, (count)*2);
+
+
+  val = 60;
+  (rc=fs.OpenScan(ifh, LE_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (val)*2);
+  // EXPECT_EQ(numScanned, (val-0)*2);
+  EXPECT_LT(numScanned, (count)*2);
+
+
+  val = 118;
+  (rc=fs.OpenScan(ifh, GT_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (count-val)*2);
+//  EXPECT_EQ(numScanned, (count-val)*2);
+  EXPECT_LT(numScanned, (count)*2);
+
+
+
+  val = 178;
+  (rc=fs.OpenScan(ifh, GE_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (count-val+1)*2);
+  EXPECT_EQ(numScanned, (count)*2);
+
+
+  val = 118;
+  (rc=fs.OpenScan(ifh, NE_OP, &val, NO_HINT));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (count-1)*2);
+  EXPECT_EQ(numScanned, (count)*2);
+}
+
+TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
+	IX_IndexScan fs;
+	RC rc;
+
+  RID r;
+	int count = 400;
+  int numScanned = 0;
+  void * null = NULL;
+
+	for( int i = 1; i <= count; i++)
+	{
+    r = RID(i,i);
+		ifh.InsertEntry((char*) &i, r);
+    r = RID(i,2*i);
+		ifh.InsertEntry((char*) &i, r);
+	}
+
+  // cerr << "per btree node " << ifh.GetRoot()->GetMaxKeys() << endl;
+
+  // cerr << "EQ_OP non-existent " << endl;
+
+  int val = count + 20;
+  (rc=fs.OpenScan(ifh, EQ_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  int numRecs = 0;
+  numScanned = 0;
+  while(1) {
+    RID rid;
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, 0);
+  ASSERT_EQ(numScanned, 0);
+
+  // cerr << "EQ_OP " << endl;
+
+  val = 20;
+  (rc=fs.OpenScan(ifh, EQ_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  EXPECT_EQ(numRecs, 2);
+  EXPECT_EQ(numScanned, (val-0)*2);
+
+
+  // cerr << "LT_OP " << endl;
+
+  val = 260;
+  (rc=fs.OpenScan(ifh, LT_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (val-1)*2);
+  EXPECT_EQ(numScanned, (val-0)*2);
+
+
+  val = 360;
+  (rc=fs.OpenScan(ifh, LE_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (val)*2);
+  EXPECT_EQ(numScanned, (val-0)*2);
+
+
+  val = 118;
+  (rc=fs.OpenScan(ifh, GT_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (count-val)*2);
+  // EXPECT_EQ(numScanned, (count-val)*2);
+  EXPECT_LT(numScanned, (count)*2);
+
+
+  val = 118;
+  (rc=fs.OpenScan(ifh, GE_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (count-val+1)*2);
+  EXPECT_EQ(numScanned, (count)*2);
+
+
+  val = 118;
+  (rc=fs.OpenScan(ifh, NE_OP, &val, NO_HINT, true));
+  ASSERT_EQ(rc, 0);
+
+  numScanned = 0;
+  numRecs = 0;
+  while(1) {
+    RID rid; 
+    rc = fs.GetNextEntry(null, rid, numScanned);
+    if(rc == IX_EOF)
+      break;
+    EXPECT_EQ(rc, 0);
+    // cerr << rid << endl;
+    numRecs++;
+  }
+  (rc=fs.CloseScan());
+  ASSERT_EQ(rc, 0);
+  ASSERT_EQ(numRecs, (count-1)*2);
+  EXPECT_EQ(numScanned, (count)*2);
+}

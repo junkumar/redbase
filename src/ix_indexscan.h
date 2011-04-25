@@ -35,17 +35,24 @@ class IX_IndexScan {
   // entries.
   RC GetNextEntry(RID &rid);
 
-  RC GetNextEntry(void *& key, RID &rid);
+  // also passes back the key scanned and number of scanned items so
+  // far (whether the predicate matched or not.
+  RC GetNextEntry(void *& key, RID &rid, int& numScanned);
 
   // Close index scan
   RC CloseScan();
  private:
+  RC OpOptimize(CompOp     c,
+                void       *value);
+
   Predicate* pred;
   IX_IndexHandle* pixh;
   BtreeNode* currNode;
   int currPos;
   bool bOpen;
   bool desc; // Is scan order ascending(def) or descending ?
+  bool eof; // early EOF set by btree analysis - set by OpOpt
+  BtreeNode* lastNode; // last node setup by OpOpt
 };
 
 

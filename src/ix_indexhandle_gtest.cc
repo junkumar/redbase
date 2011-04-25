@@ -67,7 +67,8 @@ extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
   int prev = -100000;
   void * k;
   int count = 0;
-  while((s.GetNextEntry(k, r)) != IX_EOF) {
+  int ns = 0;
+  while((s.GetNextEntry(k, r, ns)) != IX_EOF) {
     int curr = (*(int*)k);
     ASSERT_LE(prev, curr);
     prev = curr;
@@ -86,7 +87,7 @@ extern void ScanOrderedInt(IX_IndexHandle& fh, int numEntries) {
 
   prev = 999999999;
   count = 0;
-  while((s.GetNextEntry(k, r)) != IX_EOF) {
+  while((s.GetNextEntry(k, r, ns)) != IX_EOF) {
     int curr = (*(int*)k);
     ASSERT_GE(prev, curr);
     prev = curr;

@@ -10,11 +10,17 @@ nandu@cs.stanford.edu
 
 Overall Design:
 
-    Users of the RM (RecordManager) sub-system are exposed to RIDs but
-    are otherwise able to ignore the notion pages completely and leave
-    the handling of those to RM. They use the RM abstraction of
-    records (especially in conjunction with the FileScan interface) to
-    work at a higher level.
+    
+    Layout -
+
+    Duplicate Handling -
+
+    Deletion Algorithm -
+
+
+    Scan Optimizations - 
+
+
 
     The code is organized based on functionality. The RM's interface
     is fully specified in rm.h using a series of different
