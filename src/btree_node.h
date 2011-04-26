@@ -87,8 +87,11 @@ class BtreeNode {
   char * keys; // should not be accessed directly as keys[] but with SetKey()
   RID * rids;
   int numKeys;
-  bool isRoot;
-  bool isLeaf;
+  // not serialized - common to all ix pages
+  int attrLength;
+  AttrType attrType;
+  int order;
+  // not serialized - convenience
   RID pageRID;
 };
 

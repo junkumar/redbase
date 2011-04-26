@@ -136,14 +136,14 @@ TEST_F(RM_FileScanTest, UpdateAll) {
   TestRec t;
   RID r;
 	std::vector<RID> vec;
-	int count = 400;
+	int count = 4000;
 	for( int i = 0; i < count; i++)
 	{
 		t.num = i;
 		fh.InsertRec((char*) &t, r);
 		vec.push_back(r);
 	}
-	ASSERT_EQ(fh.GetNumPages(), 5);
+	//ASSERT_EQ(fh.GetNumPages(), 5);
 
   (rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
                   NO_OP, NULL, NO_HINT));
@@ -198,6 +198,7 @@ TEST_F(RM_FileScanTest, UpdateAll) {
 		rec.GetData((char*&)pBuf);
     RID rid;
     rec.GetRid(rid);
+    EXPECT_EQ(pBuf->num, count + numRecs);
     EXPECT_EQ(vec[pBuf->num], (rid));
     // cerr << pBuf->num << "\t" << rid << endl;
     numRecs++;
@@ -207,7 +208,7 @@ TEST_F(RM_FileScanTest, UpdateAll) {
   ASSERT_EQ(rc, 0);
   ASSERT_EQ(numRecs, count);
 
-  int val = 799;
+  int val = 7999;
   void * pval = &val;
   (rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, num),
                   EQ_OP, pval, NO_HINT));

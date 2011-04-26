@@ -98,7 +98,6 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo,
   hdr.rootPage = -1;
   hdr.attrType = attrType;
   hdr.attrLength = attrLength;
-  hdr.dups = false; //TODO get actual values
 
   memcpy(pData, &hdr, sizeof(hdr));
   //TODO - remove PF_PrintError or make it #define optional
