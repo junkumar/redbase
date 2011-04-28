@@ -74,8 +74,8 @@ TEST_F(BtreeNodeTest, Cons) {
   BtreeNode b(INT, sizeof(int), ph);
   // 4092 / 12 = exactly 341
   // so 340 keys = 340 * 4
-  // 341 RIDs = 341 * 8
-  // total 4088 - 4 wasted bytes
+  // 340 RIDs = 340 * 8
+  // total 4080 - 12 wasted bytes for numKeys/left/right
   ASSERT_EQ(340, b.GetMaxKeys());
 
   BtreeNode b2(FLOAT, sizeof(float), ph);

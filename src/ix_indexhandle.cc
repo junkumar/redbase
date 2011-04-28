@@ -60,7 +60,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
       if(pos != -1)
         path[i]->SetKey(pos, pData);
       else {
-        assert("largest key should be everywhere\n");
+        assert(false); //largest key should be everywhere
         return IX_BADKEY;
       }
     }
@@ -149,7 +149,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     result = parent->Insert(newNode->LargestKey(), newNode->GetPageRID());
     
     // iterate for parent node and split if required
-    node = parent;
+    node = FetchNode(parent->GetPageRID());
     failedKey = newNode->LargestKey(); // failure cannot be in node -
                                        // something was removed first.
     failedRid = newNode->GetPageRID();

@@ -586,3 +586,62 @@ TEST_F(IX_IndexHandleTest, over40pages) {
     }
   }
 }
+
+//// too slow
+// TEST_F(IX_IndexHandleTest, 4levels) {
+//   int nEntries = 0;
+//   for( int level = 1; level <= 2; ) 
+//   {
+//     RID rid;
+//     for ( int entry = 0; entry < ifh.GetRoot()->GetMaxKeys(); entry++ )
+//     {
+//       int t = nEntries % 10000;
+//       // if (nEntries > 6969) {
+//       //   cerr << "at " << nEntries << endl;
+//       //   ifh.GetRoot()->Print(cerr);
+//       // }
+//       RC rc = ifh.InsertEntry((char *)&t, RID(level, entry));
+//       if(rc != 0) {
+//         cerr << "Level " << level 
+//              << " nEntries " << nEntries 
+//              << " npages " << ifh.GetNumPages() 
+//              << endl;
+//         PrintErrorAll(rc);
+//       }
+//       ASSERT_EQ(rc, 0);
+//       nEntries++;
+//     }
+//     level = ifh.GetHeight();
+//     // cerr << "Going to Level " << level << " with nEntries " << nEntries << endl;
+//   }
+// }
+
+TEST_F(IX_IndexHandleTest, sifh4levels) {
+  int nEntries = 0;
+  for( int level = 1; level < 6; ) 
+  {
+    RID rid;
+    for ( int entry = 0; entry < sifh.GetRoot()->GetMaxKeys(); entry++ )
+    {
+      int t = level*100 + rand()%10000;
+//      int t = level*100 + (entry * rand()%10);
+      // cerr << "Inserting " << t << endl;
+
+      RC rc = sifh.InsertEntry((char *)&t, RID(level, entry));
+      if(rc != 0) {
+        cerr << "Level " << level 
+             << " nEntries " << nEntries 
+             << " npages " << sifh.GetNumPages() 
+             << endl;
+        PrintErrorAll(rc);
+      }
+      ASSERT_EQ(rc, 0);
+      nEntries++;
+    }
+    level = sifh.GetHeight();
+    // cerr << "Going to Level " << level << " with nEntries " <<
+    //  nEntries << endl;
+    // sifh.Print(cerr);
+    // cerr << "---------------------" << endl;
+  }
+}

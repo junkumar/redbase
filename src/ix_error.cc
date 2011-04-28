@@ -23,6 +23,7 @@ const char *IX_WarnMsg[] = {
 };
 
 const char *IX_ErrorMsg[] = {
+  (char*)"entry is too big",
   (char*)"error is in the PF component",
   (char*)"Index page with btree node is no longer valid",
   (char*)"Index file creation failed",

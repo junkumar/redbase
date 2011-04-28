@@ -94,3 +94,86 @@ Bugs/Known Issues:
     
     Marked under several places in the code with //TODO.
 
+---------------------------------------
+
+Design questions for the IX component.
+
+1. Suppose you're indexing an attribute with integer values. Assume
+there are no entries with duplicate values -- that is, each (v,rid)
+inserted into the index has a unique rid and a unique value v. What
+is the maximum number of entries your index can hold before it expands
+to four levels? (If you used buckets for the lowest-level index
+entries, do not count the buckets as a separate level.) Your answer
+should depend on how you structure your internal nodes and leaves, and
+on the page size. Please explain your calculation and point to the
+relevant code. What happens if there are 2 rid's for every value v?
+
+Size per btree node depends on size of attribute and the size of RIDs.
+That calculation is at 
+BtreeNode::BtreeNode()
+btree_node.cc:15
+
+A left/right pointer as well as number of keys also take up space.
+
+Note that I count the rightmost implicit entry also as an entry in my
+btree.
+
+I end up with 340 entries per btree node for PF_PAGE_SIZE(4092). See
+test case at 
+btree_node_gtest.cc:73
+
+
+Each of my internal nodes has the same structure as the leaf node and
+can have the same 340 pointers per node.
+
+Therefore level 1 b+tree has 340 entries possible.
+Therefore level 2 b+tree has 340*340 entries possible.
+Therefore level 3 b+tree has 340*340*340 entries possible.
+
+More than 340*340*340 entries will result in a 4th level.
+
+Please note that 340 is equal to the number of pointers. I count the
+number of keys as 339 + 1 - also 340. The last one is implicit.
+
+
+
+
+2. Describe the algorithm you use for deletion -- are you doing full
+deletion, lazy deletion, tombstones, or something else? If you
+implemented tombstones, how do you handle the space vacated on
+deletion? If you implemented lazy deletion, how do you handle the
+recursive index collapse?
+
+I implemented lazy deletion using an iterative algorithm that deletes
+starting at leaf and goes upwards. Deletion only happens after all
+entries are removed in a node.
+Code is at 
+IndexHandle::DeleteEntry()
+ix_indexhandle.cc:220
+
+Recursive index collapse is handled by iteratively checking each level
+to see if an "underflow" happens after the deletion and then changing
+the parent's pointer based on whether underflow happens.
+
+
+3. Do you use "buckets" pointed to by leaf nodes for holding RIDs for
+a specific attribute value, or do you store RIDs in the actual leaf
+nodes of the B+ tree structure? Briefly describe the advantages and
+disadvantages of the approach that you chose. If you had more time to
+improve your design for leaves and RIDs, what changes would you make? 
+
+Code is at 
+BtreeNode::BtreeNode()
+btree_node.cc:35
+I store RIDs directly in the leaf node. Advantages include the fact
+that I do not need to structure and manage bucket pages
+separately. This also means that I need not open bucket pages during
+an index scan. These bucket pages could be at varying level of
+emptiness if buckets are fixed per value. If the bucket size is not
+fixed per value and is built to be dynamic then we have to build a
+sophisticated method to handle lists of different sizes per key
+values. I decided this was all too complicated.
+I handled the duplicates within the Btree itself. This means that I
+needed slightly more complicated algorithms for setting up scans for
+<= and >= etc... Those are much easier if exactly one leaf entry is
+possible per value.
