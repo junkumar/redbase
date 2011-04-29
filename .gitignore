@@ -3,5 +3,6 @@ src/rm_test
 src/ix_test
 src/gtest
 src/TAGS
+src/submit*
 build/
 lib/
