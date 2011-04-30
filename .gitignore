@@ -1,4 +1,5 @@
 src/pf_test*
+src/rm_testTA*
 src/rm_test
 src/ix_test
 src/gtest

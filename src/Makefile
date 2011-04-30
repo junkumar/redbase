@@ -42,17 +42,19 @@ RM_SOURCES     = statistics.cc rm_manager.cc rm_error.cc rm_filescan.cc \
                  rm_record.cc rm_filehandle.cc rm_record_gtest.cc \
 		 rm_filehandle_gtest.cc bitmap.cc bitmap_gtest.cc \
 		 pf_manager_gtest.cc predicate.cc rm_filescan_gtest.cc \
-		 ix_error.cc
+		 ix_error.cc 
 IX_SOURCES     = ix_indexhandle.cc ix_indexhandle_gtest.cc \
 		 ix_manager.cc ix_manager_gtest.cc \
 		 ix_indexscan.cc ix_indexscan_gtest.cc \
 		 btree_node.cc btree_node_gtest.cc \
 		 ix_error.cc statistics.cc predicate.cc
-SM_SOURCES     = statistics.cc sm_stub.cc printer.cc
-QL_SOURCES     = statistics.cc #ql_manager_stub.cc
+SM_SOURCES     = statistics.cc sm_error.cc sm_manager.cc printer.cc \
+		 sm_manager_gtest.cc
+QL_SOURCES     = statistics.cc ql_manager_stub.cc
 UTILS_SOURCES  = dbcreate.cc dbdestroy.cc redbase.cc
-PARSER_SOURCES = statistics.cc #scan.c parse.c nodes.c interp.c
-TESTER_SOURCES = pf_test1.cc pf_test2.cc pf_test3.cc rm_test.cc ix_test.cc #parser_test.cc
+PARSER_SOURCES = scan.c parse.c nodes.c interp.c
+TESTER_SOURCES = pf_test1.cc pf_test2.cc pf_test3.cc rm_test.cc \
+	         rm_testTA.cc ix_test.cc parser_test.cc
 GTEST_SOURCES  = $(GTEST_ROOT)/src/gtest-all.cc
 
 PF_OBJECTS     = $(addprefix $(BUILD_DIR), $(PF_SOURCES:.cc=.o))
@@ -61,7 +63,7 @@ IX_OBJECTS     = $(addprefix $(BUILD_DIR), $(IX_SOURCES:.cc=.o))
 SM_OBJECTS     = $(addprefix $(BUILD_DIR), $(SM_SOURCES:.cc=.o))
 QL_OBJECTS     = $(addprefix $(BUILD_DIR), $(QL_SOURCES:.cc=.o))
 UTILS_OBJECTS  = $(addprefix $(BUILD_DIR), $(UTILS_SOURCES:.cc=.o))
-PARSER_OBJECTS = $(addprefix $(BUILD_DIR), $(PARSER_SOURCES:.cc=.o))
+PARSER_OBJECTS = $(addprefix $(BUILD_DIR), $(PARSER_SOURCES:.c=.o))
 TESTER_OBJECTS = $(addprefix $(BUILD_DIR), $(TESTER_SOURCES:.cc=.o))
 GTEST_OBJECTS  = $(addprefix $(BUILD_DIR), gtest-all.o)
 OBJECTS        = $(sort $(PF_OBJECTS) $(RM_OBJECTS) $(IX_OBJECTS) \

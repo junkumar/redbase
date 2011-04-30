@@ -12,6 +12,7 @@
 #include "redbase.h"
 #include "rm.h"
 #include "sm.h"
+#include "parser.h"
 
 using namespace std;
 

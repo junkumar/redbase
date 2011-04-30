@@ -8,50 +8,59 @@
 
 // Please do not include any other files than the ones below in this file.
 
+#include "sm_error.h"
 #include <stdlib.h>
 #include <string.h>
 #include "redbase.h"  // Please don't change these lines
 #include "parser.h"
 #include "rm.h"
 #include "ix.h"
+#include "catalog.h"
 
 //
 // SM_Manager: provides data management
 //
 class SM_Manager {
-    friend class QL_Manager;
-public:
-    SM_Manager    (IX_Manager &ixm, RM_Manager &rmm);
-    ~SM_Manager   ();                             // Destructor
+  friend class QL_Manager;
+ public:
+  SM_Manager    (IX_Manager &ixm_, RM_Manager &rmm_);
+  ~SM_Manager   ();                             // Destructor
 
-    RC OpenDb     (const char *dbName);           // Open the database
-    RC CloseDb    ();                             // close the database
+  RC OpenDb     (const char *dbName);           // Open the database
+  RC CloseDb    ();                             // close the database
 
-    RC CreateTable(const char *relName,           // create relation relName
-                   int        attrCount,          //   number of attributes
-                   AttrInfo   *attributes);       //   attribute data
-    RC CreateIndex(const char *relName,           // create an index for
-                   const char *attrName);         //   relName.attrName
-    RC DropTable  (const char *relName);          // destroy a relation
+  RC CreateTable(const char *relName,           // create relation relName
+                 int        attrCount,          //   number of attributes
+                 AttrInfo   *attributes);       //   attribute data
+  RC CreateIndex(const char *relName,           // create an index for
+                 const char *attrName);         //   relName.attrName
+  RC DropTable  (const char *relName);          // destroy a relation
 
-    RC DropIndex  (const char *relName,           // destroy index on
-                   const char *attrName);         //   relName.attrName
-    RC Load       (const char *relName,           // load relName from
-                   const char *fileName);         //   fileName
-    RC Help       ();                             // Print relations in db
-    RC Help       (const char *relName);          // print schema of relName
+  RC DropIndex  (const char *relName,           // destroy index on
+                 const char *attrName);         //   relName.attrName
+  RC Load       (const char *relName,           // load relName from
+                 const char *fileName);         //   fileName
+  RC Help       ();                             // Print relations in db
+  RC Help       (const char *relName);          // print schema of relName
 
-    RC Print      (const char *relName);          // print relName contents
+  RC Print      (const char *relName);          // print relName contents
 
-    RC Set        (const char *paramName,         // set parameter to
-                   const char *value);            //   value
+  RC Set        (const char *paramName,         // set parameter to
+                 const char *value);            //   value
+ private:
+  RC IsValid() const;
+  RC GetFromTable(const char *relName,           // create relation relName
+                  int&        attrCount,          //   number of attributes
+                  DataAttrInfo   *&attributes);       //   attribute data
+  
 
-private:
+ private:
+  RM_Manager& rmm;
+  IX_Manager& ixm;
+  bool bDBOpen;
+  RM_FileHandle relfh;
+  RM_FileHandle attrfh;
+  char cwd[1024];
 };
 
-//
-// Print-error function
-//
-void SM_PrintError(RC rc);
-
-#endif
+#endif // SM_H

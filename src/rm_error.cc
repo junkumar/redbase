@@ -8,6 +8,7 @@
 #include <iostream>
 #include "rm_error.h"
 #include "ix_error.h"
+#include "sm_error.h"
 #include "pf.h"
 
 using namespace std;
@@ -82,16 +83,15 @@ void PrintErrorAll(RC rc)
   else if ((rc >= START_IX_WARN && rc <= IX_LASTWARN)
            || (-rc >= -START_IX_ERR && -rc <= -IX_LASTERROR))
     IX_PrintError(rc);
+  else if ((rc >= START_SM_WARN && rc <= SM_LASTWARN)
+           || (-rc >= -START_SM_ERR && -rc <= -SM_LASTERROR))
+    SM_PrintError(rc);
   else if (rc == 0)
     cerr << "PrintError called with return code of 0\n";
   else
   {
    // Print error
     cerr << "rc was " << rc << endl;
-    cerr << "Out of bounds for both RM, IX and PF err/warn" << endl;
-    cerr << "START_IX_ERR was " << START_IX_ERR 
-         << "IX_LASTERROR was "
-         << IX_LASTERROR << endl;
-
+    cerr << "Out of bounds for RM, IX, SM and PF err/warn" << endl;
   }
 }

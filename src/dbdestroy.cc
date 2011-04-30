@@ -5,6 +5,7 @@
 // This shell is provided for the student.
 
 #include <iostream>
+#include <sstream>
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
@@ -19,32 +20,27 @@ using namespace std;
 //
 int main(int argc, char *argv[])
 {
-    char *dbname;
-    char command[255] = "mkdir ";
-    RC rc;
+  RC rc;
 
-    // Look for 2 arguments. The first is always the name of the program
-    // that was executed, and the second should be the name of the
-    // database.
-    if (argc != 2) {
-        cerr << "Usage: " << argv[0] << " dbname \n";
-        exit(1);
-    }
+  // Look for 2 arguments. The first is always the name of the program
+  // that was executed, and the second should be the name of the
+  // database.
+  if (argc != 2) {
+    cerr << "Usage: " << argv[0] << " <dbname> \n";
+    exit(1);
+  }
+  
+  // The database name is the second argument
+  string dbname(argv[1]);
+  
+  // Create a subdirectory for the database
+  stringstream command;
+  command << "rm -r " << dbname;
+  rc = system (command.str().c_str());
+  if(rc != 0) {
+    cerr << argv[0] << " rmdir error for " << dbname << "\n";
+    exit(rc);
+  }
 
-    // The database name is the second argument
-    dbname = argv[1];
-
-    // Create a subdirectory for the database
-    system (strcat(command,dbname));
-
-    if (chdir(dbname) < 0) {
-        cerr << argv[0] << " chdir error to " << dbname << "\n";
-        exit(1);
-    }
-
-    // Create the system catalogs...
-
-    // Fair amount to be filled in here!!
-
-    return(0);
+  return(0);
 }

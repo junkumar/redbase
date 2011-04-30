@@ -81,9 +81,9 @@ Printer::Printer(const DataAttrInfo *attributes_, const int attrCount_)
             strcpy(psHeader[i], attributes[i].attrName);
 
         if (attributes[i].attrType==STRING)
-            spaces[i] = min(attributes[i].attrLength, MAXPRINTSTRING);
+            spaces[i] = mmin(attributes[i].attrLength, MAXPRINTSTRING);
         else
-            spaces[i] = max(12, strlen(psHeader[i]));
+            spaces[i] = mmax(12, strlen(psHeader[i]));
 
         // We must subtract out those characters that will be for the
         // header.
