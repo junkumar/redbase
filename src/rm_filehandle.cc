@@ -99,12 +99,15 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
   RC invalid = IsValid(); if(invalid) return invalid; 
   PF_PageHandle ph;
   RM_PageHdr pHdr(this->GetNumSlots());
+  PageNum p;
 
   if(hdr.firstFree != RM_PAGE_LIST_END) 
   {
     // this last page on the free list might actually be full
     RC rc;
     if ((rc = pfHandle->GetThisPage(hdr.firstFree, ph))
+        || (rc = ph.GetPageNum(p))
+        || (rc = pfHandle->MarkDirty(p))
         // Needs to be called everytime GetThisPage is called.
         || (rc = pfHandle->UnpinPage(hdr.firstFree))
         || (rc = this->GetPageHeader(ph, pHdr)))
@@ -194,9 +197,12 @@ RC RM_FileHandle::GetPageHeader(PF_PageHandle ph, RM_PageHdr& pHdr) const
 RC RM_FileHandle::SetPageHeader(PF_PageHandle ph, const RM_PageHdr& pHdr) 
 {
   char * buf;
-  RC rc = ph.GetData(buf);
+  RC rc;
+  PageNum p = -1;
+  if(rc = ph.GetData(buf))
+    return rc;
   pHdr.to_buf(buf);
-  return rc;
+  return 0;
 }
 
 // get header from the first page of a newly opened file
@@ -311,12 +317,12 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
   char * pSlot;
   if((rc = this->GetNextFreeSlot(ph, p, s)))
     return rc;
-     if((rc = this->GetPageHeader(ph, pHdr)))
+  if((rc = this->GetPageHeader(ph, pHdr)))
     return rc;
   bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
   // std::cerr << "RM_FileHandle::InsertRec befor" << b << std::endl;
   // TODO GetSlotPtr is trashing the pHdr
-  if((rc = this->GetSlotPointer(ph, s, pSlot)))
+  if(rc = this->GetSlotPointer(ph, s, pSlot))
     return rc;
   rid = RID(p, s);
   memcpy(pSlot, pData, this->fullRecordSize());
@@ -332,7 +338,6 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
   b.to_char_buf(pHdr.freeSlotMap, b.numChars());
   rc = this->SetPageHeader(ph, pHdr);
   // std::cerr << "RM_FileHandle::InsertRec after" << b << std::endl;
-// TODO mark page as dirty
   return 0;
 }
 
@@ -349,6 +354,7 @@ RC RM_FileHandle::DeleteRec  (const RID &rid)
   PF_PageHandle ph;
   RM_PageHdr pHdr(this->GetNumSlots());
   if((rc = pfHandle->GetThisPage(p, ph)) ||
+     (rc = pfHandle->MarkDirty(p)) ||
      // Needs to be called everytime GetThisPage is called.
      (rc = pfHandle->UnpinPage(p)) ||
      (rc = this->GetPageHeader(ph, pHdr))
@@ -397,6 +403,7 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec)
   RC rc;
   RM_PageHdr pHdr(this->GetNumSlots());
   if((rc = pfHandle->GetThisPage(p, ph)) ||
+     (rc = pfHandle->MarkDirty(p)) ||
      // Needs to be called everytime GetThisPage is called.
      (rc = pfHandle->UnpinPage(p)) ||
      (rc = this->GetPageHeader(ph, pHdr))
