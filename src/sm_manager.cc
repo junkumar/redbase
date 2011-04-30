@@ -119,9 +119,100 @@ RC SM_Manager::CreateTable(const char *relName,
 		)
     return(rc);  
 
+  // attrfh.ForcePages();
+  // relfh.ForcePages();
   delete [] d;
   return (0);
 }
+
+// Get the first matching row for relName
+// contents are return in rel and the RID the record is located at is
+// returned in rid.
+// method returns SM_NOSUCHTABLE if relName was not found
+RC SM_Manager::GetRelFromCat(const char* relName, 
+                             DataRelInfo& rel,
+                             RID& rid) const
+{
+  RC invalid = IsValid(); if(invalid) return invalid;
+  if(relName == NULL)
+    return SM_BADTABLE;
+
+  void * value = const_cast<char*>(relName);
+  RM_FileScan rfs;
+  RC rc = rfs.OpenScan(relfh,STRING,MAXNAME+1,offsetof(DataRelInfo, relName),
+                       EQ_OP, value, NO_HINT);
+  if (rc != 0 ) return rc;
+
+  RM_Record rec;
+  rc = rfs.GetNextRec(rec);
+  if(rc == RM_EOF)
+    return SM_NOSUCHTABLE; // no such table
+
+  rc = rfs.CloseScan();
+  if (rc != 0 ) return rc;
+
+  DataRelInfo * prel;
+  rec.GetData((char *&) prel);
+  rel = *prel;
+  rec.GetRid(rid);
+
+  return 0;
+}
+
+// Get the first matching row for relName, attrName
+// contents are returned in attr
+// location of record is returned in rid
+// method returns SM_NOSUCHENTRY if attrName was not found
+RC SM_Manager::GetAttrFromCat(const char* relName,
+                              const char* attrName,
+                              DataAttrInfo& attr,
+                              RID& rid) const
+{
+  RC invalid = IsValid(); if(invalid) return invalid;
+  if(relName == NULL || attrName == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RC rc;
+  RM_FileScan rfs;
+  RM_Record rec;
+  DataAttrInfo * data;
+  if ((rc = rfs.OpenScan(attrfh,
+                         STRING,
+                         MAXNAME+1,
+                         offsetof(DataAttrInfo, relName),
+                         EQ_OP,
+                         (void*) relName))) 
+    return (rc);
+
+  bool attrFound = false;
+  while (rc!=RM_EOF) {
+    rc = rfs.GetNextRec(rec);
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      rec.GetData((char*&)data);
+      if(strcmp(data->attrName, attrName) == 0) {
+        attrFound = true;
+        break;
+      }
+    }
+  }
+
+  if ((rc = rfs.CloseScan()))
+    return (rc);
+
+  if(!attrFound)
+    return SM_BADATTR;
+  
+  attr = *data;
+  rec.GetRid(rid);
+  return 0;
+}
+
+
 
 RC SM_Manager::DropTable(const char *relName)
 {
@@ -222,46 +313,19 @@ RC SM_Manager::CreateIndex(const char *relName,
     return SM_BADTABLE;
   }
 
+  DataAttrInfo attr;
+  DataAttrInfo * data = &attr;
+
   RC rc;
-  RM_FileScan rfs;
-  RM_Record rec;
-  DataAttrInfo * data;
-  if ((rc = rfs.OpenScan(attrfh,
-                         STRING,
-                         MAXNAME+1,
-                         offsetof(DataAttrInfo, relName),
-                         EQ_OP,
-                         (void*) relName))) 
-    return (rc);
-
-  bool attrFound = false;
-  while (rc!=RM_EOF) {
-    rc = rfs.GetNextRec(rec);
-
-    if (rc!=0 && rc!=RM_EOF)
-      return (rc);
-
-    if (rc!=RM_EOF) {
-      rec.GetData((char*&)data);
-      if(strcmp(data->attrName, attrName) == 0) {
-        if(data->indexNo != -1)
-          return SM_INDEXEXISTS;
-        data->indexNo = data->offset;
-        attrFound = true;
-        break;
-      }
-    }
-  }
-
-  // Close the scan, file, delete the attributes pointer, etc.
-  if ((rc = rfs.CloseScan()))
-    return (rc);
-
-  if(!attrFound)
-    return SM_BADATTR;
-  
   RID rid;
-  rec.GetRid(rid);
+  rc = GetAttrFromCat(relName, attrName, attr, rid);
+  if(rc != 0) return rc;
+
+  // index already exists
+  if(data->indexNo != -1)
+    return SM_INDEXEXISTS;
+  // otherwise here is a new one
+  data->indexNo = data->offset;
 
   if(
     (rc = ixm.CreateIndex(relName, data->indexNo, 
@@ -270,6 +334,7 @@ RC SM_Manager::CreateIndex(const char *relName,
     return(rc);
 
   // update attrcat
+  RM_Record rec;
   rec.Set((char*)data, DataAttrInfo::size(), rid);
   if ((rc = attrfh.UpdateRec(rec)) != 0)
     return rc;
@@ -365,10 +430,13 @@ RC SM_Manager::Load(const char *relName,
   }
 
   char * buf = new char[size];
-
-  while(ifs.good()) {
+  int numLines = 0;
+  while(!ifs.eof()) {
     string line;
     getline(ifs, line);
+    if(line.length() == 0) continue; // ignore last newline
+    numLines++;
+    // cerr << "Line " << numLines << ": " << line << endl;
     // tokenize line
     string token;
     std::istringstream iss(line);
@@ -387,31 +455,44 @@ RC SM_Manager::Load(const char *relName,
         ss >> val;
         memcpy(buf + attributes[i].offset, &val, attributes[i].attrLength);
       }
-      if(attributes[i].attrType == INT) {
-        string val;
-        ss >> val;
+      if(attributes[i].attrType == STRING) {
+        string val = token;
+        // cerr << "Line " << numLines << ": token : " << token << endl;
+        if(val.length() > attributes[i].attrLength) {
+          cerr << "SM_Manager::Load truncating to " 
+               << attributes[i].attrLength << " - " << val << endl; 
+        }
         memcpy(buf + attributes[i].offset, val.c_str(), attributes[i].attrLength);
       }
-      RID rid;
-      if ((rc = rfh.InsertRec(buf, rid)) < 0
-        )
-        return(rc);
       i++;
     }
-
+    RID rid;
+    if ((rc = rfh.InsertRec(buf, rid)) < 0
+      )
+      return(rc);
   }
 
   delete [] buf;
   delete [] attributes;
+
+  // update numRecords in relcat
+  DataRelInfo r;
+  RID rid;
+  rc = GetRelFromCat(relName, r, rid);
+  if(rc != 0) return rc;
+
+  r.numRecords += numLines;
+  r.numPages = rfh.GetNumPages();
+  RM_Record rec;
+  rec.Set((char*)&r, DataRelInfo::size(), rid);
+  if ((rc = relfh.UpdateRec(rec)) != 0)
+    return rc;
+
   if((rc =	rmm.CloseFile(rfh))
     ) 
     return(rc);
 
   ifs.close();
-
-  cout << "Load\n"
-       << "   relName =" << relName << "\n"
-       << "   fileName=" << fileName << "\n";
   return (0);
 }
 
@@ -420,13 +501,22 @@ RC SM_Manager::Print(const char *relName)
   RC invalid = IsValid(); if(invalid) return invalid;
   DataAttrInfo *attributes;
   RM_FileHandle rfh;
+  RM_FileHandle* prfh;
+
   int attrCount;
   RM_Record rec;
   char *data;
   RC rc;
 
-  rc = rmm.OpenFile(relName, rfh);
-  if (rc !=0) return rc;
+  if(strcmp(relName, "relcat") == 0)
+    prfh = &relfh;
+  else if(strcmp(relName, "attrcat") == 0)
+    prfh = &attrfh;
+  else {
+    rc = rmm.OpenFile(relName, rfh);
+    if (rc !=0) return rc;
+    prfh = &rfh;
+  }
 
   rc = GetFromTable(relName, attrCount, attributes);
   if (rc !=0) return rc;
@@ -437,7 +527,7 @@ RC SM_Manager::Print(const char *relName)
 
   RM_FileScan rfs;
 
-  if ((rc = rfs.OpenScan(rfh, INT, sizeof(int), 0, NO_OP, NULL))) 
+  if ((rc = rfs.OpenScan(*prfh, INT, sizeof(int), 0, NO_OP, NULL))) 
     return (rc);
 
   // Print each tuple
@@ -457,11 +547,14 @@ RC SM_Manager::Print(const char *relName)
   p.PrintFooter(cout);
 
   // Close the scan, file, delete the attributes pointer, etc.
-  if((rc = rfs.CloseScan()) ||
-     (rc = rmm.CloseFile(rfh))
-    ) 
+  if((rc = rfs.CloseScan()))
     return (rc);
    
+  if((0 == rfh.IsValid())) {
+    if (rc = rmm.CloseFile(rfh))
+      return (rc);
+  }
+
   delete [] attributes;
   return (0);
 }
@@ -623,6 +716,9 @@ RC SM_Manager::GetFromTable(const char *relName,
   DataRelInfo * prel;
   rec.GetData((char *&) prel);
 
+  rc = rfs.CloseScan();
+  if (rc != 0 ) return rc;
+
   attrCount = prel->attrCount;
   attributes = new DataAttrInfo[attrCount];
 
@@ -646,6 +742,9 @@ RC SM_Manager::GetFromTable(const char *relName,
     // too few or too many
     return SM_BADTABLE;
   }
+
+  rc = afs.CloseScan();
+  if (rc != 0 ) return rc;
 
   return 0;
 }

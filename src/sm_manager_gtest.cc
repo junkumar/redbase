@@ -166,6 +166,47 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     rc = system (command.str().c_str());
     ASSERT_NE(rc, 0);
 
+    command.str("");
+    command << "echo \"create table in(in i, out f, bw c2);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"load in(\\\"../data\\\");\" | ./redbase " 
+            << dbname;
+    cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"print relcat;\" | ./redbase "
+            << dbname 
+            << " | grep ^in | perl -nle '@a = split /\\s+/; print $a[4]'";
+    // cerr << command.str() << endl;
+    rc = system (command.str().c_str());
+
+    command.str("wc -l data | perl -nle '@a = split /\\s+/; print $a[1]'");
+    rc = system (command.str().c_str());
+
+
+    command.str("");
+    command << "echo \"load in(\\\"../data.2700\\\");\" | ./redbase " 
+            << dbname;
+    // cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"print relcat;\" | ./redbase "
+            << dbname 
+            << " | grep ^in | perl -nle '@a = split /\\s+/; print $a[3]; print $a[4]'";
+    // cerr << command.str() << endl;
+    rc = system (command.str().c_str());
+
+    command.str("wc -l data.2700 data | grep total | perl -nle '@a = split /\\s+/; print $a[1]'");
+    rc = system (command.str().c_str());
+
     stringstream command2;
     command2 << "./dbdestroy " << dbname;
     rc = system (command2.str().c_str());

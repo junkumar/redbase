@@ -53,6 +53,23 @@ class SM_Manager {
                   int&        attrCount,          //   number of attributes
                   DataAttrInfo   *&attributes);       //   attribute data
   
+  // Get the first matching row for relName
+  // contents are return in rel and the RID the record is located at is
+  // returned in rid.
+  // method returns SM_NOSUCHTABLE if relName was not found
+  RC GetRelFromCat(const char* relName, 
+                   DataRelInfo& rel,
+                   RID& rid) const;
+
+  // Get the first matching row for relName, attrName
+  // contents are returned in attr
+  // location of record is returned in rid
+  // method returns SM_NOSUCHENTRY if attrName was not found
+  RC GetAttrFromCat(const char* relName,
+                    const char* attrName,
+                    DataAttrInfo& attr,
+                    RID& rid) const;
+
 
  private:
   RM_Manager& rmm;

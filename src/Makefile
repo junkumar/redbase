@@ -94,7 +94,8 @@ all: $(LIBRARIES) $(UTILS) tags gtest
 
 clean: tags-clean
 	rm -f $(BUILD_DIR)*.o $(BUILD_DIR)*.d y.output y.tab.h \
-	parse.c	$(LIBRARIES) $(EXECUTABLES) gtest $(BUILD_DIR)*.d.*
+	parse.c	scan.c test.out \
+	$(LIBRARIES) $(EXECUTABLES) gtest $(BUILD_DIR)*.d.*
 
 testers: all $(TESTS)
 
