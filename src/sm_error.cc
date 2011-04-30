@@ -28,9 +28,9 @@ const char *SM_ErrorMsg[] = {
   (char*)"Bad Table name - no such table",
   (char*)"bad open",
   (char*)"file is not open",
-  (char*)"Bad RID - invalid page num or slot num",
-  (char*)"Bad Table",
-  (char*)"end of file",
+  (char*)"Bad Attribute name specified for this relation",
+  (char*)"Bad Table/Relation",
+  (char*)"Index already exists",
 };
 
 //

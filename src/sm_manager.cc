@@ -6,6 +6,8 @@
 
 #include <cstdio>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "redbase.h"
 #include "sm.h"
 #include "ix.h"
@@ -81,15 +83,43 @@ RC SM_Manager::CreateTable(const char *relName,
 {
   RC invalid = IsValid(); if(invalid) return invalid;
 
-  cout << "CreateTable\n"
-       << "   relName     =" << relName << "\n"
-       << "   attrCount   =" << attrCount << "\n";
-  for (int i = 0; i < attrCount; i++)
-    cout << "   attributes[" << i << "].attrName=" << attributes[i].attrName
-         << "   attrType="
-         << (attributes[i].attrType == INT ? "INT" :
-             attributes[i].attrType == FLOAT ? "FLOAT" : "STRING")
-         << "   attrLength=" << attributes[i].attrLength << "\n";
+  if(relName == NULL || attrCount <= 0 || attributes == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RID rid;
+  RC rc;
+
+  DataAttrInfo * d = new DataAttrInfo[attrCount];
+  int size = 0;
+  for (int i = 0; i < attrCount; i++) {
+    d[i] = DataAttrInfo(attributes[i]);
+    d[i].offset = size;
+    size += attributes[i].attrLength;
+    strcpy (d[i].relName, relName);
+
+    if ((rc = attrfh.InsertRec((char*) &d[i], rid)) < 0
+      )
+      return(rc);
+  }
+
+  if(
+    (rc = rmm.CreateFile(relName, size)) 
+    ) 
+    return(rc);
+
+  DataRelInfo rel;
+  strcpy(rel.relName, relName);
+  rel.attrCount = attrCount;
+  rel.recordSize = size;
+  rel.numPages = 1; // initially
+  rel.numRecords = 0;
+
+	if ((rc = relfh.InsertRec((char*) &rel, rid)) < 0
+		)
+    return(rc);  
+
+  delete [] d;
   return (0);
 }
 
@@ -97,7 +127,89 @@ RC SM_Manager::DropTable(const char *relName)
 {
   RC invalid = IsValid(); if(invalid) return invalid;
 
-  cout << "DropTable\n   relName=" << relName << "\n";
+  if(relName == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RM_FileScan rfs;
+  RM_Record rec;
+  DataRelInfo * data;
+  RC rc;
+  if ((rc = rfs.OpenScan(relfh,
+                         STRING,
+                         MAXNAME+1,
+                         offsetof(DataRelInfo, relName),
+                         EQ_OP,
+                         (void*) relName))) 
+    return (rc);
+
+  bool attrFound = false;
+  while (rc!=RM_EOF) {
+    rc = rfs.GetNextRec(rec);
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      rec.GetData((char*&)data);
+      if(strcmp(data->relName, relName) == 0) {
+        attrFound = true;
+        break;
+      }
+    }
+  }
+
+  if ((rc = rfs.CloseScan()))
+    return (rc);
+
+  if(!attrFound)
+    return SM_NOSUCHTABLE;
+  
+  RID rid;
+  rec.GetRid(rid);
+
+  if(
+    (rc = rmm.DestroyFile(relName)) 
+    )
+    return(rc);
+  
+  // update relcat
+  if ((rc = relfh.DeleteRec(rid)) != 0)
+    return rc;
+
+  {
+    RM_Record rec;
+    DataAttrInfo * adata;
+    if ((rc = rfs.OpenScan(attrfh,
+                           STRING,
+                           MAXNAME+1,
+                           offsetof(DataAttrInfo, relName),
+                           EQ_OP,
+                           (void*) relName))) 
+      return (rc);
+    
+    while (rc!=RM_EOF) {
+      rc = rfs.GetNextRec(rec);
+      
+      if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+      
+      if (rc!=RM_EOF) {
+        rec.GetData((char*&)adata);
+        if(strcmp(adata->relName, relName) == 0) {
+          if(adata->indexNo != -1) // drop indexes also
+            this->DropIndex(relName, adata->attrName);
+          RID rid;
+          rec.GetRid(rid);
+          if ((rc = attrfh.DeleteRec(rid)) != 0)
+            return rc;
+        }
+      }
+    }
+    
+    if ((rc = rfs.CloseScan()))
+      return (rc);
+  }
   return (0);
 }
 
@@ -106,9 +218,61 @@ RC SM_Manager::CreateIndex(const char *relName,
 {
   RC invalid = IsValid(); if(invalid) return invalid;
 
-  cout << "CreateIndex\n"
-       << "   relName =" << relName << "\n"
-       << "   attrName=" << attrName << "\n";
+  if(relName == NULL || attrName == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RC rc;
+  RM_FileScan rfs;
+  RM_Record rec;
+  DataAttrInfo * data;
+  if ((rc = rfs.OpenScan(attrfh,
+                         STRING,
+                         MAXNAME+1,
+                         offsetof(DataAttrInfo, relName),
+                         EQ_OP,
+                         (void*) relName))) 
+    return (rc);
+
+  bool attrFound = false;
+  while (rc!=RM_EOF) {
+    rc = rfs.GetNextRec(rec);
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      rec.GetData((char*&)data);
+      if(strcmp(data->attrName, attrName) == 0) {
+        if(data->indexNo != -1)
+          return SM_INDEXEXISTS;
+        data->indexNo = data->offset;
+        attrFound = true;
+        break;
+      }
+    }
+  }
+
+  // Close the scan, file, delete the attributes pointer, etc.
+  if ((rc = rfs.CloseScan()))
+    return (rc);
+
+  if(!attrFound)
+    return SM_BADATTR;
+  
+  RID rid;
+  rec.GetRid(rid);
+
+  if(
+    (rc = ixm.CreateIndex(relName, data->indexNo, 
+                          data->attrType, data->attrLength)) 
+    )
+    return(rc);
+
+  // update attrcat
+  rec.Set((char*)data, DataAttrInfo::size(), rid);
+  if ((rc = attrfh.UpdateRec(rec)) != 0)
+    return rc;
   return (0);
 }
 
@@ -117,9 +281,57 @@ RC SM_Manager::DropIndex(const char *relName,
 {
   RC invalid = IsValid(); if(invalid) return invalid;
 
-  cout << "DropIndex\n"
-       << "   relName =" << relName << "\n"
-       << "   attrName=" << attrName << "\n";
+  if(relName == NULL || attrName == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RM_FileScan rfs;
+  RM_Record rec;
+  DataAttrInfo * data;
+  RC rc;
+  if ((rc = rfs.OpenScan(attrfh,
+                         STRING,
+                         MAXNAME+1,
+                         offsetof(DataAttrInfo, relName),
+                         EQ_OP,
+                         (void*) relName))) 
+    return (rc);
+
+  bool attrFound = false;
+  while (rc!=RM_EOF) {
+    rc = rfs.GetNextRec(rec);
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      rec.GetData((char*&)data);
+      if(strcmp(data->attrName, attrName) == 0) {
+        data->indexNo = -1;
+        attrFound = true;
+        break;
+      }
+    }
+  }
+
+  if ((rc = rfs.CloseScan()))
+    return (rc);
+
+  if(!attrFound)
+    return SM_BADATTR;
+  
+  RID rid;
+  rec.GetRid(rid);
+
+  if(
+    (rc = ixm.DestroyIndex(relName, data->offset))
+    )
+    return(rc);
+
+  // update attrcat
+  rec.Set((char*)data, DataAttrInfo::size(), rid);
+  if ((rc = attrfh.UpdateRec(rec)) != 0)
+    return rc;
   return (0);
 }
 
@@ -127,6 +339,75 @@ RC SM_Manager::Load(const char *relName,
                     const char *fileName)
 {
   RC invalid = IsValid(); if(invalid) return invalid;
+
+  if(relName == NULL || fileName == NULL) {
+    return SM_BADTABLE;
+  }
+
+  ifstream ifs(fileName);
+  if(ifs.fail())
+    return SM_BADTABLE;
+  
+  RM_FileHandle rfh;
+  RC rc;
+  if((rc =	rmm.OpenFile(relName, rfh))
+    ) 
+    return(rc);
+
+  int attrCount = -1;
+  DataAttrInfo * attributes;
+  rc = GetFromTable(relName, attrCount, attributes);
+  if(rc != 0) return rc;
+
+  int size = 0;
+  for (int i = 0; i < attrCount; i++) {
+    size += attributes[i].attrLength;
+  }
+
+  char * buf = new char[size];
+
+  while(ifs.good()) {
+    string line;
+    getline(ifs, line);
+    // tokenize line
+    string token;
+    std::istringstream iss(line);
+    int i = 0;
+    while ( getline(iss, token, ',') )
+    {
+      assert(i < attrCount);
+      istringstream ss(token);
+      if(attributes[i].attrType == INT) {
+        int val;
+        ss >> val;
+        memcpy(buf + attributes[i].offset , &val, attributes[i].attrLength);
+      }
+      if(attributes[i].attrType == FLOAT) {
+        float val;
+        ss >> val;
+        memcpy(buf + attributes[i].offset, &val, attributes[i].attrLength);
+      }
+      if(attributes[i].attrType == INT) {
+        string val;
+        ss >> val;
+        memcpy(buf + attributes[i].offset, val.c_str(), attributes[i].attrLength);
+      }
+      RID rid;
+      if ((rc = rfh.InsertRec(buf, rid)) < 0
+        )
+        return(rc);
+      i++;
+    }
+
+  }
+
+  delete [] buf;
+  delete [] attributes;
+  if((rc =	rmm.CloseFile(rfh))
+    ) 
+    return(rc);
+
+  ifs.close();
 
   cout << "Load\n"
        << "   relName =" << relName << "\n"

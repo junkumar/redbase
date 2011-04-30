@@ -39,12 +39,12 @@ RM_Record::~RM_Record()
 // }
 
 // Allows a resetting as long as size matches.
-RC RM_Record::Set     (char *pData, int size, RID rid)
+RC RM_Record::Set     (char *pData, int size, RID rid_)
 {
 	if(recordSize != -1 && (size != recordSize))
 		return RM_RECSIZEMISMATCH;
 	recordSize = size;
-  this->rid = rid;
+  this->rid = rid_;
 	if (data == NULL)
 		data = new char[recordSize];
   memcpy(data, pData, size);

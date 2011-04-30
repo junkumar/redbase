@@ -28,10 +28,10 @@ void SM_PrintError(RC rc);
 #define SM_NOSUCHTABLE     (START_SM_ERR - 3)
 #define SM_BADOPEN         (START_SM_ERR - 5)
 #define SM_FNOTOPEN        (START_SM_ERR - 6)
-#define SM_BADRID          (START_SM_ERR - 7)
+#define SM_BADATTR         (START_SM_ERR - 7)
 #define SM_BADTABLE        (START_SM_ERR - 8)
-#define SM_EOF             (START_SM_ERR - 9)  // end of file
+#define SM_INDEXEXISTS     (START_SM_ERR - 9)
 
-#define SM_LASTERROR SM_EOF
+#define SM_LASTERROR SM_INDEXEXISTS
 
 #endif // SM_ERROR_H

@@ -67,3 +67,109 @@ TEST_F(SM_ManagerTest, Cons) {
     rc = system (command2.str().c_str());
     ASSERT_EQ(rc, 0);
 }
+
+TEST_F(SM_ManagerTest, CreateDrop) {
+    RC rc;
+    PF_Manager pfm;
+    IX_Manager ixm(pfm);
+    RM_Manager rmm(pfm);
+    SM_Manager smm(ixm, rmm);
+
+    const char * dbname = "cdtest";
+    stringstream command;
+    command << "rm -r " << dbname;
+    rc = system (command.str().c_str());
+
+    command.str("");
+    command << "./dbcreate " << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    // no such table
+    command.str("");
+    command << "echo \"drop table in;\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create table in(in i, fl f);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "ls  " 
+            << dbname << "/in";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    // should fail - no index yet
+    command.str("");
+    command << "echo \"drop index in(in);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create index in(in);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create index in(fl);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    // should fail the 2nd time - but redbase always return true
+    command.str("");
+    command << "echo \"create index in(fl);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "ls  " 
+            << dbname << "/in.0";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "ls  " 
+            << dbname << "/in.4";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"drop table in;\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "ls  " 
+            << dbname << "/in.0";
+    rc = system (command.str().c_str());
+    ASSERT_NE(rc, 0);
+
+    command.str("");
+    command << "ls  " 
+            << dbname << "/in.4";
+    rc = system (command.str().c_str());
+    ASSERT_NE(rc, 0);
+
+    command.str("");
+    command << "ls  " 
+            << dbname << "/in";
+    rc = system (command.str().c_str());
+    ASSERT_NE(rc, 0);
+
+    stringstream command2;
+    command2 << "./dbdestroy " << dbname;
+    rc = system (command2.str().c_str());
+    ASSERT_EQ(rc, 0);
+    
+
+}

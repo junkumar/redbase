@@ -18,7 +18,7 @@
 
 using namespace std;
 
-void PrintErrorExit(RC rc) {
+static void PrintErrorExit(RC rc) {
   PrintErrorAll(rc);
   exit(rc);
 }
