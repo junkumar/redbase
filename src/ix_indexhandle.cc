@@ -7,6 +7,7 @@ IX_IndexHandle::IX_IndexHandle()
   path = NULL;
   pathP = NULL;
   treeLargest = NULL;
+  hdr.height = 0;
 }
 
 IX_IndexHandle::~IX_IndexHandle()
@@ -97,6 +98,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     // cerr << "nro largestKey was " << *(int*)oldLargest  << endl;
     // cerr << "nro numKeys was " << node->GetNumKeys()  << endl;
+    delete [] charPtr;
 
     // make new  node
     PF_PageHandle ph;
@@ -152,7 +154,6 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
                             node->GetPageRID());
     // this result should always be good - we removed first before
     // inserting to prevent overflow.
-    delete [] charPtr;
 
     // insert new key
     result = parent->Insert(newNode->LargestKey(), newNode->GetPageRID());
@@ -164,6 +165,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     failedRid = newNode->GetPageRID();
 
     delete newNode;
+    newNode = NULL;
   } // while
 
   if(level >= 0) {
@@ -183,7 +185,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     if (rc != 0) return IX_PF;
     rc = GetThisPage(p, ph);
     if (rc != 0) return IX_PF;
-  
+
     root = new BtreeNode(hdr.attrType, hdr.attrLength,
                          ph, true,
                          hdr.pageSize);
@@ -196,7 +198,12 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     rc = pfHandle->GetThisPage(hdr.rootPage, rootph);
     if (rc != 0) return rc;
 
-    SetHeight(++hdr.height);
+    if(newNode != NULL) {
+      delete newNode;
+      newNode = NULL;
+    }
+
+    SetHeight(hdr.height+1);
     return 0;
   }
 }
@@ -383,7 +390,7 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     if (rc < 0)
       return IX_PF;
 
-    SetHeight(--hdr.height); // do all other init
+    SetHeight(hdr.height-1); // do all other init
     return 0;
   }
 }
@@ -569,6 +576,7 @@ BtreeNode* IX_IndexHandle::FindSmallestLeaf()
       RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
       if (rc != 0) return NULL;
       delete path[i];
+      path[i] = NULL;
     }
     path[i] = FetchNode(r);
     PF_PageHandle dummy;
@@ -608,6 +616,7 @@ BtreeNode* IX_IndexHandle::FindLargestLeaf()
       RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
       if (rc != 0) return NULL;
       delete path[i];
+      path[i] = NULL;
     }
     path[i] = FetchNode(r);
     PF_PageHandle dummy;
@@ -656,12 +665,14 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
     // start with a fresh path
     if(path[i] != NULL) {
       RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
-      if (rc != 0) return NULL;
+      // if (rc != 0) return NULL;
       delete path[i];
+      path[i] = NULL;
     }
-    path[i] = FetchNode(r);
+    path[i] = FetchNode(r.Page());
     PF_PageHandle dummy;
     // pin path pages
+    
     RC rc = pfHandle->GetThisPage(path[i]->GetPageRID().Page(), dummy);
     if (rc != 0) return NULL;
 
@@ -717,7 +728,14 @@ int IX_IndexHandle::GetHeight() const
 }
 void IX_IndexHandle::SetHeight(const int& h)
 {
-  delete [] path;
+  for(int i = 1;i < hdr.height; i++)
+    if (path[i] != NULL) {
+      delete path[i];
+      path[i] = NULL;
+    }
+  if(path != NULL) delete [] path;
+  if(pathP != NULL) delete [] pathP;
+
   hdr.height = h;
   path = new BtreeNode* [hdr.height];
   for(int i=1;i < hdr.height; i++)

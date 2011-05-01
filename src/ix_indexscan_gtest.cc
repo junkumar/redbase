@@ -383,11 +383,10 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   EXPECT_EQ(numScanned, (val-0)*2);
 
 
-  // cerr << "LT_OP " << endl;
-
   val = 260;
   (rc=fs.OpenScan(ifh, LT_OP, &val, NO_HINT, true));
   ASSERT_EQ(rc, 0);
+  cerr << "LT_OP " << endl;
 
   numScanned = 0;
   numRecs = 0;
@@ -405,6 +404,7 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   ASSERT_EQ(numRecs, (val-1)*2);
   EXPECT_EQ(numScanned, (val-0)*2);
 
+  // cerr << "LE_OP " << endl;
 
   val = 360;
   (rc=fs.OpenScan(ifh, LE_OP, &val, NO_HINT, true));
@@ -426,6 +426,7 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   ASSERT_EQ(numRecs, (val)*2);
   EXPECT_EQ(numScanned, (val-0)*2);
 
+  // cerr << "GT_OP " << endl;
 
   val = 118;
   (rc=fs.OpenScan(ifh, GT_OP, &val, NO_HINT, true));
@@ -448,6 +449,7 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   // EXPECT_EQ(numScanned, (count-val)*2);
   EXPECT_LT(numScanned, (count)*2);
 
+  // cerr << "GE_OP " << endl;
 
   val = 118;
   (rc=fs.OpenScan(ifh, GE_OP, &val, NO_HINT, true));
@@ -469,6 +471,7 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   ASSERT_EQ(numRecs, (count-val+1)*2);
   EXPECT_EQ(numScanned, (count)*2);
 
+  // cerr << "NE_OP " << endl;
 
   val = 118;
   (rc=fs.OpenScan(ifh, NE_OP, &val, NO_HINT, true));

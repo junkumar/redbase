@@ -58,6 +58,7 @@ BtreeNode::BtreeNode(AttrType attrType, int attrLength,
 
 BtreeNode::~BtreeNode()
 {
+  // cerr << "Destructor for BtreeNode - page id " << pageRID << endl;
 };
 
 RC BtreeNode::ResetBtreeNode(PF_PageHandle& ph, const BtreeNode& rhs)

@@ -87,27 +87,23 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
   // first time in
   if(currNode == NULL && currPos == -1) {
     if(!desc) {
-      currNode = pixh->FindSmallestLeaf();
+      currNode = pixh->FetchNode(pixh->FindSmallestLeaf()->GetPageRID());
       currPos = -1;
     } else {
-      currNode = pixh->FindLargestLeaf();
+      currNode = pixh->FetchNode(pixh->FindLargestLeaf()->GetPageRID());
       currPos = currNode->GetNumKeys(); // 1 past
     }
   }
   
-  for( BtreeNode* j = currNode;
-       (j != NULL);
+  for( ;
+       (currNode != NULL);
        /* see end of loop */ ) 
   {
     // cerr << "GetNextEntry j's RID was " << j->GetPageRID() << endl;
     int i = -1;
     if(!desc) {
-      if(currNode == j) // first time in for loop ?
-        i = currPos+1;
-      else {
-        i = 0;
-        currNode = j; // save Node in object state for later.
-      }
+      // first time in for loop ?
+      i = currPos+1;
 
       for (; i < currNode->GetNumKeys(); i++) 
       {
@@ -128,12 +124,8 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
         }
       }
     } else { // Descending
-      if(currNode == j) // first time in for loop ?
-        i = currPos-1;
-      else {
-        currNode = j; // save Node in object state for later.
-        i = currNode->GetNumKeys()-1;
-      }
+      // first time in for loop ?
+      i = currPos-1;
 
       for (; i >= 0; i--) 
       {
@@ -156,14 +148,23 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
 
     }
     if( (lastNode!= NULL) && 
-        j->GetPageRID() == lastNode->GetPageRID() )
+        currNode->GetPageRID() == lastNode->GetPageRID() )
       break;
-    // Advance j
+    // Advance to a new page
     if(!desc) {
-      j = pixh->FetchNode(j->GetRight());
+      PageNum right = currNode->GetRight();
+      delete currNode;
+      currNode = NULL;
+      currNode = pixh->FetchNode(right);
+      currPos = -1;
     }
     else {
-      j = pixh->FetchNode(j->GetLeft());
+      PageNum left = currNode->GetLeft();
+      delete currNode;
+      currNode = NULL;
+      currNode = pixh->FetchNode(left);
+      if(currNode != NULL)
+        currPos = currNode->GetNumKeys();
     }
   } // for j
 
@@ -200,7 +201,9 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
   if(c == NE_OP)
     return 0;
   RID r(-1, -1);
-  currNode = pixh->FindLeaf(value);
+
+  if(currNode != NULL) delete currNode;
+  currNode = pixh->FetchNode(pixh->FindLeaf(value)->GetPageRID().Page());
   currPos = currNode->FindKey((const void*&)value);
 
   // find rightmost version of a value and go left from there.
@@ -211,6 +214,7 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
   
   if((c == EQ_OP) && desc == true) {
     if(currPos == -1) {// key does not exist
+      delete currNode;
       eof = true;
       return 0;
     }
@@ -222,12 +226,14 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
   // find rightmost version of value lesser than and go left from there.
   if((c == GE_OP) && desc == true) {
     lastNode = NULL;
+    delete currNode;
     currNode = NULL;
     currPos = -1;
   }
 
   if((c == GT_OP) && desc == true) {
     lastNode = pixh->FetchNode(currNode->GetPageRID());
+    delete currNode;
     currNode = NULL;
     currPos = -1;
   }
@@ -236,26 +242,30 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
   if(desc == false) {
     if((c == LE_OP || c == LT_OP)) {
       lastNode = pixh->FetchNode(currNode->GetPageRID());
+      delete currNode;
       currNode = NULL;
       currPos = -1;
     }
     if((c == GT_OP)) {
       lastNode = NULL;
-      currNode = pixh->FetchNode(currNode->GetPageRID());
+      // currNode = pixh->FetchNode(currNode->GetPageRID());
       // currNode->Print(cerr);
       // cerr << "GT curr was " << currNode->GetPageRID() << endl;
     }
     if((c == GE_OP)) {
+      delete currNode;
       currNode = NULL;
       currPos = -1;
       lastNode = NULL;
     }
     if((c == EQ_OP)) {
       if(currPos == -1) { // key does not exist
+        delete currNode;
         eof = true;
         return 0;
       }
       lastNode = pixh->FetchNode(currNode->GetPageRID());
+      delete currNode;
       currNode = NULL;
       currPos = -1;
     }
