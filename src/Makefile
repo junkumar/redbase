@@ -112,7 +112,7 @@ tags-clean:
 	rm -f TAGS
 
 val:
-	valgrind --leak-check=full --suppressions=valgrind.supp ./gtest --gtest_filter=*IX_*	
+	valgrind --leak-check=full --suppressions=valgrind.supp ./gtest --gtest_filter=*IX_*Small*	
 
 
 #
