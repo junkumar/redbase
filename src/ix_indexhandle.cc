@@ -21,7 +21,11 @@ IX_IndexHandle::~IX_IndexHandle()
   if(path != NULL) {
     // path[0] is root
     for (int i = 1; i < hdr.height; i++) 
-      if(path[i] != NULL) delete path[i];
+      if(path[i] != NULL) {
+        if(pfHandle != NULL)
+          pfHandle->UnpinPage(path[i]->GetPageRID().Page());
+        delete path[i];
+      }
     delete [] path;
   }
   if(pfHandle != NULL)
@@ -63,8 +67,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
       if(pos != -1)
         path[i]->SetKey(pos, pData);
       else {
-        assert(false); //largest key should be everywhere
-        return IX_BADKEY;
+        // assert(false); //largest key should be everywhere
+        // return IX_BADKEY;
+        cerr << "Fishy intermediate node ?" << endl;
       }
     }
     // copy from pData into new treeLargest
@@ -560,9 +565,17 @@ BtreeNode* IX_IndexHandle::FindSmallestLeaf()
       return NULL;
     }
     // start with a fresh path
-    delete path[i];
+    if(path[i] != NULL) {
+      RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
+      if (rc != 0) return NULL;
+      delete path[i];
+    }
     path[i] = FetchNode(r);
-    pathP[i-1] = 0;
+    PF_PageHandle dummy;
+    // pin path pages
+    RC rc = pfHandle->GetThisPage(path[i]->GetPageRID().Page(), dummy);
+    if (rc != 0) return NULL;
+    pathP[i-1] = 0; // dummy
   }
   return path[hdr.height-1];
 }
@@ -591,9 +604,17 @@ BtreeNode* IX_IndexHandle::FindLargestLeaf()
       return NULL;
     }
     // start with a fresh path
-    delete path[i];
+    if(path[i] != NULL) {
+      RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
+      if (rc != 0) return NULL;
+      delete path[i];
+    }
     path[i] = FetchNode(r);
-    pathP[i-1] = 0;
+    PF_PageHandle dummy;
+    // pin path pages
+    RC rc = pfHandle->GetThisPage(path[i]->GetPageRID().Page(), dummy);
+    if (rc != 0) return NULL;
+    pathP[i-1] = 0; // dummy
   }
   return path[hdr.height-1];
 }
@@ -633,8 +654,17 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
       pos = path[i-1]->FindKey((const void*&)(p));
     }
     // start with a fresh path
-    delete path[i];
+    if(path[i] != NULL) {
+      RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
+      if (rc != 0) return NULL;
+      delete path[i];
+    }
     path[i] = FetchNode(r);
+    PF_PageHandle dummy;
+    // pin path pages
+    RC rc = pfHandle->GetThisPage(path[i]->GetPageRID().Page(), dummy);
+    if (rc != 0) return NULL;
+
     pathP[i-1] = pos;
   }
   return path[hdr.height-1];

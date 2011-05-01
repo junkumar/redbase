@@ -618,7 +618,7 @@ TEST_F(IX_IndexHandleTest, Big3levels) {
 
 TEST_F(IX_IndexHandleTest, sifh4levels) {
   int nEntries = 0;
-  for( int level = 1; level < 6; ) 
+  for( int level = 1; level < 7; ) 
   {
     RID rid;
     for ( int entry = 0; entry < sifh.GetRoot()->GetMaxKeys(); entry++ )
@@ -639,8 +639,8 @@ TEST_F(IX_IndexHandleTest, sifh4levels) {
       nEntries++;
     }
     level = sifh.GetHeight();
-    // cerr << "Going to Level " << level << " with nEntries " <<
-    // nEntries << endl;
+    // cerr << "Going to Level " << level << " with nEntries " 
+    //      << nEntries << endl;
     // sifh.Print(cerr);
     // cerr << "---------------------" << endl;
   }
