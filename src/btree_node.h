@@ -16,10 +16,12 @@ class BtreeNode {
   BtreeNode(AttrType attrType, int attrLength,
             PF_PageHandle& ph, bool newPage = true,
             int pageSize = PF_PAGE_SIZE);
+  RC ResetBtreeNode(PF_PageHandle& ph, const BtreeNode& rhs);
   ~BtreeNode();
   int Destroy();
 
   friend class BtreeNodeTest;
+  friend class IX_IndexHandle;
   RC IsValid() const;
   int GetMaxKeys() const;
   

@@ -85,7 +85,7 @@ UTILS          = $(UTILS_SOURCES:.cc=)
 TESTS          = $(TESTER_SOURCES:.cc=)
 EXECUTABLES    = $(UTILS) $(TESTS)
 
-LIBS           = -lparser -lql -lsm -lix -lrm -lpf -lgtest
+LIBS           = -lparser -lql ../lib/libsm.a -lix -lrm -lpf -lgtest
 
 #
 # Build targets
@@ -112,7 +112,7 @@ tags-clean:
 	rm -f TAGS
 
 val:
-	valgrind --suppressions=valgrind.supp ./gtest --gtest_filter=*
+	valgrind --leak-check=full --suppressions=valgrind.supp ./gtest --gtest_filter=*IX_*	
 
 
 #

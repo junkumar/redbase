@@ -11,10 +11,11 @@ IX_IndexHandle::IX_IndexHandle()
 
 IX_IndexHandle::~IX_IndexHandle()
 {
-  if(pfHandle != NULL)
-    delete pfHandle;
-  if(root != NULL)
+  if(root != NULL && pfHandle != NULL) {
+    // unpin old root page 
+    RC rc = pfHandle->UnpinPage(hdr.rootPage);
     delete root;
+  }
   if(pathP != NULL)
     delete [] pathP;
   if(path != NULL) {
@@ -23,6 +24,8 @@ IX_IndexHandle::~IX_IndexHandle()
       if(path[i] != NULL) delete path[i];
     delete [] path;
   }
+  if(pfHandle != NULL)
+    delete pfHandle;
   if(treeLargest != NULL)
     delete [] (char*) treeLargest;
 }
@@ -106,9 +109,10 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     if (rc != 0) return IX_PF;
     // split adjustment
     BtreeNode * currRight = FetchNode(newNode->GetRight());
-    if(currRight != NULL)
+    if(currRight != NULL) {
       currRight->SetLeft(newNode->GetPageRID().Page());
-
+      delete currRight;
+    }
 
     BtreeNode * nodeInsertedInto = NULL;
 
@@ -153,6 +157,8 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     failedKey = newNode->LargestKey(); // failure cannot be in node -
                                        // something was removed first.
     failedRid = newNode->GetPageRID();
+
+    delete newNode;
   } // while
 
   if(level >= 0) {
@@ -160,10 +166,15 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     return 0;
   } else {
     // cerr << "root split happened" << endl;
+
+    // unpin old root page 
+    RC rc = pfHandle->UnpinPage(hdr.rootPage);
+    if (rc != 0) return rc;
+
     // make new root node
     PF_PageHandle ph;
     PageNum p;
-    RC rc = GetNewPage(p);
+    rc = GetNewPage(p);
     if (rc != 0) return IX_PF;
     rc = GetThisPage(p, ph);
     if (rc != 0) return IX_PF;
@@ -173,6 +184,12 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
                          hdr.pageSize);
     root->Insert(node->LargestKey(), node->GetPageRID());
     root->Insert(newNode->LargestKey(), newNode->GetPageRID());
+
+    // pin root page - should always be valid
+    hdr.rootPage = root->GetPageRID().Page();
+    PF_PageHandle rootph;
+    rc = pfHandle->GetThisPage(hdr.rootPage, rootph);
+    if (rc != 0) return rc;
 
     SetHeight(++hdr.height);
     return 0;
@@ -324,6 +341,11 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
       else
         right->SetLeft(-1);
     }
+    if(right != NULL)
+      delete right;
+    if(left != NULL)
+      delete left;
+
     node->Destroy();
     RC rc = DisposePage(node->GetPageRID().Page());
     if (rc < 0)
@@ -345,8 +367,14 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
 
     // new root is only child
     root = FetchNode(root->GetAddr(0));
+    // pin root page - should always be valid
+    hdr.rootPage = root->GetPageRID().Page();
+    PF_PageHandle rootph;
+    RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph);
+    if (rc != 0) return rc;
+
     node->Destroy();
-    RC rc = DisposePage(node->GetPageRID().Page());
+    rc = DisposePage(node->GetPageRID().Page());
     if (rc < 0)
       return IX_PF;
 
@@ -404,6 +432,10 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
     hdr.rootPage = p;
     SetHeight(1); // do all other init
   } 
+
+  // pin root page - should always be valid
+  RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph);
+  if (rc != 0) return rc;
 
   root = new BtreeNode(hdr.attrType, hdr.attrLength,
                        rootph, newPage,
@@ -679,7 +711,7 @@ void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
   BtreeNode * node = NULL;
   if(level == -1) {
     level = hdr.height;
-    node = root;
+    node = FetchNode(root->GetPageRID());
   }
   else {
     if(level < 1) {
@@ -703,4 +735,5 @@ void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
   // else level == 1 - recursion ends
   if(level == 1 && node->GetRight() == -1)
     os << endl; //blank after rightmost leaf
+  if(node!=NULL) delete node;
 }

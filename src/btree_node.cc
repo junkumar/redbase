@@ -60,6 +60,32 @@ BtreeNode::~BtreeNode()
 {
 };
 
+RC BtreeNode::ResetBtreeNode(PF_PageHandle& ph, const BtreeNode& rhs)
+{
+  order = (rhs.order);
+  attrLength = (rhs.attrLength);
+  attrType = (rhs.attrType);
+  numKeys = (rhs.numKeys);
+  
+  char * pData = NULL;
+  RC rc = ph.GetData(pData);
+  if(rc != 0 ) return rc;
+
+  PageNum p; rc = ph.GetPageNum(p);
+  if(rc != 0 ) return rc;
+  SetPageRID(RID(p, -1));
+
+  keys = pData;
+  rids = (RID*) (pData + attrLength*(order));
+
+  GetNumKeys();
+  GetLeft();
+  GetRight();
+
+  assert(IsValid() == 0);
+  return 0;
+};
+
 
 // Only works if node is empty
 // ret -1 if node is not empty

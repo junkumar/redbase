@@ -18,6 +18,10 @@ IX_IndexScan::IX_IndexScan(): bOpen(false), desc(false), eof(false), lastNode(NU
 
 IX_IndexScan::~IX_IndexScan()
 {
+  if(currNode != NULL)
+    delete currNode;
+  if(lastNode != NULL)
+    delete lastNode;
 }
 
 
@@ -149,10 +153,12 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
         j->GetPageRID() == lastNode->GetPageRID() )
       break;
     // Advance j
-    if(!desc)
+    if(!desc) {
       j = pixh->FetchNode(j->GetRight());
-    else
+    }
+    else {
       j = pixh->FetchNode(j->GetLeft());
+    }
   } // for j
 
   return IX_EOF;
@@ -209,12 +215,14 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
   // find rightmost version of value lesser than and go left from there.
   if((c == GE_OP) && desc == true) {
     lastNode = NULL;
+    if (currNode != NULL) delete currNode;
     currNode = NULL;
     currPos = -1;
   }
 
   if((c == GT_OP) && desc == true) {
     lastNode = pixh->FetchNode(currNode->GetPageRID());
+    if (currNode != NULL) delete currNode;
     currNode = NULL;
     currPos = -1;
   }
@@ -223,6 +231,7 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
   if(desc == false) {
     if((c == LE_OP || c == LT_OP)) {
       lastNode = pixh->FetchNode(currNode->GetPageRID());
+      if (currNode != NULL) delete currNode;
       currNode = NULL;
       currPos = -1;
     }
@@ -233,6 +242,7 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
       // cerr << "GT curr was " << currNode->GetPageRID() << endl;
     }
     if((c == GE_OP)) {
+      if (currNode != NULL) delete currNode;
       currNode = NULL;
       currPos = -1;
       lastNode = NULL;
@@ -243,6 +253,7 @@ RC IX_IndexScan::OpOptimize(CompOp     c,
         return 0;
       }
       lastNode = pixh->FetchNode(currNode->GetPageRID());
+      if (currNode != NULL) delete currNode;
       currNode = NULL;
       currPos = -1;
     }

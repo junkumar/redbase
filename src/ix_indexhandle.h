@@ -82,6 +82,9 @@ class IX_IndexHandle {
 
   BtreeNode* FetchNode(RID r) const;
   BtreeNode* FetchNode(PageNum p) const;
+  void ResetNode(BtreeNode*& old, PageNum p) const;
+  // Reset to the BtreeNode at the RID specified within Btree
+  void ResetNode(BtreeNode*& old, RID r) const;
 
   // get/set height
   int GetHeight() const;
