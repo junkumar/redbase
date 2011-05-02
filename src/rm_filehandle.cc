@@ -198,8 +198,7 @@ RC RM_FileHandle::SetPageHeader(PF_PageHandle ph, const RM_PageHdr& pHdr)
 {
   char * buf;
   RC rc;
-  PageNum p = -1;
-  if(rc = ph.GetData(buf))
+  if((rc = ph.GetData(buf)))
     return rc;
   pHdr.to_buf(buf);
   return 0;
@@ -322,7 +321,7 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid)
   bitmap b(pHdr.freeSlotMap, this->GetNumSlots());
   // std::cerr << "RM_FileHandle::InsertRec befor" << b << std::endl;
   // TODO GetSlotPtr is trashing the pHdr
-  if(rc = this->GetSlotPointer(ph, s, pSlot))
+  if((rc = this->GetSlotPointer(ph, s, pSlot)))
     return rc;
   rid = RID(p, s);
   memcpy(pSlot, pData, this->fullRecordSize());

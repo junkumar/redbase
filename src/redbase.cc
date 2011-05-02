@@ -45,12 +45,12 @@ int main(int argc, char *argv[])
   SM_Manager smm(ixm, rmm);
   QL_Manager qlm(smm, ixm, rmm);
   // open the database
-  if (rc = smm.OpenDb(dbname))
+  if ((rc = smm.OpenDb(dbname)))
     PrintErrorExit(rc);
   // call the parser
   RBparse(pfm, smm, qlm);
   // close the database
-  if (rc = smm.CloseDb())
+  if ((rc = smm.CloseDb()))
     PrintErrorExit(rc);
   
   cout << "Bye.\n";

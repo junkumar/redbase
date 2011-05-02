@@ -14,7 +14,7 @@ IX_IndexHandle::~IX_IndexHandle()
 {
   if(root != NULL && pfHandle != NULL) {
     // unpin old root page 
-    RC rc = pfHandle->UnpinPage(hdr.rootPage);
+    pfHandle->UnpinPage(hdr.rootPage);
     delete root;
   }
   if(pathP != NULL)
