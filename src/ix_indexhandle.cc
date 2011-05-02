@@ -108,6 +108,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     rc = GetThisPage(p, ph);
     if (rc != 0) return rc;
   
+    // rc = pfHandle->MarkDirty(p);
+    // if(rc!=0) return NULL;
+
     newNode = new BtreeNode(hdr.attrType, hdr.attrLength,
                             ph, true,
                             hdr.pageSize);
@@ -185,6 +188,9 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
     if (rc != 0) return IX_PF;
     rc = GetThisPage(p, ph);
     if (rc != 0) return IX_PF;
+
+    // rc = pfHandle->MarkDirty(p);
+    // if(rc!=0) return NULL;
 
     root = new BtreeNode(hdr.attrType, hdr.attrLength,
                          ph, true,
@@ -285,7 +291,7 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   // node. Means it is in parent and potentially whole path (every
   // intermediate node)
   if (nodeLargest) {
-    cerr << "node largest" << endl;
+    // cerr << "node largest" << endl;
     // void * leftKey = NULL;
     // node->GetKey(node->GetNumKeys()-2, leftKey);
     // cerr << " left key " << *(int*)leftKey << endl;
@@ -400,6 +406,9 @@ RC IX_IndexHandle::GetThisPage(PageNum p, PF_PageHandle& ph) const {
   RC rc = pfHandle->GetThisPage(p, ph); 
   if (rc != 0) return rc;
   // Needs to be called everytime GetThisPage is called.
+  rc = pfHandle->MarkDirty(p);
+  if(rc!=0) return NULL;
+
   rc = pfHandle->UnpinPage(p);
   if (rc != 0) return rc;
   return 0;
@@ -448,6 +457,9 @@ RC IX_IndexHandle::Open(PF_FileHandle * pfh, int pairSize,
   // pin root page - should always be valid
   RC rc = pfHandle->GetThisPage(hdr.rootPage, rootph);
   if (rc != 0) return rc;
+
+  // rc = pfHandle->MarkDirty(hdr.rootPage);
+  // if(rc!=0) return NULL;
 
   root = new BtreeNode(hdr.attrType, hdr.attrLength,
                        rootph, newPage,
@@ -697,6 +709,9 @@ BtreeNode* IX_IndexHandle::FetchNode(RID r) const
   RC rc = GetThisPage(r.Page(), ph);
   if(rc!=0) return NULL;
 
+  // rc = pfHandle->MarkDirty(r.Page());
+  // if(rc!=0) return NULL;
+
   return new BtreeNode(hdr.attrType, hdr.attrLength,
                        ph, false,
                        hdr.pageSize);
@@ -729,7 +744,7 @@ int IX_IndexHandle::GetHeight() const
 void IX_IndexHandle::SetHeight(const int& h)
 {
   for(int i = 1;i < hdr.height; i++)
-    if (path[i] != NULL) {
+    if (path != NULL && path[i] != NULL) {
       delete path[i];
       path[i] = NULL;
     }

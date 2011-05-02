@@ -227,3 +227,166 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     
 
 }
+
+TEST_F(SM_ManagerTest, loadafter_testdir) {
+    RC rc;
+    PF_Manager pfm;
+    IX_Manager ixm(pfm);
+    RM_Manager rmm(pfm);
+    SM_Manager smm(ixm, rmm);
+
+    const char * dbname = "test";
+    stringstream command;
+    command << "rm -r " << dbname;
+    rc = system (command.str().c_str());
+
+    command.str("");
+    command << "./dbcreate " << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create table in(in i, out f, bw c2);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create index in(bw);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+
+    command.str("");
+    command << "echo \"load in(\\\"../data\\\");\" | ./redbase " 
+            << dbname;
+    // cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+
+    // no such table
+    command.str("");
+    command << "echo \"help in;\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+
+    IX_IndexHandle ifh;
+    if (chdir(dbname) < 0) {
+      cerr << " chdir error to " << dbname 
+           << ". Does the db exist ?\n";
+    }
+    rc = ixm.OpenIndex("in", 8, ifh);
+    ASSERT_EQ(rc, 0);
+
+    IX_IndexScan fs;
+    
+    (rc=fs.OpenScan(ifh, NO_OP, NULL, NO_HINT));
+    ASSERT_EQ(rc, 0);
+
+    int ns = 0;
+    while(1) {
+      RID rid; 
+      char * pbuf;
+      rc = fs.GetNextEntry((void*&)pbuf, rid, ns);
+      if(rc == IX_EOF)
+        break;
+      EXPECT_EQ(rc, 0);
+      char buf[3];
+      strncpy(buf, pbuf, 2);
+      buf[2] = '\0';
+      cerr << buf << "\t" << rid << endl;
+    }
+    
+    EXPECT_EQ(5, ns);
+    (rc=fs.CloseScan());
+    ASSERT_EQ(rc, 0);
+    if (chdir("..") < 0) {
+      cerr << " chdir error to ..\n";  
+    }
+
+    
+}
+
+TEST_F(SM_ManagerTest, loadbefore_testdir) {
+    RC rc;
+    PF_Manager pfm;
+    IX_Manager ixm(pfm);
+    RM_Manager rmm(pfm);
+    SM_Manager smm(ixm, rmm);
+
+    const char * dbname = "test";
+    stringstream command;
+    command << "rm -r " << dbname;
+    rc = system (command.str().c_str());
+
+    command.str("");
+    command << "./dbcreate " << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create table in(in i, out f, bw c2);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    
+    command.str("");
+    command << "echo \"load in(\\\"../data\\\");\" | ./redbase " 
+            << dbname;
+    // cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create index in(bw);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+
+    // no such table
+    command.str("");
+    command << "echo \"help in;\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+
+    IX_IndexHandle ifh;
+    if (chdir(dbname) < 0) {
+      cerr << " chdir error to " << dbname 
+           << ". Does the db exist ?\n";
+    }
+    rc = ixm.OpenIndex("in", 8, ifh);
+    ASSERT_EQ(rc, 0);
+
+    IX_IndexScan fs;
+    
+    (rc=fs.OpenScan(ifh, NO_OP, NULL, NO_HINT));
+    ASSERT_EQ(rc, 0);
+
+    int ns = 0;
+    while(1) {
+      RID rid; 
+      char * pbuf;
+      rc = fs.GetNextEntry((void*&)pbuf, rid, ns);
+      if(rc == IX_EOF)
+        break;
+      EXPECT_EQ(rc, 0);
+      char buf[3];
+      strncpy(buf, pbuf, 2);
+      buf[2] = '\0';
+      // cerr << buf << "\t" << rid << endl;
+    }
+    
+    ASSERT_EQ(5, ns);
+    (rc=fs.CloseScan());
+    ASSERT_EQ(rc, 0);
+
+    
+}

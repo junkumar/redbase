@@ -224,6 +224,39 @@ TEST_F(IX_IndexHandleTest, SmallPage) {
   ScanOrderedInt(sifh, 8);
 }
 
+TEST_F(IX_IndexHandleTest, SmallPageStr) {
+  system("rm -f smallpagefile.0");
+  // small size pages - 3 int keys per page
+  int smallPage = (sizeof(RID) + sizeof(int))*(3+1);
+
+  RC rc;
+  IX_IndexHandle ssifh;
+  if(
+      (rc = ixm.CreateIndex("smallpagefile", 0, STRING, 4, smallPage)) 
+      || (rc =  ixm.OpenIndex("smallpagefile", 0, ssifh))
+      )
+      IX_PrintError(rc);
+
+
+  const BtreeNode * root = ssifh.GetRoot();
+  ASSERT_EQ(root->GetMaxKeys(), 3);
+  
+  char entries[5];
+
+  for (int i = 0; i < 7; i++) {
+    RID r(0, i);
+    RC rc;
+    sprintf(entries, "%dcrc", i); 
+    rc = ssifh.InsertEntry(entries, r);
+    ASSERT_EQ(rc, 0);
+    ssifh.Print(cerr);
+    // cerr << endl << endl;
+  }
+  ASSERT_EQ(ssifh.GetHeight(), 2);
+  
+}
+
+
 TEST_F(IX_IndexHandleTest, 2SmallPage) {
   const BtreeNode * root = sifh.GetRoot();
   ASSERT_EQ(root->GetMaxKeys(), 3);

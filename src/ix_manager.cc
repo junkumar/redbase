@@ -215,8 +215,10 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &ixh)
   if(!ixh.bFileOpen || ixh.pfHandle == NULL)
     return IX_FNOTOPEN;
 
+  // cerr << "IX_Manager::CloseIndex - in method\n";
   if(ixh.HdrChanged())
   {
+    // cerr << "IX_Manager::CloseIndex - header changed\n";
     // write header to disk
     PF_PageHandle ph;
     RC rc = ixh.pfHandle->GetThisPage(0, ph);
@@ -247,6 +249,8 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &ixh)
       return rc;
     }
 
+    // cerr << "IX_Manager::CloseIndex - header changed\n";
+    // cerr << ixh.root->GetNumKeys() << "-- root keys\n";
     rc = ixh.ForcePages();
     if (rc < 0)
     {

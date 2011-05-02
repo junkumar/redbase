@@ -350,6 +350,58 @@ RC SM_Manager::CreateIndex(const char *relName,
   rec.Set((char*)data, DataAttrInfo::size(), rid);
   if ((rc = attrfh.UpdateRec(rec)) != 0)
     return rc;
+
+  // now create index entries
+  IX_IndexHandle ixh;
+  rc = ixm.OpenIndex(relName, data->indexNo, ixh);
+  if(rc !=0) return rc;
+
+  RM_FileHandle rfh;
+  rc = rmm.OpenFile(relName, rfh);
+  if (rc !=0) return rc;
+  RM_FileHandle *prfh = &rfh;
+
+  int attrCount;
+  DataAttrInfo * attributes;
+  rc = GetFromTable(relName, attrCount, attributes);
+  if (rc !=0) return rc;
+
+  RM_FileScan rfs;
+
+  if ((rc = rfs.OpenScan(*prfh, data->attrType, data->attrLength, data->offset, NO_OP, NULL))) 
+    return (rc);
+
+  // Index each tuple
+  while (rc!=RM_EOF) {
+    RM_Record rec;
+    rc = rfs.GetNextRec(rec);
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      char * pdata;
+      rec.GetData(pdata);
+      RID rid;
+      rec.GetRid(rid);
+      // cerr << "SM create index - inserting {" << *(char*)(pdata + data->offset) << "} " << rid << endl;
+      ixh.InsertEntry(pdata + data->offset, rid);
+    }
+  }
+  
+  
+  if((rc = rfs.CloseScan()))
+    return (rc);
+   
+  if((0 == rfh.IsValid())) {
+    if (rc = rmm.CloseFile(rfh))
+      return (rc);
+  }
+
+
+  rc = ixm.CloseIndex(ixh);
+  if(rc !=0) return rc;
+
   return (0);
 }
 
@@ -487,17 +539,18 @@ RC SM_Manager::Load(const char *relName,
     if ((rc = rfh.InsertRec(buf, rid)) < 0
       )
       return(rc);
+    
     for (int i = 0; i < attrCount; i++) {
       if(attributes[i].indexNo != -1) {
-        indexes[i].InsertEntry(buf + attributes[i].offset, 
-                               rid);
+        // cerr << "SM load index - inserting {" << *(char*)(buf + attributes[i].offset) << "} " << rid << endl;
+        rc = indexes[i].InsertEntry(buf + attributes[i].offset, 
+                                    rid);
+        if (rc != 0) return rc;
       }
     }
 
   }
 
-  delete [] buf;
-  delete [] attributes;
 
   // update numRecords in relcat
   DataRelInfo r;
@@ -518,10 +571,14 @@ RC SM_Manager::Load(const char *relName,
 
   for (int i = 0; i < attrCount; i++) {
     if(attributes[i].indexNo != -1) {
-      ixm.CloseIndex(indexes[i]);
+      RC rc = ixm.CloseIndex(indexes[i]);
+      if(rc != 0 ) return rc;
+      cerr << "SM load index - closed " << i << endl;
     }
   }
 
+  delete [] buf;
+  delete [] attributes;
   delete [] indexes;
   ifs.close();
   return (0);

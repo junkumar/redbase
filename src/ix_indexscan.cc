@@ -66,6 +66,8 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
 
   if(value != NULL)
     OpOptimize(compOp, value);
+  
+  // pixh->Print(cerr);
   return 0;
 }
 
@@ -86,6 +88,7 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
 
   // first time in
   if(currNode == NULL && currPos == -1) {
+    // pixh->Print(cerr);
     if(!desc) {
       currNode = pixh->FetchNode(pixh->FindSmallestLeaf()->GetPageRID());
       currPos = -1;
