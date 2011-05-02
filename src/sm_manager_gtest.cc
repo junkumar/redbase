@@ -33,7 +33,7 @@ TEST_F(SM_ManagerTest, Cons) {
 
     const char * dbname = "smtfile";
     stringstream comm;
-    comm << "rm -r " << dbname;
+    comm << "rm -rf " << dbname;
     rc = system (comm.str().c_str());
 
     stringstream command;
@@ -77,7 +77,7 @@ TEST_F(SM_ManagerTest, CreateDrop) {
 
     const char * dbname = "cdtest";
     stringstream command;
-    command << "rm -r " << dbname;
+    command << "rm -rf " << dbname;
     rc = system (command.str().c_str());
 
     command.str("");
@@ -237,7 +237,7 @@ TEST_F(SM_ManagerTest, loadafter_testdir) {
 
     const char * dbname = "test";
     stringstream command;
-    command << "rm -r " << dbname;
+    command << "rm -rf " << dbname;
     rc = system (command.str().c_str());
 
     command.str("");
@@ -318,9 +318,9 @@ TEST_F(SM_ManagerTest, loadbefore_testdir) {
     RM_Manager rmm(pfm);
     SM_Manager smm(ixm, rmm);
 
-    const char * dbname = "test";
+    const char * dbname = "test2";
     stringstream command;
-    command << "rm -r " << dbname;
+    command << "rm -rf " << dbname;
     rc = system (command.str().c_str());
 
     command.str("");
