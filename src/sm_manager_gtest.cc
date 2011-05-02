@@ -173,11 +173,24 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     ASSERT_EQ(rc, 0);
 
     command.str("");
+    command << "echo \"create index in(out);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
     command << "echo \"load in(\\\"../data\\\");\" | ./redbase " 
             << dbname;
     cerr << command.str();
     rc = system (command.str().c_str());
     ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"print in;\" | ./redbase "
+            << dbname 
+      ;    // cerr << command.str() << endl;
+    rc = system (command.str().c_str());
+
 
     command.str("");
     command << "echo \"print relcat;\" | ./redbase "

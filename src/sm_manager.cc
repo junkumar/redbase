@@ -87,6 +87,12 @@ RC SM_Manager::CreateTable(const char *relName,
     return SM_BADTABLE;
   }
 
+  if(strcmp(relName, "relcat") == 0 ||
+     strcmp(relName, "attrcat") == 0
+    ) {
+    return SM_BADTABLE;
+  }
+
   RID rid;
   RC rc;
 
@@ -222,6 +228,12 @@ RC SM_Manager::DropTable(const char *relName)
     return SM_BADTABLE;
   }
 
+  if(strcmp(relName, "relcat") == 0 ||
+     strcmp(relName, "attrcat") == 0
+    ) {
+    return SM_BADTABLE;
+  }
+          
   RM_FileScan rfs;
   RM_Record rec;
   DataRelInfo * data;
@@ -424,9 +436,14 @@ RC SM_Manager::Load(const char *relName,
   rc = GetFromTable(relName, attrCount, attributes);
   if(rc != 0) return rc;
 
+  IX_IndexHandle * indexes = new IX_IndexHandle[attrCount];
+
   int size = 0;
   for (int i = 0; i < attrCount; i++) {
     size += attributes[i].attrLength;
+    if(attributes[i].indexNo != -1) {
+      ixm.OpenIndex(relName, attributes[i].indexNo, indexes[i]);
+    }
   }
 
   char * buf = new char[size];
@@ -470,6 +487,13 @@ RC SM_Manager::Load(const char *relName,
     if ((rc = rfh.InsertRec(buf, rid)) < 0
       )
       return(rc);
+    for (int i = 0; i < attrCount; i++) {
+      if(attributes[i].indexNo != -1) {
+        indexes[i].InsertEntry(buf + attributes[i].offset, 
+                               rid);
+      }
+    }
+
   }
 
   delete [] buf;
@@ -492,6 +516,13 @@ RC SM_Manager::Load(const char *relName,
     ) 
     return(rc);
 
+  for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1) {
+      ixm.CloseIndex(indexes[i]);
+    }
+  }
+
+  delete [] indexes;
   ifs.close();
   return (0);
 }
@@ -563,9 +594,9 @@ RC SM_Manager::Set(const char *paramName, const char *value)
 {
   RC invalid = IsValid(); if(invalid) return invalid;
 
-  cout << "Set\n"
-       << "   paramName=" << paramName << "\n"
-       << "   value    =" << value << "\n";
+  // cout << "Set\n"
+  //      << "   paramName=" << paramName << "\n"
+  //      << "   value    =" << value << "\n";
   return (0);
 }
 

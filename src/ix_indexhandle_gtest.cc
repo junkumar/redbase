@@ -573,18 +573,40 @@ TEST_F(IX_IndexHandleTest, DelDups) {
 }
 
 TEST_F(IX_IndexHandleTest, over40pages) {
+  int numEntries = 0;
   for( int page = 1; page < 49; page++) 
   {
     RID rid;
     for ( int entry = 0; entry < ifh.GetRoot()->GetMaxKeys(); entry++ )
     {
       int t = 10;
-      RC rc = ifh.InsertEntry((char *)&t, RID(page, entry));
+      RC rc = ifh.InsertEntry((char *)&t, RID(page, numEntries++));
       if(rc != 0)
         cerr << "Page " << page << " Entry " << entry << endl;
       ASSERT_EQ(rc, 0);
     }
   }
+
+  IX_IndexScan s;
+  RC rc =  s.OpenScan(ifh, NO_OP, NULL);
+  ASSERT_EQ(rc, 0);
+
+  RID r;
+  void * k;
+  int count = 0;
+  int ns = 0;
+  while((s.GetNextEntry(k, r, ns)) != IX_EOF) {
+    int curr = (*(int*)k);
+    EXPECT_EQ(10, curr);
+    EXPECT_EQ(count, r.Slot());
+    count++;
+    // cerr << "IX Scan entry - " << curr 
+    //      << " Count " << count << endl; 
+  }
+  ASSERT_EQ(48*ifh.GetRoot()->GetMaxKeys(), count);
+
+  rc =  s.CloseScan();
+  ASSERT_EQ(rc, 0);  
 }
 
 // too slow
