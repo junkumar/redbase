@@ -1,0 +1,61 @@
+
+System Management for RedBase
+
+Nandu Jayakumar
+CS 346 Spring 2011
+nandu@cs.stanford.edu
+
+
+---------------------------------------
+
+Overall Design:
+ 
+  This is an implemenation of the system catalogs as relations within
+  the database along with commands required to bootstrap and interact
+  with tables/indexes in the database. 
+
+   relcat and attrcat are built as RM files with fixed schemas.
+   A struct called DataRelInfo was created (much like DataAttrInfo) to
+   represent each record in relcat. Each record in attrcat is
+   basically a DataAttrInfo struct.
+
+---------------------------------------
+
+Key Data Structures:
+
+  
+   The items maintained in relcat include -
+
+recordSize;            // Size per row
+attrCount;             // # of attributes
+numPages;              // # of pages used by relation
+numRecords;            // # of records in relation
+relName[MAXNAME+1];    // Relation name
+
+   Currently numPages and numRecords are populated by
+   SM_Manager::Load() but other DML will also have to keep these
+   correct in order for them to be useful system statistics.
+    
+---------------------------------------
+
+Testing:
+
+   Automated unit tests were used to test each class. A popular test
+   harness - google-test, which is in the
+   same style as JUnit was used to make testing fast and automatic.
+   See sm_manager_gtest.cc.
+   Data files were created and used for testing alongside testing with
+   the suggested stars/soaps data.
+
+---------------------------------------
+
+Bugs/Known Issues:
+    
+   Wish there was a way to print the index as if it were a
+   relation. I considered making the index available as a full
+   relation by making entries in relcat/attrcat but decided against it
+   so that users would not be stopped from creating tables with
+   .number suffixes.
+
+---------------------------------------
+
