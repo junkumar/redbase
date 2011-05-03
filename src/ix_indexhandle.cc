@@ -25,7 +25,7 @@ IX_IndexHandle::~IX_IndexHandle()
       if(path[i] != NULL) {
         if(pfHandle != NULL)
           pfHandle->UnpinPage(path[i]->GetPageRID().Page());
-        delete path[i];
+        // delete path[i]; - better leak than crash
       }
     delete [] path;
   }
