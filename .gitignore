@@ -1,3 +1,5 @@
+src/testdb
+src/test.out
 src/pf_test*
 src/rm_testTA*
 src/rm_test
