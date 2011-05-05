@@ -1,0 +1,60 @@
+#! /bin/csh -f
+
+# ql_test: QL component test script
+
+#
+# DBHOME:  This is the directory where dbcreate, redbase, and dbdestroy are
+#
+set DBHOME = .
+
+#
+# TESTSDIR:  This is the directory where the files of test queries
+# are.  
+#
+set TESTSDIR = .
+
+#
+# This is the name of the data base we will be using for the tests.
+#
+set TESTDB = testdb
+
+
+#
+# This is the name of the output file we will use for the tests.
+#
+set OUTPUT = test.out
+
+#
+# Run the requested tests
+#
+
+#
+# if no args given, then run all tests
+#
+
+if ( $#argv == 0 ) then
+	echo "QL layer test sequence" >! $OUTPUT
+
+	foreach queryfile ( `ls $TESTSDIR/ql_test.*` )
+		echo running test '#' $queryfile:e '****************' >> $OUTPUT
+		$DBHOME/dbcreate  $TESTDB
+		$DBHOME/redbase   $TESTDB < $queryfile >>& $OUTPUT
+		$DBHOME/dbdestroy $TESTDB
+	end
+
+#
+# otherwise, run just the specified tests
+#
+
+else
+	foreach testnum ( $* )
+		if ( -r $TESTSDIR/ql_test.$testnum ) then
+			echo running test '#' $testnum '****************' >> $OUTPUT
+			$DBHOME/dbcreate  $TESTDB
+			$DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
+			$DBHOME/dbdestroy $TESTDB
+		else
+			echo I can not find a test number $testnum. >> $OUTPUT
+		endif
+	end
+endif

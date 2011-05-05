@@ -1,0 +1,14 @@
+/* A sample script being distributed to the students.  */
+/* You should make more scripts and share them (via    */
+/* the mechanism outlined in class and in the          */
+/* handouts) with other students.                      */
+
+!ls
+create table student(no i, name c20, dept c4, GPA f, comment c3);
+load student("/usr/class/cs346/redbase/data/student.data");
+!ls
+
+print student;
+select * from student;
+
+exit;
