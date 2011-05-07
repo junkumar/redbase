@@ -190,7 +190,6 @@ private:
 // RM_FileScan: condition-based scan of records in the file
 //
 class RM_FileScan {
-  friend class FileScan;
  public:
   RM_FileScan  ();
   ~RM_FileScan ();
@@ -205,6 +204,7 @@ class RM_FileScan {
   RC GetNextRec(RM_Record &rec);               // Get next matching record
   RC CloseScan ();                             // Close the scan
   bool IsOpen() const { return (bOpen && prmh != NULL && pred != NULL); }
+  void resetState() { current = RID(1, -1); }
  private:
   Predicate * pred;
   RM_FileHandle * prmh;

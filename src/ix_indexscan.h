@@ -41,9 +41,13 @@ class IX_IndexScan {
 
   // Close index scan
   RC CloseScan();
+
+  // for iterator to reset state for another open/close
+  RC ResetState();
+  
+  bool IsOpen() const { return (bOpen && pred != NULL && pixh != NULL); }
  private:
-  RC OpOptimize(CompOp     c,
-                void       *value);
+  RC OpOptimize(); // Optimizes based on value of c, value and resets state
 
   Predicate* pred;
   IX_IndexHandle* pixh;
@@ -53,6 +57,8 @@ class IX_IndexScan {
   bool desc; // Is scan order ascending(def) or descending ?
   bool eof; // early EOF set by btree analysis - set by OpOpt
   BtreeNode* lastNode; // last node setup by OpOpt
+  CompOp c; // save Op for OpOpt
+  void* value; // save Op for OpOpt
 };
 
 

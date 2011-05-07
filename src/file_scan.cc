@@ -86,7 +86,7 @@ RC FileScan::Close()
     return RM_FNOTOPEN;
 
   bIterOpen = false;
-  rfs.current = RID(1,-1);
+  rfs.resetState();
   return 0;
 }
 
@@ -106,12 +106,4 @@ RC FileScan::GetNext(Tuple &t)
     t.Set(buf);
   }
   return rc;
-}
-
-// iterator interface
-RC FileScan::Lookup(const char* relName,
-                    const char* attrName,
-                    AttrInfo& returnAttr) const
-{
-  
 }

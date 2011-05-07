@@ -24,10 +24,6 @@ class FileScan: public Iterator {
   virtual RC GetNext(Tuple &t);
   virtual RC Close();
 
-  virtual RC Lookup(const char * relName,
-                    const char* attrName,
-                    AttrInfo & returnAttr) const;
-
   RC IsValid();
   virtual RC Eof() const { return RM_EOF; }
   virtual DataAttrInfo* GetAttr() const { return attrs; }

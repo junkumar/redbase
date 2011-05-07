@@ -14,6 +14,8 @@ IX_IndexScan::IX_IndexScan(): bOpen(false), desc(false), eof(false), lastNode(NU
   pixh = NULL;
   currNode = NULL;
   currPos = -1;
+  c = EQ_OP;
+  value = NULL;
 }
 
 IX_IndexScan::~IX_IndexScan()
@@ -33,7 +35,7 @@ IX_IndexScan::~IX_IndexScan()
 
 RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
                           CompOp     compOp,
-                          void       *value,
+                          void       *value_,
                           ClientHint pinHint,
                           bool desc) 
 {
@@ -61,12 +63,14 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
                        pixh->GetAttrLength(),
                        0,
                        compOp,
-                       value,
+                       value_,
                        pinHint);
 
-  if(value != NULL)
-    OpOptimize(compOp, value);
-  
+  c = compOp;
+  if(value_ != NULL) {
+    value = value_; // TODO deep copy ?
+    OpOptimize();
+  }
   // pixh->Print(cerr);
   return 0;
 }
@@ -190,9 +194,19 @@ RC IX_IndexScan::CloseScan()
   return 0;
 }
 
+// for the iterator to use
+RC IX_IndexScan::ResetState()
+{
+  currNode = NULL;
+  currPos = -1;
+  lastNode = NULL;
+  eof = false;
+
+  return this->OpOptimize();
+}
+
 // Set up current pointers based on btree
-RC IX_IndexScan::OpOptimize(CompOp     c,
-                            void       *value)
+RC IX_IndexScan::OpOptimize()
 {
   if(!bOpen)
     return IX_FNOTOPEN;
