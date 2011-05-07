@@ -12,6 +12,7 @@
 #include <string.h>
 #include "redbase.h"
 #include "parser.h"
+#include "ql_error.h"
 #include "rm.h"
 #include "ix.h"
 #include "sm.h"
@@ -50,9 +51,4 @@ public:
 private:
 };
 
-//
-// Print-error function
-//
-void QL_PrintError(RC rc);
-
-#endif
+#endif // QL_H

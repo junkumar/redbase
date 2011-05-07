@@ -47,11 +47,14 @@ class SM_Manager {
 
   RC Set        (const char *paramName,         // set parameter to
                  const char *value);            //   value
- private:
+ public:
   RC IsValid() const;
+  
+  // attributes is allocated and returned back with attrCount elements.
+  // attrCount is returned back with number of attributes
   RC GetFromTable(const char *relName,           // create relation relName
-                  int&        attrCount,          //   number of attributes
-                  DataAttrInfo   *&attributes);       //   attribute data
+                  int&        attrCount,         // number of attributes
+                  DataAttrInfo   *&attributes);  // attribute data
   
   // Get the first matching row for relName
   // contents are return in rel and the RID the record is located at is

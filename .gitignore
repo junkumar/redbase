@@ -1,9 +1,16 @@
+src/redbase
+src/dbdestroy
+src/dbcreate
 src/testdb
 src/test.out
 src/pf_test*
 src/rm_testTA*
 src/rm_test
 src/ix_test
+src/parser_test
+src/parse.c
+src/scan.c
+src/y.tab.h
 src/gtest
 src/TAGS
 src/submit*

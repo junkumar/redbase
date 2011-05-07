@@ -164,7 +164,6 @@ public:
   int GetNumSlots() const;
 
   RC IsValid() const;
-
 private:
   bool IsValidPageNum (const PageNum pageNum) const;
   bool IsValidRID(const RID rid) const;
@@ -191,7 +190,8 @@ private:
 // RM_FileScan: condition-based scan of records in the file
 //
 class RM_FileScan {
-public:
+  friend class FileScan;
+ public:
   RM_FileScan  ();
   ~RM_FileScan ();
 
@@ -203,8 +203,9 @@ public:
                 void       *value,
                 ClientHint pinHint = NO_HINT); // Initialize a file scan
   RC GetNextRec(RM_Record &rec);               // Get next matching record
-  RC CloseScan ();                            // Close the scan
-private:
+  RC CloseScan ();                             // Close the scan
+  bool IsOpen() const { return (bOpen && prmh != NULL && pred != NULL); }
+ private:
   Predicate * pred;
   RM_FileHandle * prmh;
   RID current;
