@@ -1,0 +1,243 @@
+%ix_proposal.tex
+%
+\documentclass[letterpaper,11pt]{article}
+
+%-----------------------------------------------------------
+%Margin setup
+
+\setlength{\voffset}{0.1in}
+\setlength{\paperwidth}{8.5in}
+\setlength{\paperheight}{11in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{11in}
+\setlength{\textheight}{9.5in}
+\setlength{\topmargin}{-0.25in}
+\setlength{\textwidth}{7in}
+\setlength{\topskip}{0in}
+\setlength{\oddsidemargin}{-0.25in}
+\setlength{\evensidemargin}{-0.25in}
+%-----------------------------------------------------------
+%\usepackage{fullpage}
+%\usepackage{shading}
+%\textheight=9.0in
+\pagestyle{empty}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\usepackage{hyperref}
+\usepackage{fontspec}
+
+% DOCUMENT LAYOUT
+\setlength\parindent{0in}
+% FONTS
+\defaultfontfeatures{Mapping=tex-text} % converts LaTeX specials (``quotes'' --- dashes etc.) to unicode
+\setromanfont[Numbers=Uppercase]{Hoefler Text}
+\setmonofont[Scale=0.8]{Monaco}
+\setsansfont[Scale=0.9]{Optima Regular}
+
+%-----------------------------------------------------------
+%Custom commands
+\newcommand{\resitem}[1]{\item #1 \vspace{-2pt}}
+%\newcommand{\resheading}[1]{{\large \parashade[.9]{sharpcorners}{\textbf{#1 \vphantom{p\^{E}}}}}}
+
+\newcommand{\resheading}[1]{{\vspace{0.1in}\large {\textbf{\textsf{#1 \vphantom{p\^{E}}}}}}}
+
+% \newcommand{\ressubheading}[4]{\begin{tabular*}{6.5in}{l@{\extracolsep{\fill}}r}
+% 		\textbf{\textsf{#1}} & #2 \\
+% 		\textit{#3} & \textit{#4} \\
+% \end{tabular*}\vspace{-6pt}}
+%-----------------------------------------------------------
+
+
+
+\begin{document}
+
+
+\textsf{\LARGE RedBase Part 5: Extension - Ordered Operations}\\[1cm]
+
+\vspace{0.1in}
+
+\begin{description}
+\item Nandu Jayakumar
+\item CS346 Spr 2011
+\item <nandu@cs.stanford.edu>
+
+\end{description}
+
+
+\resheading{Introduction}
+
+The goal of my extension to RedBase is to provide the database a limited set of ordered
+data processing primitives. 
+  \begin{itemize}
+   \resitem{Merge-Join Operator for two tables that both have Btree indexes on
+    the join key.}
+   \resitem{An operator that can be used to sort relations.}
+   \resitem{Extension of RedBase RQL to support the SQL ``order by'' clause.}
+  \end{itemize}
+
+
+\resheading{Impact on other components of RedBase}
+ \begin{itemize}
+   \resitem{QL iterators: The index-merge-join operator is added as a new
+     iterator option.}
+   \resitem{QL query planner: The addition of this join operator results in a 
+    new heuristic to help choose this operator implementation when a join can be
+    performed this way.}
+  \resitem{QL iterators: The sort operator is added as a new iterator option.}
+   \resitem{QL query planner: The addition of order-by results in the
+    requirement to insert a sort operator into the query plan as required.}
+   \resitem{Parser: Adding RQL support for the order-by clause.}
+   \resitem{PF, RM, IX: No impact.}
+   \resitem{SM: No impact currently. It would be great to be able to keep a
+     sort-key per table as part of meta-info. This would make a lot of sense if
+     already sorted relations are bulk-loaded or if an insert could be performed
+   as a result of a select-order-by.}
+
+  \end{itemize}
+
+
+\resheading{Design and EX interface}
+
+Both the btree-index-merge-join operator and the sort operator will be
+implemented as iterators (by extending the abstract base class
+Iterator). Multiple queries would find a use for these operators in different
+situations.
+
+\resheading{}
+\emph{IndexMergeJoin}
+\resheading{}
+
+This physical operator provides the ability to join to relations that both have
+btree indexes using a algorithm that is more efficient than the nested-loop join
+in most cases.
+The initial plan is to implement the merge-join operator as a binary operator
+for simplicity even though the algorithm would be identical with any number of
+relations being joined and they can all be done in one sweep across the
+data. Initially, the plan is to only support equijoins using this operators.
+
+The btree-index-merge-join operator will never run into out-of-memory issues
+even if the total size of records with the same key value exceeds the size of
+the buffer pool. This is because the implementation only needs one active record
+from each stream being joined at a time.
+
+This operator can only be used in a join if both(all) relations being joined
+have a btree index on the join-key. This allows for an ordered index-scan that
+allows a simple scan algorithm that goes in strict key order across both
+relations to be implementable in an efficient mannger. This join has time
+efficiency proportional to O(m+n) if the sizes of the relations are m and n
+respectively.
+
+
+\begin{verbatim}
+class IndexMergeJoin: public Iterator {
+ public:
+  IndexMergeJoin(DataAttrInfo    rattr[], // Array containing field types of R.
+                 int     len_in_r,        // # of columns in R.
+                 DataAttrInfo    sattr[], // Array containing field types of S.
+                 int     len_in_s,        // # of columns in S.                 
+                 Iterator *    it_r,      // access for left i/p to join -R
+                 Iterator *    it_s,      // access for right i/p to join -S
+                 RC& status);
+
+  virtual ~IndexMergeJoin();
+
+  virtual RC Open();
+  virtual RC GetNext(Tuple &t);
+  virtual RC Close();
+  virtual RC Eof() const;
+
+ private:
+  bool bIterOpen;
+  DataAttrInfo* attrs;
+  int attrCount;
+};
+\end{verbatim}
+
+  \resheading{RC Open()}
+This is where both the indexes are opened and readied.
+
+  \resheading{RC GetNext()}
+The 2 indexes are traversed till a match is found.  The position on a relation
+is only advanced if no further matches are found on the other relation.
+
+  \resheading{RC Close()}
+Close all child iterators.
+
+  \resheading{RC Eof()}
+Returns the value that can be tested against the return of GetNext() to
+determine if the iterator has finished with its entire stream.
+
+\resheading{}
+\emph{Sort}
+\resheading{}
+
+The sort operator operates on one relation at a time. This operator will also
+implement the iterator interface, but unlike most other operators written so far
+in RedBase will have blocking behavior. At the point when it is started all the
+data will have to sorted and kept ready so that it can be returned easily during
+the iteration phase. This sorting will result in blocking behavior in the Open()
+method of this iterator.
+
+Depending on the size of the relation being sorted this operator is likely to
+run into a problem when the entire relation being sorted does not fit in the
+buffer pool. This problem can be remedied in one of two ways.
+
+  \begin{itemize}
+
+    \resitem{Creating temporary relations each of which are as big as the buffer
+    pool allows. And finally merging all these temporary relations to provide the
+  output. The merging can be performed without needing significant amount of
+  memory.}
+
+    \resitem{Using an external sort program like GNU sort that does its own
+      memory and paging management to perform the sorting in a memory-aware
+      manner.}
+
+  \end{itemize}
+
+
+
+
+\begin{verbatim}
+class Sort: public Iterator {
+ public:
+  Sort(DataAttrInfo    attr[],
+       AttrType     sortKeyType,
+       int    sortKeyLength,
+       int     sortKeyOffset,
+       Iterator *    in,
+       RC& status);
+
+  virtual ~Sort();
+
+  virtual RC Open();
+  virtual RC GetNext(Tuple &t);
+  virtual RC Close();
+  
+ private:
+  bool bIterOpen;
+  DataAttrInfo* attrs;
+  int attrCount;
+};
+\end{verbatim}
+
+  \resheading{RC Open()}
+Open the child iterator and go through it one record after the other to get all
+records and then stored the sorted set of records in a buffer for the GetNext
+call. This is the place where memory could be exceeded and spilling
+functionality may be required.
+
+  \resheading{RC GetNext()}
+Return the next record that has been buffered in some manner.
+
+  \resheading{RC Close()}
+Close the child iterator.
+
+  \resheading{RC Eof()}
+Returns the value that can be tested against the return of GetNext() to
+determine if the iterator has finished with its entire stream.
+
+\end{document}

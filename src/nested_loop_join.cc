@@ -1,30 +1,27 @@
 //
-// File:        index_scan.cc
+// File:        nested_loop_join.cc
 //
 
-#include "index_scan.h"
+#include "nested_loop_join.h"
 #include "rm.h"
 #include "sm.h"
 
 using namespace std;
 
-IndexScan::IndexScan(SM_Manager& smm,
-                     RM_Manager& rmm,
-                     IX_Manager& ixm,
-                     const char* relName,
-                     const char* indexAttrName, 
-                     const Condition& cond,
-                     RC& status,
-                     bool desc)
-  :ifs(IX_IndexScan()), bIterOpen(false), prmm(&rmm), pixm(&ixm),
-   rmh(RM_FileHandle()), ixh(IX_IndexHandle())
+NestedLoopJoin::
+NestedLoopJoin(const RelAttr & lhs,
+               const RelAttr & rhs,
+               Iterator *    am1,      // access for left i/p to join -R
+               Iterator *    am2,      // access for right i/p to join -S
+               
+               //Cond **outFilter,   // Ptr to the output filter
+               //Cond **rightFilter, // Ptr to filter applied on right i
+               //FldSpec  * proj_list,
+               // int        n_out_flds,
+               Status   & s);
+:bIterOpen(false)
 {
-  if(relName == NULL || indexAttrName == NULL) {
-    status = SM_NOSUCHTABLE;
-    return;
-  }
-
-  attrCount = -1;
+  attrCount = 
   attrs = NULL;
   RC rc = smm.GetFromTable(relName, attrCount, attrs);
   if (rc != 0) { 
@@ -72,12 +69,12 @@ IndexScan::IndexScan(SM_Manager& smm,
   status = 0;
 }
 
-RC IndexScan::IsValid()
+RC NestedLoopJoin::IsValid()
 {
   return (attrCount != -1 && attrs != NULL) ? 0 : SM_BADTABLE;
 }
 
-IndexScan::~IndexScan()
+NestedLoopJoin::~NestedLoopJoin()
 {
   ifs.CloseScan();
   pixm->CloseIndex(ixh);
@@ -88,7 +85,7 @@ IndexScan::~IndexScan()
 
 // iterator interface
 // acts as a (re)open after OpenScan has been called.
-RC IndexScan::Open()
+RC NestedLoopJoin::Open()
 {
   if(bIterOpen)
     return IX_HANDLEOPEN;
@@ -100,7 +97,7 @@ RC IndexScan::Open()
 }
 
 // iterator interface
-RC IndexScan::Close()
+RC NestedLoopJoin::Close()
 {
   if(!bIterOpen)
     return IX_FNOTOPEN;
@@ -113,7 +110,7 @@ RC IndexScan::Close()
 }
 
 // iterator interface
-RC IndexScan::GetNext(Tuple &t)
+RC NestedLoopJoin::GetNext(Tuple &t)
 {
   if(!bIterOpen)
     return IX_FNOTOPEN;
