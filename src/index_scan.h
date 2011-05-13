@@ -16,13 +16,13 @@ using namespace std;
 class IndexScan: public Iterator {
  public:
   IndexScan(SM_Manager& smm,
-                       RM_Manager& rmm,
-                       IX_Manager& ixm,
-                       const char* relName,
-                       const char* indexAttrName, 
-                       const Condition& cond,
-                       RC& status,
-                       bool desc=false);
+            RM_Manager& rmm,
+            IX_Manager& ixm,
+            const char* relName,
+            const char* indexAttrName, 
+            const Condition& cond,
+            RC& status,
+            bool desc=false);
 
   virtual ~IndexScan();
 
@@ -33,6 +33,7 @@ class IndexScan: public Iterator {
   RC IsValid();
   virtual RC Eof() const { return IX_EOF; }
   virtual DataAttrInfo* GetAttr() const { return attrs; }
+  virtual int GetAttrCount() const { return attrCount; }
 
  private:
   IX_IndexScan ifs;

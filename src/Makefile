@@ -52,7 +52,7 @@ SM_SOURCES     = statistics.cc sm_error.cc sm_manager.cc printer.cc \
 		 sm_manager_gtest.cc
 QL_SOURCES     = statistics.cc ql_manager.cc ql_error.cc file_scan.cc \
 		 file_scan_gtest.cc index_scan.cc index_scan_gtest.cc \
-	
+		 nested_loop_join.cc nested_loop_join_gtest.cc
 UTILS_SOURCES  = dbcreate.cc dbdestroy.cc redbase.cc
 PARSER_SOURCES = scan.c parse.c nodes.c interp.c
 TESTER_SOURCES = pf_test1.cc pf_test2.cc pf_test3.cc rm_test.cc \

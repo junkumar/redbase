@@ -22,15 +22,15 @@ const char *QL_WarnMsg[] = {
 };
 
 const char *QL_ErrorMsg[] = {
-  (char*)"DB is already open",
-  (char*)"Bad DB name - no such DB.",
+  (char*)"QL_BADJOINKEY Bad Join Key - is it present ?",
+  (char*)"QL_ALREADYOPEN Iterator already open.",
   (char*)"DB is not open",
   (char*)"Bad Table name - no such table",
   (char*)"bad open",
-  (char*)"file is not open",
-  (char*)"Bad Attribute name specified for this relation",
+  (char*)"QL_FNOTOPEN Iterator is not open",
+  (char*)"QL_JOINKEYTYPEMISMATCH Join columns need to be the same on both sides",
   (char*)"Bad Table/Relation",
-  (char*)"Index already exists",
+  (char*)"QL_EOF end of input on iterator",
 };
 
 //

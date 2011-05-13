@@ -22,16 +22,16 @@ void QL_PrintError(RC rc);
 #define QL_LASTWARN QL_ENTRYEXISTS
 
 
-#define QL_DBOPEN          (START_QL_ERR - 0)
-#define QL_NOSUCHDB        (START_QL_ERR - 1)
+#define QL_BADJOINKEY      (START_QL_ERR - 0)
+#define QL_ALREADYOPEN     (START_QL_ERR - 1)
 #define QL_NOTOPEN         (START_QL_ERR - 2)  
 #define QL_NOSUCHTABLE     (START_QL_ERR - 3)
 #define QL_BADOPEN         (START_QL_ERR - 4)
 #define QL_FNOTOPEN        (START_QL_ERR - 5)
-#define QL_BADATTR         (START_QL_ERR - 6)
+#define QL_JOINKEYTYPEMISMATCH (START_QL_ERR - 6)
 #define QL_BADTABLE        (START_QL_ERR - 7)
-#define QL_INDEXEXISTS     (START_QL_ERR - 8)
+#define QL_EOF             (START_QL_ERR - 8)
 
-#define QL_LASTERROR QL_INDEXEXISTS
+#define QL_LASTERROR QL_EOF
 
 #endif // QL_ERROR_H

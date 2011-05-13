@@ -10,23 +10,22 @@
 #include "ix.h"
 #include "sm.h"
 #include "rm.h"
+#include "ql_error.h"
 
 using namespace std;
 
 class NestedLoopJoin: public Iterator {
  public:
-  NestedLoopJoin(DataAttrInfo    in1[],  // Array containing field types of R.
-                 int     len_in1,        // # of columns in R.
-                 DataAttrInfo    in2[],  // Array containing field types of S.
-                 int     len_in2,        // # of columns in S.                 
-                 Iterator *    am1,      // access for left i/p to join -R
-                 Iterator *    am2,      // access for right i/p to join -S
-                 
+  NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
+                 const char * rJoinAttr,   // name of join key - right
+                 Iterator *    lhsIt,      // access for left i/p to join -R
+                 Iterator *    rhsIt,      // access for right i/p to join -S
+               
                  //Cond **outFilter,   // Ptr to the output filter
                  //Cond **rightFilter, // Ptr to filter applied on right i
                  //FldSpec  * proj_list,
                  // int        n_out_flds,
-                 RC& status);
+                 RC   & status);
 
   virtual ~NestedLoopJoin();
 
@@ -35,16 +34,22 @@ class NestedLoopJoin: public Iterator {
   virtual RC Close();
 
   RC IsValid();
-  virtual RC Eof() const { return IX_EOF; }
+  virtual RC Eof() const { return QL_EOF; }
   virtual DataAttrInfo* GetAttr() const { return attrs; }
   virtual int GetAttrCount() const { return attrCount; }
 
  private:
-  IX_NestedLoopJoin ifs;
-  IX_Manager* pixm;
-  RM_Manager* prmm;
-  RM_FileHandle rmh;
-  IX_IndexHandle ixh;
+  int CmpKey(AttrType attrType, int attrLength, 
+             const void* a,
+             const void* b) const;
+
+ private:
+  DataAttrInfo lKey; // offset of join key in the left iterator
+  DataAttrInfo rKey; // offset of join key in the right iterator
+  Iterator* lhsIt;
+  Iterator* rhsIt;
+  Tuple left;
+  Tuple right;
   // used for iterator interface
   bool bIterOpen;
   DataAttrInfo* attrs;

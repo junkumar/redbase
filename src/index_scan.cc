@@ -54,7 +54,7 @@ IndexScan::IndexScan(SM_Manager& smm,
   }
 
   rc = pixm->OpenIndex(relName, indexNo, ixh);
-  if (rc != 0) { 
+  if (rc != 0) {
     status = rc;
     return;
   }
@@ -90,6 +90,8 @@ IndexScan::~IndexScan()
 // acts as a (re)open after OpenScan has been called.
 RC IndexScan::Open()
 {
+  RC invalid = IsValid(); if(invalid) return invalid;
+
   if(bIterOpen)
     return IX_HANDLEOPEN;
   if(!ifs.IsOpen())
@@ -102,6 +104,8 @@ RC IndexScan::Open()
 // iterator interface
 RC IndexScan::Close()
 {
+  RC invalid = IsValid(); if(invalid) return invalid;
+
   if(!bIterOpen)
     return IX_FNOTOPEN;
   if(!ifs.IsOpen())
@@ -115,6 +119,8 @@ RC IndexScan::Close()
 // iterator interface
 RC IndexScan::GetNext(Tuple &t)
 {
+  RC invalid = IsValid(); if(invalid) return invalid;
+
   if(!bIterOpen)
     return IX_FNOTOPEN;
   if(!ifs.IsOpen())

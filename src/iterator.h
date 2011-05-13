@@ -16,6 +16,12 @@ class Tuple {
   Tuple(int ct, int length_): count(ct), length(length_) {
     data = new char[length];
   }
+  Tuple(const Tuple& rhs): count(rhs.count), length(rhs.length) {
+    data = new char[length];
+    memcpy(data, rhs.data, length);
+    SetAttr(rhs.GetAttributes());
+  }
+
   ~Tuple() { delete [] data; }
   int GetLength() const { return length; }
   int GetAttrCount() const { return count; }
@@ -26,6 +32,16 @@ class Tuple {
   }
   void GetData(char *& buf) { buf = data; }
   void SetAttr(DataAttrInfo* pa) { attrs = pa; }
+
+  void Get(const char* attrName, void*& p) const {
+    assert(attrs != NULL);
+    for (int i = 0; i < count; i++) {
+      if(strcmp(attrs[i].attrName, attrName) == 0) {
+        p = (data+attrs[i].offset);
+        return;
+      }
+    }
+  }
 
   void Get(const char* attrName, int& intAttr) const {
     assert(attrs != NULL);
@@ -63,6 +79,32 @@ class Tuple {
   int length;
 };
 
+namespace {
+std::ostream &operator<<(std::ostream &os, const Tuple &t) {
+  os << "{";
+  DataAttrInfo* attrs = t.GetAttributes();    
+
+  for (int pos = 0; pos < t.GetAttrCount(); pos++) {
+    void * k = NULL;
+    AttrType attrType = attrs[pos].attrType;
+    t.Get(attrs[pos].attrName, k);
+    if( attrType == INT )
+      os << *((int*)k);
+    if( attrType == FLOAT )
+      os << *((float*)k);
+    if( attrType == STRING ) {
+      for(int i=0; i < attrs[pos].attrLength; i++) {
+        if(((char*)k)[i] == 0) break;
+        os << ((char*)k)[i];
+      }
+    }
+    os << ", ";
+  }
+  os << "\b\b";
+  os << "}";  
+}
+
+};
 class Iterator {
  public:
   Iterator() {}
@@ -78,6 +120,15 @@ class Iterator {
 
   // return must be good enough to use with Tuple::SetAttr()
   virtual DataAttrInfo* GetAttr() const = 0;
+  virtual int GetAttrCount() const = 0;
+
+  virtual int TupleLength() const {
+    int l = 0;
+    DataAttrInfo* a = GetAttr();
+    for(int i = 0; i < GetAttrCount(); i++) 
+      l += a[i].attrLength;
+    return l;
+  }
 };
 
 #endif // ITERATOR_H

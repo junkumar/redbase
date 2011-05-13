@@ -27,6 +27,7 @@ class FileScan: public Iterator {
   RC IsValid();
   virtual RC Eof() const { return RM_EOF; }
   virtual DataAttrInfo* GetAttr() const { return attrs; }
+  virtual int GetAttrCount() const { return attrCount; }
 
  private:
   RM_FileScan rfs;
