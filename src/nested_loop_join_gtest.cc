@@ -88,7 +88,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     RC status = -1;
-/*
+
     FileScan lfs(smm, rmm, "in", cond, status);
     ASSERT_EQ(status, 0);
     FileScan rfs(smm, rmm, "in", cond, status);
@@ -111,10 +111,6 @@ TEST_F(NestedLoopJoinTest, Cons) {
       EXPECT_EQ(rc, 0);
       if(rc != 0)
         PrintErrorAll(rc);
-      int in = -1;
-      float out = -1;
-      char bw[3]; bw[2] = 0;
-
       cerr << t << endl;
       ns++;
       if(ns > 20) ASSERT_EQ(1, 0);
@@ -153,10 +149,6 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        int in = -1;
-        float out = -1;
-        char bw[3]; bw[2] = 0;
-
         cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);
@@ -191,10 +183,6 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        int in = -1;
-        float out = -1;
-        char bw[3]; bw[2] = 0;
-
         cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);
@@ -204,7 +192,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
       (rc=fs.Close());
       ASSERT_EQ(rc, 0);
     }
-*/
+
     { // index on one side
 
       IndexScan lfs(smm, rmm, ixm, "in", "bw", cond, status);
@@ -239,10 +227,6 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        int in = -1;
-        float out = -1;
-        char bw[3]; bw[2] = 0;
-
         cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);

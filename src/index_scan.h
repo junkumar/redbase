@@ -32,8 +32,6 @@ class IndexScan: public Iterator {
 
   RC IsValid();
   virtual RC Eof() const { return IX_EOF; }
-  virtual DataAttrInfo* GetAttr() const { return attrs; }
-  virtual int GetAttrCount() const { return attrCount; }
 
  private:
   IX_IndexScan ifs;
@@ -41,10 +39,6 @@ class IndexScan: public Iterator {
   RM_Manager* prmm;
   RM_FileHandle rmh;
   IX_IndexHandle ixh;
-  // used for iterator interface
-  bool bIterOpen;
-  DataAttrInfo* attrs;
-  int attrCount;
 };
 
 #endif // INDEXSCAN_H

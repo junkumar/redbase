@@ -101,13 +101,14 @@ std::ostream &operator<<(std::ostream &os, const Tuple &t) {
     os << ", ";
   }
   os << "\b\b";
-  os << "}";  
+  os << "}";
+  return os;
 }
 
 };
 class Iterator {
  public:
-  Iterator() {}
+  Iterator():bIterOpen(false) {}
   virtual ~Iterator() {}
 
   virtual RC Open() = 0;
@@ -119,8 +120,8 @@ class Iterator {
   virtual RC Eof() const = 0;
 
   // return must be good enough to use with Tuple::SetAttr()
-  virtual DataAttrInfo* GetAttr() const = 0;
-  virtual int GetAttrCount() const = 0;
+  virtual DataAttrInfo* GetAttr() const { return attrs; }
+  virtual int GetAttrCount() const { return attrCount; }
 
   virtual int TupleLength() const {
     int l = 0;
@@ -129,6 +130,10 @@ class Iterator {
       l += a[i].attrLength;
     return l;
   }
+ protected:
+  bool bIterOpen;
+  DataAttrInfo* attrs;
+  int attrCount;
 };
 
 #endif // ITERATOR_H

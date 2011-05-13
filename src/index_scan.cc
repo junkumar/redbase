@@ -16,7 +16,7 @@ IndexScan::IndexScan(SM_Manager& smm,
                      const Condition& cond,
                      RC& status,
                      bool desc)
-  :ifs(IX_IndexScan()), bIterOpen(false), prmm(&rmm), pixm(&ixm),
+  :ifs(IX_IndexScan()), prmm(&rmm), pixm(&ixm),
    rmh(RM_FileHandle()), ixh(IX_IndexHandle())
 {
   if(relName == NULL || indexAttrName == NULL) {

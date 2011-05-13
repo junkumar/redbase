@@ -13,7 +13,7 @@ FileScan::FileScan(SM_Manager& smm,
                    const char* relName, 
                    const Condition& cond,
                    RC& status)
-  :rfs(RM_FileScan()), bIterOpen(false), prmm(&rmm), rmh(RM_FileHandle())
+  :rfs(RM_FileScan()), prmm(&rmm), rmh(RM_FileHandle())
 {
   attrCount = -1;
   attrs = NULL;

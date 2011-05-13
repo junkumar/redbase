@@ -35,8 +35,6 @@ class NestedLoopJoin: public Iterator {
 
   RC IsValid();
   virtual RC Eof() const { return QL_EOF; }
-  virtual DataAttrInfo* GetAttr() const { return attrs; }
-  virtual int GetAttrCount() const { return attrCount; }
 
  private:
   int CmpKey(AttrType attrType, int attrLength, 
@@ -50,10 +48,6 @@ class NestedLoopJoin: public Iterator {
   Iterator* rhsIt;
   Tuple left;
   Tuple right;
-  // used for iterator interface
-  bool bIterOpen;
-  DataAttrInfo* attrs;
-  int attrCount;
 };
 
 #endif // NESTEDLOOPJOIN_H

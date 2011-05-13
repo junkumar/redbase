@@ -20,7 +20,7 @@ NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
                //FldSpec  * proj_list,
                // int        n_out_flds,
                RC   & status)
-  :bIterOpen(false), lhsIt(lhsIt_), rhsIt(rhsIt_),
+  :lhsIt(lhsIt_), rhsIt(rhsIt_),
    left(lhsIt->GetAttrCount(), lhsIt->TupleLength()),
    right(rhsIt->GetAttrCount(), rhsIt->TupleLength())
 {
@@ -61,7 +61,7 @@ NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
   }
   
   DataAttrInfo * lattrs = lhsIt->GetAttr();
-  for(int i = 0, j = 0; i < lhsIt->GetAttrCount(); i++) {
+  for(int i = 0; i < lhsIt->GetAttrCount(); i++) {
     if(strcmp(lattrs[i].attrName, lJoinAttr) == 0) {
       lKey = lattrs[i];
     }
