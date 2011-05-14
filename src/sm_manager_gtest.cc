@@ -224,8 +224,6 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     command2 << "./dbdestroy " << dbname;
     rc = system (command2.str().c_str());
     ASSERT_EQ(rc, 0);
-    
-
 }
 
 TEST_F(SM_ManagerTest, loadafter_testdir) {
@@ -389,4 +387,98 @@ TEST_F(SM_ManagerTest, loadbefore_testdir) {
     ASSERT_EQ(rc, 0);
 
     
+}
+
+TEST_F(SM_ManagerTest, SemCheck) {
+    RC rc;
+    PF_Manager pfm;
+    IX_Manager ixm(pfm);
+    RM_Manager rmm(pfm);
+    SM_Manager smm(ixm, rmm);
+
+    const char * dbname = "cdtest";
+    stringstream command;
+    command << "rm -rf " << dbname;
+    rc = system (command.str().c_str());
+
+    command.str("");
+    command << "./dbcreate " << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create table in(in i, fl f, st c4);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"create table in2(inn i, fl f, stt c4);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
+    command << "echo \"load in(\\\"../data\\\");\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    ASSERT_EQ(0, smm.OpenDb(dbname));
+
+    ASSERT_EQ(0, smm.SemCheck("in"));
+    ASSERT_NE(0, smm.SemCheck("in0923094820984"));
+
+    RelAttr ra;
+    ra.relName = "in";
+    ra.attrName = "in";
+    ASSERT_EQ(0, smm.SemCheck(ra));
+    ra.attrName = "in234234324234";
+    ASSERT_NE(0, smm.SemCheck(ra));
+
+    ra.relName = NULL;
+    char * rels[2];
+    rels[0] = "in";
+    rels[1] = "in2";
+
+    ra.attrName = "in";
+    EXPECT_EQ(0, smm.FindRelForAttr(ra, 2, rels));
+    ASSERT_STREQ("in", ra.relName);
+
+    // ambiguous
+    ra.relName = NULL;
+    ra.attrName = "fl";
+    EXPECT_EQ(SM_AMBGATTR, smm.FindRelForAttr(ra, 2, rels));
+    ASSERT_STREQ(NULL, ra.relName);
+
+    // conditions
+    Condition cond;
+    cond.lhsAttr.relName = "in";
+    cond.lhsAttr.attrName = "in";
+    cond.rhsAttr.relName = "in2";
+    cond.rhsAttr.attrName = "inn";
+    cond.op = EQ_OP;
+    cond.bRhsIsAttr = TRUE;
+
+    EXPECT_EQ(0, smm.SemCheck(cond));
+
+
+    cond.lhsAttr.relName = "in";
+    cond.lhsAttr.attrName = "in";
+    cond.rhsAttr.relName = "in2";
+    cond.rhsAttr.attrName = "fl";
+    cond.op = EQ_OP;
+    cond.bRhsIsAttr = TRUE;
+
+    EXPECT_EQ(SM_TYPEMISMATCH, smm.SemCheck(cond));
+
+    // cond.op = EQ_OP + 34343434;
+    // EXPECT_EQ(SM_BADOP, smm.SemCheck(cond));
+
+
+    ASSERT_EQ(0, smm.CloseDb());
+    stringstream command2;
+    command2 << "./dbdestroy " << dbname;
+    rc = system (command2.str().c_str());
+    ASSERT_EQ(rc, 0);
 }

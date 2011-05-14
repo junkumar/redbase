@@ -73,7 +73,17 @@ class SM_Manager {
                     DataAttrInfo& attr,
                     RID& rid) const;
 
-
+  // Semantic checks for various parts of queries
+  RC SemCheck(const char* relName) const;
+  RC SemCheck(const RelAttr& ra) const;
+  RC SemCheck(const Condition& cond) const;
+  // for NULL relname - implicit relation name
+  // return error if there is a clash and multiple relations have this attrName
+  // user must free() ra.relName eventually
+  RC FindRelForAttr(RelAttr& ra, int nRelations, 
+                    const char * const
+                    possibleRelations[]) const;
+  
  private:
   RM_Manager& rmm;
   IX_Manager& ixm;

@@ -836,3 +836,79 @@ RC SM_Manager::GetFromTable(const char *relName,
 
   return 0;
 }
+
+RC SM_Manager::SemCheck(const char* relName) const {
+  RC invalid = IsValid(); if(invalid) return invalid;
+  DataRelInfo rel;
+  RID rid;
+  return GetRelFromCat(relName, rel, rid);
+}
+
+RC SM_Manager::SemCheck(const RelAttr& ra) const {
+  RC invalid = IsValid(); if(invalid) return invalid;
+  DataAttrInfo a;
+  RID rid;
+  return GetAttrFromCat(ra.relName, ra.attrName, a, rid);
+}
+
+// ra.relName must be NULL when we start off and should be free()d by the user
+RC SM_Manager::FindRelForAttr(RelAttr& ra, int nRelations, 
+                              const char * const
+                              possibleRelations[]) const {
+  RC invalid = IsValid(); if(invalid) return invalid;
+  if(ra.relName != NULL) return 0;
+  DataAttrInfo a;
+  RID rid;
+  bool found = false;
+  for( int i = 0; i < nRelations; i++ ) {
+    RC rc = GetAttrFromCat(possibleRelations[i], ra.attrName, a, rid);
+    if(rc == 0 && !found) {
+      found = true;
+      ra.relName = strdup(possibleRelations[i]);
+    }
+    else 
+      if(rc == 0 && found) {
+        // clash
+        free(ra.relName);
+        ra.relName = NULL;
+        return SM_AMBGATTR;
+    }
+  }
+  if (!found)
+    return SM_NOSUCHENTRY;
+  else // ra was populated
+    return 0;
+}
+
+// should be used only after lhsAttr and rhsAttr have been expanded out of NULL
+RC SM_Manager::SemCheck(const Condition& cond) const {
+  if((cond.op < NO_OP) ||
+      cond.op > GE_OP)
+    return SM_BADOP;
+
+  if(cond.lhsAttr.relName == NULL || cond.lhsAttr.attrName == NULL)
+    return SM_NOSUCHENTRY;
+
+  if(cond.bRhsIsAttr == TRUE) {
+    if(cond.rhsAttr.relName == NULL || cond.rhsAttr.attrName == NULL)
+      return SM_NOSUCHENTRY;
+    DataAttrInfo a, b;
+    RID rid;
+    RC rc = GetAttrFromCat(cond.lhsAttr.relName, cond.lhsAttr.attrName, a, rid);
+    if (rc !=0) return SM_NOSUCHENTRY;
+    rc = GetAttrFromCat(cond.rhsAttr.relName, cond.rhsAttr.attrName, b, rid);
+    if (rc !=0) return SM_NOSUCHENTRY;
+
+    if(b.attrType != a.attrType)
+      return SM_TYPEMISMATCH;
+
+  } else {
+    DataAttrInfo a;
+    RID rid;
+    RC rc = GetAttrFromCat(cond.lhsAttr.relName, cond.lhsAttr.attrName, a, rid);
+    if (rc !=0) return SM_NOSUCHENTRY;
+    if(cond.rhsValue.type != a.attrType)
+      return SM_TYPEMISMATCH;
+  }
+  return 0;
+}

@@ -72,11 +72,11 @@ TEST_F(NestedLoopJoinTest, Cons) {
     ASSERT_EQ(rc, 0);
 
 
-    command.str("");
-    command << "echo \"help in;\" | ./redbase " 
-            << dbname;
-    rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    // command.str("");
+    // command << "echo \"help in;\" | ./redbase " 
+    //         << dbname;
+    // rc = system (command.str().c_str());
+    // ASSERT_EQ(rc, 0);
 
     Condition cond;
     cond.op = EQ_OP;
@@ -111,7 +111,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
       EXPECT_EQ(rc, 0);
       if(rc != 0)
         PrintErrorAll(rc);
-      cerr << t << endl;
+      // cerr << t << endl;
       ns++;
       if(ns > 20) ASSERT_EQ(1, 0);
     }
@@ -149,7 +149,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        cerr << t << endl;
+        // cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);
       }
@@ -183,7 +183,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        cerr << t << endl;
+        // cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);
       }
@@ -227,7 +227,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        cerr << t << endl;
+        // cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);
       }

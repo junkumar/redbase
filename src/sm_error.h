@@ -16,10 +16,9 @@ void SM_PrintError(RC rc);
 #define SM_INVALIDSIZE    (START_SM_WARN + 1)  // invalid entry size
 #define SM_ENTRYEXISTS    (START_SM_WARN + 2)  // key,rid already
                                                // exists in index
-#define SM_NOSUCHENTRY    (START_SM_WARN + 3)  // key,rid combination
-                                               // does not exist in index
+#define SM_NOSUCHENTRY    (START_SM_WARN + 3)
 
-#define SM_LASTWARN SM_ENTRYEXISTS
+#define SM_LASTWARN SM_NOSUCHENTRY
 
 
 #define SM_DBOPEN          (START_SM_ERR - 0)
@@ -31,7 +30,10 @@ void SM_PrintError(RC rc);
 #define SM_BADATTR         (START_SM_ERR - 6)
 #define SM_BADTABLE        (START_SM_ERR - 7)
 #define SM_INDEXEXISTS     (START_SM_ERR - 8)
+#define SM_TYPEMISMATCH    (START_SM_ERR - 9)
+#define SM_BADOP           (START_SM_ERR - 10)
+#define SM_AMBGATTR        (START_SM_ERR - 11)
 
-#define SM_LASTERROR SM_INDEXEXISTS
+#define SM_LASTERROR SM_AMBGATTR
 
 #endif // SM_ERROR_H

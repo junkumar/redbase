@@ -18,7 +18,7 @@ const char *SM_WarnMsg[] = {
   (char*)"key was not found in btree",
   (char*)"key attribute size is too small(<=0) or too big for a page",
   (char*)"key,rid already exists in index",
-  (char*)"key,rid combination does not exist in index",
+  (char*)"SM_NOSUCHENTRY relName/attrName do not exist in DB",
 };
 
 const char *SM_ErrorMsg[] = {
@@ -30,7 +30,10 @@ const char *SM_ErrorMsg[] = {
   (char*)"file is not open",
   (char*)"Bad Attribute name specified for this relation",
   (char*)"Bad Table/Relation",
-  (char*)"Index already exists",
+  (char*)"SM_INDEXEXISTS Index already exists.",
+  (char*)"SM_TYPEMISMATCH Types do not match.",
+  (char*)"SM_BADOP Bad operator in condition.",
+  (char*)"SM_AMBGATTR Attribute ambiguous - more than 1 relation contains same attr.",
 };
 
 //

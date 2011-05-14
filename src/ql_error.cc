@@ -16,7 +16,7 @@ using namespace std;
 //
 const char *QL_WarnMsg[] = {
   (char*)"key was not found in btree",
-  (char*)"key attribute size is too qlall(<=0) or too big for a page",
+  (char*)"QL_INVALIDSIZE invalid number of attributes",
   (char*)"key,rid already exists in index",
   (char*)"key,rid combination does not exist in index",
 };
@@ -24,11 +24,11 @@ const char *QL_WarnMsg[] = {
 const char *QL_ErrorMsg[] = {
   (char*)"QL_BADJOINKEY Bad Join Key - is it present ?",
   (char*)"QL_ALREADYOPEN Iterator already open.",
-  (char*)"DB is not open",
-  (char*)"Bad Table name - no such table",
+  (char*)"QL_BADATTR Bad Attribute",
+  (char*)"QL_DUPREL Duplicate Table names",
   (char*)"bad open",
   (char*)"QL_FNOTOPEN Iterator is not open",
-  (char*)"QL_JOINKEYTYPEMISMATCH Join columns need to be the same on both sides",
+  (char*)"QL_JOINKEYTYPEMISMATCH Type mismatch",
   (char*)"Bad Table/Relation",
   (char*)"QL_EOF end of input on iterator",
 };
