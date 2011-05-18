@@ -14,6 +14,11 @@
 #include "sm.h"
 #include "ix.h"
 #include "rm.h"
+#include "iterator.h"
+#include "index_scan.h"
+#include "file_scan.h"
+#include "nested_loop_join.h"
+#include <map>
 
 using namespace std;
 
@@ -201,15 +206,30 @@ RC QL_Manager::Insert(const char *relName,
     return QL_INVALIDSIZE;
   }
 
+  int size = 0;
   for(int i =0; i < nValues; i++) {
     if(values[i].type != attr[i].attrType) {
       delete [] attr;
       return QL_JOINKEYTYPEMISMATCH;
     }
+    size += attr[i].attrLength;
   }
 
-  delete [] attr;
+  char * buf = new char[size];
+  int offset = 0;
+  for(int i =0; i < nValues; i++) {
+    assert(values[i].data != NULL);
+    memcpy(buf + offset,
+           values[i].data,
+           attr[i].attrLength);
+    offset += attr[i].attrLength;
+  }
 
+  rc = smm.LoadRecord(relName, size, buf);
+  if (rc != 0) return rc;
+
+  delete [] attr;
+  delete [] buf;
   int i;
 
   cout << "Insert\n";
@@ -270,6 +290,10 @@ RC QL_Manager::Delete(const char *relName_,
     if (rc != 0) return rc;
   }
 
+  Iterator* it = GetLeafIterator(relName, nConditions, conditions);
+
+  if(bQueryPlans == TRUE)
+    cout << "\n" << it->Explain() << "\n";
 
   int i;
 
@@ -377,4 +401,115 @@ RC QL_Manager::Update(const char *relName_,
     cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
   return 0;
+}
+
+//
+// Choose between filescan and indexscan for first operation - leaf level of
+// operator tree
+// REturned iterator should be deleted by user after use.
+Iterator* QL_Manager::GetLeafIterator(const char *relName,
+                                      int nConditions, const Condition conditions[])
+{  
+  RC invalid = IsValid(); if(invalid) return NULL;
+
+  if(relName == NULL) {
+    return NULL;
+  }
+
+  int attrCount = -1;
+  DataAttrInfo * attributes;
+  RC rc = smm.GetFromTable(relName, attrCount, attributes);
+  if(rc != 0) return NULL;
+
+  int nIndexes = 0;
+  char* chosenIndex = NULL;
+  const Condition * chosenCond = NULL;
+  Condition * filters = NULL;
+  int nFilters = -1;
+
+  map<string, const Condition*> keys;
+
+  for(int j = 0; j < nConditions; j++) {
+    if(strcmp(conditions[j].lhsAttr.relName, relName) == 0) {
+      keys[string(conditions[j].lhsAttr.attrName)] = &conditions[j];
+    }
+
+    if(conditions[j].bRhsIsAttr == TRUE &&
+       strcmp(conditions[j].rhsAttr.relName, relName) == 0) {
+      keys[string(conditions[j].rhsAttr.attrName)] = &conditions[j];
+    }
+  }
+  
+  for(map<string, const Condition*>::iterator it = keys.begin(); it != keys.end(); it++) {
+    // Pick last numerical index or at least one non-numeric index
+    for (int i = 0; i < attrCount; i++) {
+      if(attributes[i].indexNo != -1 && 
+         strcmp(it->first.c_str(), attributes[i].attrName) == 0) {
+        nIndexes++;
+        if(chosenIndex == NULL ||
+           attributes[i].attrType == INT || attributes[i].attrType == FLOAT) {
+          chosenIndex = attributes[i].attrName;
+          chosenCond = it->second;
+        }
+      }
+    }
+  }
+
+  if(chosenCond == NULL) {
+    nFilters = nConditions;
+    filters = new Condition[nFilters];
+    for(int j = 0; j < nConditions; j++) {
+      if(chosenCond != &(conditions[j])) {
+        filters[j] = conditions[j];
+      }
+    }
+  } else {
+    nFilters = nConditions - 1;
+    filters = new Condition[nFilters];
+    for(int j = 0, k = 0; j < nConditions; j++) {
+      if(chosenCond != &(conditions[j])) {
+        filters[k] = conditions[j];
+        k++;
+      }
+    }
+  }
+
+  if(nConditions == 0 || nIndexes == 0) {
+    Condition cond = NULLCONDITION;
+
+    RC status = -1;
+    Iterator* it = NULL;
+    if(nConditions == 0)
+      it = new FileScan(smm, rmm, relName, status, cond);
+    else
+      it = new FileScan(smm, rmm, relName, status, cond, nConditions,
+                        conditions);
+    
+    if(status != 0) {
+      PrintErrorAll(status);
+      return NULL;
+    }
+    delete [] attributes;
+    return it;
+  }
+
+  // use an index scan
+  RC status = -1;
+  Iterator* it;
+
+  if(chosenCond != NULL)
+    it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
+                       *chosenCond, nFilters, filters);
+  else
+    it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
+                       NULLCONDITION, nFilters, filters);
+
+  if(status != 0) {
+    PrintErrorAll(status);
+    return NULL;
+  }
+
+  delete [] filters;
+  delete [] attributes;
+  return it;
 }

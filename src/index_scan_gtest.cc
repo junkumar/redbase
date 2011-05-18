@@ -61,10 +61,8 @@ TEST_F(IndexScanTest, Cons) {
     rc = system (command.str().c_str());
     ASSERT_EQ(rc, 0);
 
-
-    // no such table
     command.str("");
-    command << "echo \"help in;\" | ./redbase " 
+    command << "echo \"print in;\" | ./redbase " 
             << dbname;
     rc = system (command.str().c_str());
     ASSERT_EQ(rc, 0);
@@ -83,7 +81,7 @@ TEST_F(IndexScanTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     RC status = -1;
-    IndexScan fs(smm, rmm, ixm, "in", "bw", cond, status);
+    IndexScan fs(smm, rmm, ixm, "in", "bw", status, cond);
     ASSERT_EQ(status, 0);
 
     rc=fs.Open();
@@ -109,7 +107,7 @@ TEST_F(IndexScanTest, Cons) {
       ns++;
     }
     
-    EXPECT_EQ(3, ns);
+    EXPECT_EQ(2, ns);
     (rc=fs.Close());
     ASSERT_EQ(rc, 0);
 

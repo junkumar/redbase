@@ -48,10 +48,15 @@ int main(int argc, char *argv[])
   if ((rc = smm.OpenDb(dbname)))
     PrintErrorExit(rc);
   // call the parser
-  RBparse(pfm, smm, qlm);
+  RC parseRC = RBparse(pfm, smm, qlm);
+
   // close the database
   if ((rc = smm.CloseDb()))
     PrintErrorExit(rc);
   
+  if(parseRC != 0)
+    PrintErrorExit(parseRC);
+
   cout << "Bye.\n";
+  return 0;
 }

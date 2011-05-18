@@ -6,9 +6,12 @@
 #define ITERATOR_H
 
 #include "redbase.h"
-#include "printer.h"
+#include "data_attr_info.h"
+#include <sstream>
 
 using namespace std;
+
+class DataAttrInfo;
 
 // abstraction to hide details of offsets and type conversions
 class Tuple {
@@ -30,6 +33,7 @@ class Tuple {
     assert(buf != NULL);
     memcpy(data, buf, length);
   }
+  void GetData(const char *& buf) const { buf = data; }
   void GetData(char *& buf) { buf = data; }
   void SetAttr(DataAttrInfo* pa) { attrs = pa; }
 
@@ -80,32 +84,32 @@ class Tuple {
 };
 
 namespace {
-std::ostream &operator<<(std::ostream &os, const Tuple &t) {
-  os << "{";
-  DataAttrInfo* attrs = t.GetAttributes();    
+  std::ostream &operator<<(std::ostream &os, const Tuple &t) {
+    os << "{";
+    DataAttrInfo* attrs = t.GetAttributes();    
 
-  for (int pos = 0; pos < t.GetAttrCount(); pos++) {
-    void * k = NULL;
-    AttrType attrType = attrs[pos].attrType;
-    t.Get(attrs[pos].attrName, k);
-    if( attrType == INT )
-      os << *((int*)k);
-    if( attrType == FLOAT )
-      os << *((float*)k);
-    if( attrType == STRING ) {
-      for(int i=0; i < attrs[pos].attrLength; i++) {
-        if(((char*)k)[i] == 0) break;
-        os << ((char*)k)[i];
+    for (int pos = 0; pos < t.GetAttrCount(); pos++) {
+      void * k = NULL;
+      AttrType attrType = attrs[pos].attrType;
+      t.Get(attrs[pos].attrName, k);
+      if( attrType == INT )
+        os << *((int*)k);
+      if( attrType == FLOAT )
+        os << *((float*)k);
+      if( attrType == STRING ) {
+        for(int i=0; i < attrs[pos].attrLength; i++) {
+          if(((char*)k)[i] == 0) break;
+          os << ((char*)k)[i];
+        }
       }
+      os << ", ";
     }
-    os << ", ";
+    os << "\b\b";
+    os << "}";
+    return os;
   }
-  os << "\b\b";
-  os << "}";
-  return os;
-}
-
 };
+
 class Iterator {
  public:
   Iterator():bIterOpen(false) {}
@@ -130,10 +134,14 @@ class Iterator {
       l += a[i].attrLength;
     return l;
   }
+  
+  virtual string Explain() const { return explain.str(); }
+
  protected:
   bool bIterOpen;
   DataAttrInfo* attrs;
   int attrCount;
+  stringstream explain;
 };
 
 #endif // ITERATOR_H

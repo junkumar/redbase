@@ -78,7 +78,7 @@ TEST_F(FileScanTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     RC status = -1;
-    FileScan fs(smm, rmm, "in", cond, status);
+    FileScan fs(smm, rmm, "in", status, cond);
     ASSERT_EQ(status, 0);
 
     rc=fs.Open();

@@ -47,6 +47,8 @@ struct Condition{
 
 };
 
+static Condition NULLCONDITION;
+
 std::ostream &operator<<(std::ostream &s, const CompOp &op);
 std::ostream &operator<<(std::ostream &s, const AttrType &at);
 
@@ -56,7 +58,7 @@ std::ostream &operator<<(std::ostream &s, const AttrType &at);
 class QL_Manager;
 class SM_Manager;
 
-void RBparse(PF_Manager &pfm, SM_Manager &smm, QL_Manager &qlm);
+RC RBparse(PF_Manager &pfm, SM_Manager &smm, QL_Manager &qlm);
 
 //
 // Error printing function; calls component-specific functions

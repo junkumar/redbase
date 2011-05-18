@@ -12,80 +12,24 @@
 #include <cstring>
 #include "redbase.h"      // For definition of MAXNAME
 #include "catalog.h"
+#include "data_attr_info.h"
+#include "iterator.h"
 
 #define MAXPRINTSTRING  ((2*MAXNAME) + 5)
 
-//
-// DataAttrInfo
-//
-// This struct stores the information that is kept within in
-// attribute catalog.  It identifies a relation name, attribute name
-// and the location type and length of the attribute.
-//
-struct DataAttrInfo
-{
-  // Default constructor
-  DataAttrInfo() {
-    memset(relName, 0, MAXNAME + 1);
-    memset(attrName, 0, MAXNAME + 1);
-  };
-
-  DataAttrInfo(const AttrInfo &a ) {
-    memset(attrName, 0, MAXNAME + 1);
-    strcpy (attrName, a.attrName);
-    attrType = a.attrType;
-    attrLength = a.attrLength;
-    memset(relName, 0, MAXNAME + 1);
-    indexNo = -1;
-    offset = -1;
-  };
-
-  // Copy constructor
-  DataAttrInfo( const DataAttrInfo &d ) {
-    strcpy (relName, d.relName);
-    strcpy (attrName, d.attrName);
-    offset = d.offset;
-    attrType = d.attrType;
-    attrLength = d.attrLength;
-    indexNo = d.indexNo;
-  };
-
-  DataAttrInfo& operator=(const DataAttrInfo &d) {
-    if (this != &d) {
-      strcpy (relName, d.relName);
-      strcpy (attrName, d.attrName);
-      offset = d.offset;
-      attrType = d.attrType;
-      attrLength = d.attrLength;
-      indexNo = d.indexNo;
-    }
-    return (*this);
-  };
-
-  static unsigned int size() { 
-    return 2*(MAXNAME+1) + sizeof(AttrType) + 3*sizeof(int);
-  }
-
-  static unsigned int members() { 
-    return 6;
-  }
-
-  int      offset;                // Offset of attribute
-  AttrType attrType;              // Type of attribute
-  int      attrLength;            // Length of attribute
-  int      indexNo;               // Index number of attribute
-  char     relName[MAXNAME+1];    // Relation name
-  char     attrName[MAXNAME+1];   // Attribute name
-};
-
 // Print some number of spaces
 void Spaces(int maxLength, int printedSoFar);
+
+class DataAttrInfo;
+class Tuple;
 
 class Printer {
  public:
   // Constructor.  Takes as arguments an array of attributes along with
   // the length of the array.
   Printer(const DataAttrInfo *attributes, const int attrCount);
+  Printer(const Tuple& t);
+
   ~Printer();
 
   void PrintHeader(std::ostream &c) const;
@@ -96,8 +40,12 @@ class Printer {
   // RecData.  The second will be useful in the QL layer.
   void Print(std::ostream &c, const char * const data);
   void Print(std::ostream &c, const void * const data[]);
+  void Print(std::ostream &c, const Tuple& t);
 
   void PrintFooter(std::ostream &c) const;
+  
+ private:
+  void Init(const DataAttrInfo *attributes_, const int attrCount_);
 
  private:
   DataAttrInfo *attributes;

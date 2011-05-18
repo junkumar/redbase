@@ -16,6 +16,7 @@
 #include "rm.h"
 #include "ix.h"
 #include "sm.h"
+#include "iterator.h"
 
 //
 // QL_Manager: query language (DML)
@@ -49,10 +50,15 @@ class QL_Manager {
               const Condition conditions[]);   // conditions in where clause
  public:
   RC IsValid() const;
+  // Choose between filescan and indexscan for first operation - leaf level of
+  // operator tree
+  Iterator* GetLeafIterator(const char *relName_,
+                            int nConditions, const Condition conditions_[]);
+
  private:
-  SM_Manager& smm;
   RM_Manager& rmm;
   IX_Manager& ixm;
+  SM_Manager& smm;
 };
 
 #endif // QL_H

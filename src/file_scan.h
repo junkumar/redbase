@@ -15,9 +15,12 @@ class FileScan: public Iterator {
  public:
   FileScan(SM_Manager& smm,
            RM_Manager& rmm,
-           const char* relName, 
-           const Condition& cond,
-           RC& status);
+           const char* relName,
+           RC& status,
+           const Condition& cond = NULLCONDITION,
+           int nOutFilters = 0,
+           const Condition outFilters[] = NULL);
+
   virtual ~FileScan();
 
   virtual RC Open();
@@ -30,7 +33,11 @@ class FileScan: public Iterator {
  private:
   RM_FileScan rfs;
   RM_Manager* prmm;
+  SM_Manager* psmm;
+  const char * relName;
   RM_FileHandle rmh;
+  int nOFilters;
+  Condition* oFilters;
 };
 
 #endif // FILESCAN_H

@@ -2,6 +2,7 @@ src/redbase
 src/dbdestroy
 src/dbcreate
 src/testdb
+src/test
 src/test2
 src/test.out
 src/pf_test*

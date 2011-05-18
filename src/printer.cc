@@ -27,6 +27,10 @@ void Spaces(int maxLength, int printedSoFar)
 //
 // ------------------------------------------------------------------------------
 //
+Printer::Printer(const Tuple& t)
+{
+  Init(t.GetAttributes(), t.GetAttrCount());
+}
 
 //
 // Printer
@@ -38,6 +42,11 @@ void Spaces(int maxLength, int printedSoFar)
 //  attrCount - the number of attributes
 //
 Printer::Printer(const DataAttrInfo *attributes_, const int attrCount_)
+{
+  Init(attributes_, attrCount_);
+}
+
+void Printer::Init(const DataAttrInfo *attributes_, const int attrCount_)
 {
     attrCount = attrCount_;
     attributes = new DataAttrInfo[attrCount];
@@ -208,6 +217,13 @@ void Printer::Print(ostream &c, const void * const data[])
         }
     }
     c << "\n";
+}
+
+void Printer::Print(std::ostream &c, const Tuple& t)
+{
+  const char * data;
+  t.GetData(data);
+  Print(c, data);
 }
 
 //

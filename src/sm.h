@@ -84,6 +84,11 @@ class SM_Manager {
                     const char * const
                     possibleRelations[]) const;
   
+// Load a single record in the buf into the table relName
+  RC LoadRecord(const char *relName,
+                int buflen,
+                const char buf[]);
+
  private:
   RM_Manager& rmm;
   IX_Manager& ixm;

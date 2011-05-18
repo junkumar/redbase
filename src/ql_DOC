@@ -28,6 +28,8 @@ Overall Design:
    represent each record in relcat. Each record in attrcat is
    basically a DataAttrInfo struct.
 
+Update
+- could just be delete + insert - not efficient - two passes over everything
 ---------------------------------------
 
 Key Data Structures:

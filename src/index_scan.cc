@@ -11,13 +11,16 @@ using namespace std;
 IndexScan::IndexScan(SM_Manager& smm,
                      RM_Manager& rmm,
                      IX_Manager& ixm,
-                     const char* relName,
+                     const char* relName_,
                      const char* indexAttrName, 
-                     const Condition& cond,
                      RC& status,
+                     const Condition& cond,
+                     int nOutFilters,
+                     const Condition outFilters[],
                      bool desc)
-  :ifs(IX_IndexScan()), prmm(&rmm), pixm(&ixm),
-   rmh(RM_FileHandle()), ixh(IX_IndexHandle())
+  :ifs(IX_IndexScan()), prmm(&rmm), pixm(&ixm), psmm(&smm),
+   rmh(RM_FileHandle()), ixh(IX_IndexHandle()), relName(relName_),
+   nOFilters(nOutFilters), oFilters(NULL)
 {
   if(relName == NULL || indexAttrName == NULL) {
     status = SM_NOSUCHTABLE;
@@ -69,6 +72,22 @@ IndexScan::IndexScan(SM_Manager& smm,
     return;
   }
 
+  oFilters = new Condition[nOFilters];
+  for(int i = 0; i < nOFilters; i++) {
+    oFilters[i] = outFilters[i]; // shallow copy
+  }
+
+  explain << "IndexScan\n";
+  explain << "   relName = " << relName << "\n";
+  explain << "   attrName = " << indexAttrName << "\n";
+  if(cond.rhsValue.data != NULL)
+    explain << "   ScanCond = " << cond << "\n";
+  if(nOutFilters > 0) {
+    explain << "   nConditions = " << nOutFilters << "\n";
+    for (int i = 0; i < nOutFilters; i++)
+      explain << "   conditions[" << i << "]:" << outFilters[i] << "\n";
+  }
+
   status = 0;
 }
 
@@ -83,6 +102,7 @@ IndexScan::~IndexScan()
   pixm->CloseIndex(ixh);
   prmm->CloseFile(rmh);
   delete [] attrs;
+  delete [] oFilters;
 }
 
 
@@ -127,15 +147,55 @@ RC IndexScan::GetNext(Tuple &t)
     return IX_FNOTOPEN;
   
   RID rid;
-  RC rc = ifs.GetNextEntry(rid);
-  if (rc == 0) {
+  RC rc;
+  bool found = false;
+
+  while(!found) {
+
+    rc = ifs.GetNextEntry(rid);
+    if (rc != 0) return rc;
+
     RM_Record rec;
     rc = rmh.GetRec(rid, rec);
     if (rc != 0 ) return rc;
     char * buf;
     rc = rec.GetData(buf);
     if (rc != 0 ) return rc;
-    t.Set(buf);
-  }
+
+    bool recordIn = true;
+    for (int i = 0; i < nOFilters; i++) {
+      Condition cond = oFilters[i];
+      DataAttrInfo condAttr;
+      RID r;  
+      rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, condAttr, r);
+      if (rc != 0) return rc;
+
+      Predicate p(condAttr.attrType,
+                  condAttr.attrLength,
+                  condAttr.offset,
+                  cond.op,
+                  cond.rhsValue.data,
+                  NO_HINT);
+        
+      char * rhs = (char*)cond.rhsValue.data;
+      if(cond.bRhsIsAttr == TRUE) {
+        DataAttrInfo rhsAttr;
+        RID r;  
+        rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, rhsAttr, r);
+        if (rc != 0) return rc;
+        rhs = (buf + rhsAttr.offset);
+      }       
+   
+      if(!p.eval(buf, rhs, cond.op)) {
+        recordIn = false;
+        break;
+      }
+    }
+
+    if(recordIn) {
+      t.Set(buf);
+      found = true;
+    }
+  } // while
   return rc;
 }

@@ -464,6 +464,89 @@ RC SM_Manager::DropIndex(const char *relName,
   return (0);
 }
 
+// Load a single record in the buf into the table relName
+RC SM_Manager::LoadRecord(const char *relName,
+                          int buflen,
+                          const char buf[])
+{
+  RC invalid = IsValid(); if(invalid) return invalid;
+
+  if(relName == NULL || buf == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RM_FileHandle rfh;
+  RC rc;
+  if((rc =	rmm.OpenFile(relName, rfh))
+    ) 
+    return(rc);
+
+  int attrCount = -1;
+  DataAttrInfo * attributes;
+  rc = GetFromTable(relName, attrCount, attributes);
+  if(rc != 0) return rc;
+
+  IX_IndexHandle * indexes = new IX_IndexHandle[attrCount];
+
+  int size = 0;
+  for (int i = 0; i < attrCount; i++) {
+    size += attributes[i].attrLength;
+    if(attributes[i].indexNo != -1) {
+      ixm.OpenIndex(relName, attributes[i].indexNo, indexes[i]);
+    }
+  }
+
+  if(size != buflen)
+    return SM_BADTABLE;
+
+  {
+    RID rid;
+    if ((rc = rfh.InsertRec(buf, rid)) < 0
+      )
+      return(rc);
+    
+    for (int i = 0; i < attrCount; i++) {
+      if(attributes[i].indexNo != -1) {
+        // cerr << "SM loadRecord index - inserting {" << *(char*)(buf +
+        // attributes[i].offset) << "} " << rid << endl;
+        char * ptr = const_cast<char*>(buf + attributes[i].offset);
+        rc = indexes[i].InsertEntry(ptr,
+                                    rid);
+        if (rc != 0) return rc;
+      }
+    }
+  }
+  // update numRecords in relcat
+  DataRelInfo r;
+  RID rid;
+  rc = GetRelFromCat(relName, r, rid);
+  if(rc != 0) return rc;
+
+  r.numRecords += 1;
+  r.numPages = rfh.GetNumPages();
+  RM_Record rec;
+  rec.Set((char*)&r, DataRelInfo::size(), rid);
+  if ((rc = relfh.UpdateRec(rec)) != 0)
+    return rc;
+
+  if((rc =	rmm.CloseFile(rfh))
+    ) 
+    return(rc);
+
+  for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1) {
+      RC rc = ixm.CloseIndex(indexes[i]);
+      if(rc != 0 ) return rc;
+      // cerr << "SM loadRecord index - closed " << i << endl;
+    }
+  }
+
+  delete [] attributes;
+  delete [] indexes;
+  return 0;
+
+}
+
 RC SM_Manager::Load(const char *relName,
                     const char *fileName)
 {
@@ -573,7 +656,7 @@ RC SM_Manager::Load(const char *relName,
     if(attributes[i].indexNo != -1) {
       RC rc = ixm.CloseIndex(indexes[i]);
       if(rc != 0 ) return rc;
-      cerr << "SM load index - closed " << i << endl;
+      // cerr << "SM load index - closed " << i << endl;
     }
   }
 

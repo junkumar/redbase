@@ -35,35 +35,36 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
     return RM_HANDLEOPEN;
   }
 
-  if((compOp < NO_OP) ||
-      compOp > GE_OP)
-    return RM_FCREATEFAIL;
-
-  if((attrType < INT) ||
-      (attrType > STRING))
-    return RM_FCREATEFAIL;
-
   prmh = const_cast<RM_FileHandle*>(&fileHandle);
   if((prmh == NULL) || 
      prmh->IsValid() != 0)
     return RM_FCREATEFAIL;
 
-  if(attrLength >= PF_PAGE_SIZE - (int)sizeof(RID) ||
-     attrLength <= 0)
-    return RM_RECSIZEMISMATCH;
-
-  if((attrType == INT && (unsigned int)attrLength != sizeof(int)) ||
-     (attrType == FLOAT && (unsigned int)attrLength != sizeof(float))
-     ||
-     (attrType == STRING && 
-      ((unsigned int)attrLength <= 0 || 
-       (unsigned int)attrLength > MAXSTRINGLEN)))
+  if(value != NULL) { // allow lazy init - dont check cond if value if NULL
+    if((compOp < NO_OP) ||
+       compOp > GE_OP)
       return RM_FCREATEFAIL;
 
+    if((attrType < INT) ||
+       (attrType > STRING))
+      return RM_FCREATEFAIL;
 
-  if((attrOffset >= prmh->fullRecordSize()) ||
-     attrOffset < 0)
-    return RM_FCREATEFAIL;
+    if(attrLength >= PF_PAGE_SIZE - (int)sizeof(RID) ||
+       attrLength <= 0)
+      return RM_RECSIZEMISMATCH;
+
+    if((attrType == INT && (unsigned int)attrLength != sizeof(int)) ||
+       (attrType == FLOAT && (unsigned int)attrLength != sizeof(float))
+       ||
+       (attrType == STRING && 
+        ((unsigned int)attrLength <= 0 || 
+         (unsigned int)attrLength > MAXSTRINGLEN)))
+      return RM_FCREATEFAIL;
+
+    if((attrOffset >= prmh->fullRecordSize()) ||
+       attrOffset < 0)
+      return RM_FCREATEFAIL;
+  }
 
   bOpen = true;
   pred = new Predicate(attrType,       

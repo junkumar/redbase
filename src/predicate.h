@@ -35,6 +35,7 @@ public:
 
   CompOp initOp() const { return compOp; }
   bool eval(const char *buf, CompOp c) const;
+  bool eval(const char *lhsBuf, const char* rhsValuep, CompOp c) const;
 
  private:
   AttrType   attrType;

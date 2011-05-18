@@ -89,9 +89,9 @@ TEST_F(NestedLoopJoinTest, Cons) {
 
     RC status = -1;
 
-    FileScan lfs(smm, rmm, "in", cond, status);
+    FileScan lfs(smm, rmm, "in", status, cond);
     ASSERT_EQ(status, 0);
-    FileScan rfs(smm, rmm, "in", cond, status);
+    FileScan rfs(smm, rmm, "in", status, cond);
     ASSERT_EQ(status, 0);
 
     NestedLoopJoin fs("in", "in", &lfs, &rfs, status);
@@ -127,10 +127,10 @@ TEST_F(NestedLoopJoinTest, Cons) {
 
     { // different relations
 
-      FileScan lfs(smm, rmm, "in", cond, status);
+      FileScan lfs(smm, rmm, "in", status, cond);
       ASSERT_EQ(status, 0);
 
-      FileScan rfs(smm, rmm, "stars", cond, status);
+      FileScan rfs(smm, rmm, "stars", status, cond);
       ASSERT_EQ(status, 0);
 
       NestedLoopJoin fs("in", "soapid", &lfs, &rfs, status);
@@ -161,10 +161,10 @@ TEST_F(NestedLoopJoinTest, Cons) {
 
     { // nothing to join
 
-      FileScan lfs(smm, rmm, "in", cond, status);
+      FileScan lfs(smm, rmm, "in", status, cond);
       ASSERT_EQ(status, 0);
 
-      FileScan rfs(smm, rmm, "stars", cond, status);
+      FileScan rfs(smm, rmm, "stars", status, cond);
       ASSERT_EQ(status, 0);
 
       NestedLoopJoin fs("bw", "stname", &lfs, &rfs, status);
@@ -195,7 +195,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
 
     { // index on one side
 
-      IndexScan lfs(smm, rmm, ixm, "in", "bw", cond, status);
+      IndexScan lfs(smm, rmm, ixm, "in", "bw", status, cond);
       ASSERT_EQ(status, 0);
 
       int ac = -1;
@@ -208,7 +208,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
       cond2.rhsValue.data = NULL;
       cond2.rhsValue.data = FALSE;
 
-      FileScan rfs(smm, rmm, "stars", cond2, status);
+      FileScan rfs(smm, rmm, "stars", status, cond2);
       ASSERT_EQ(status, 0);
 
       NestedLoopJoin fs("bw", "plays", &lfs, &rfs, status);

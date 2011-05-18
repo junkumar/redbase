@@ -90,7 +90,7 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     command << "echo \"drop table in;\" | ./redbase " 
             << dbname;
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_NE(rc, 0);
 
     command.str("");
     command << "echo \"create table in(in i, fl f);\" | ./redbase " 
@@ -109,7 +109,7 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     command << "echo \"drop index in(in);\" | ./redbase " 
             << dbname;
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_NE(rc, 0);
 
     command.str("");
     command << "echo \"create index in(in);\" | ./redbase " 
@@ -128,7 +128,7 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     command << "echo \"create index in(fl);\" | ./redbase " 
             << dbname;
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_NE(rc, 0);
 
     command.str("");
     command << "ls  " 
@@ -304,9 +304,7 @@ TEST_F(SM_ManagerTest, loadafter_testdir) {
     ASSERT_EQ(rc, 0);
     if (chdir("..") < 0) {
       cerr << " chdir error to ..\n";  
-    }
-
-    
+    }    
 }
 
 TEST_F(SM_ManagerTest, loadbefore_testdir) {
@@ -385,8 +383,9 @@ TEST_F(SM_ManagerTest, loadbefore_testdir) {
     ASSERT_EQ(5, ns);
     (rc=fs.CloseScan());
     ASSERT_EQ(rc, 0);
-
-    
+    if (chdir("..") < 0) {
+      cerr << " chdir error to ..\n";  
+    }    
 }
 
 TEST_F(SM_ManagerTest, SemCheck) {
