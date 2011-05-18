@@ -79,6 +79,24 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc >> 8, 10);
 
     command.str("");
+    command << "echo \"queryplans on;update soaps set rating = 4.1 where soapid = 133;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 1);
+
+    command.str("");
+    command << "echo \"queryplans on;update soaps set soapid = 132 where soapid = 133;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 1);
+
+    command.str("");
+    command << "echo \"queryplans on;update soaps set soapid = 133 where soapid = 132;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 1);
+
+    command.str("");
     command << "echo \"queryplans on;delete from soaps where soapid = 133;\" | ./redbase " 
             << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
@@ -99,6 +117,12 @@ TEST_F(QL_ManagerTest, Cons) {
     command.str("");
     command << "echo \"print soaps;\" | ./redbase "
             << dbname << " | ./counter.pl " ;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 3);
+
+    command.str("");
+    command << "echo \"queryplans on;update soaps set rating = 1.111;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 3);
 

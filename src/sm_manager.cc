@@ -464,6 +464,122 @@ RC SM_Manager::DropIndex(const char *relName,
   return (0);
 }
 
+RC SM_Manager::DropIndexFromAttrCatAlone(const char *relName,
+                                         const char *attrName)
+{
+  RC invalid = IsValid(); if(invalid) return invalid;
+
+  cerr << "attrName " << attrName << " early in DropIndexFromAttrCatAlone\n";
+
+  if(relName == NULL || attrName == NULL) {
+    return SM_BADTABLE;
+  }
+
+
+
+  RM_FileScan rfs;
+  RM_Record rec;
+  DataAttrInfo * data;
+  RC rc;
+  if ((rc = rfs.OpenScan(attrfh,
+                         STRING,
+                         MAXNAME+1,
+                         offsetof(DataAttrInfo, relName),
+                         EQ_OP,
+                         (void*) relName))) 
+    return (rc);
+
+  bool attrFound = false;
+  while (rc!=RM_EOF) {
+    rc = rfs.GetNextRec(rec);
+
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      rec.GetData((char*&)data);
+      cerr << "data->attrName " << data->attrName << " found in DropIndexFromAttrCatAlone\n";
+        
+      if(strcmp(data->attrName, attrName) == 0) {
+        cerr << "attrName " << attrName << " found in DropIndexFromAttrCatAlone\n";
+        data->indexNo = -1;
+        attrFound = true;
+        break;
+      }
+    }
+  }
+
+  if ((rc = rfs.CloseScan()))
+    return (rc);
+
+  if(!attrFound)
+    return SM_BADATTR;
+  
+  RID rid;
+  rec.GetRid(rid);
+
+  // update attrcat
+  rec.Set((char*)data, DataAttrInfo::size(), rid);
+  if ((rc = attrfh.UpdateRec(rec)) != 0)
+    return rc;
+  return (0);
+}
+
+RC SM_Manager::ResetIndexFromAttrCatAlone(const char *relName,
+                                          const char *attrName)
+{
+  RC invalid = IsValid(); if(invalid) return invalid;
+
+  if(relName == NULL || attrName == NULL) {
+    return SM_BADTABLE;
+  }
+
+  RM_FileScan rfs;
+  RM_Record rec;
+  DataAttrInfo * data;
+  RC rc;
+  if ((rc = rfs.OpenScan(attrfh,
+                         STRING,
+                         MAXNAME+1,
+                         offsetof(DataAttrInfo, relName),
+                         EQ_OP,
+                         (void*) relName))) 
+    return (rc);
+
+  bool attrFound = false;
+  while (rc!=RM_EOF) {
+    rc = rfs.GetNextRec(rec);
+
+    if (rc!=0 && rc!=RM_EOF)
+      return (rc);
+
+    if (rc!=RM_EOF) {
+      rec.GetData((char*&)data);
+      if(strcmp(data->attrName, attrName) == 0) {
+        data->indexNo = data->offset;
+        attrFound = true;
+        break;
+      }
+    }
+  }
+
+  if ((rc = rfs.CloseScan()))
+    return (rc);
+
+  if(!attrFound)
+    return SM_BADATTR;
+  
+  RID rid;
+  rec.GetRid(rid);
+
+  // update attrcat
+  rec.Set((char*)data, DataAttrInfo::size(), rid);
+  if ((rc = attrfh.UpdateRec(rec)) != 0)
+    return rc;
+  return (0);
+}
+
 // Load a single record in the buf into the table relName
 RC SM_Manager::LoadRecord(const char *relName,
                           int buflen,
@@ -919,6 +1035,16 @@ RC SM_Manager::GetFromTable(const char *relName,
 
   return 0;
 }
+
+bool SM_Manager::IsAttrIndexed(const char* relName, const char* attrName) const {
+  RC invalid = IsValid(); if(invalid) return invalid;
+  DataAttrInfo a;
+  RID rid;
+  RC rc = GetAttrFromCat(relName, attrName, a, rid);
+  
+  return a.indexNo != -1 ? true : false;
+}
+
 
 RC SM_Manager::SemCheck(const char* relName) const {
   RC invalid = IsValid(); if(invalid) return invalid;

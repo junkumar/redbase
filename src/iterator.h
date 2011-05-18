@@ -53,6 +53,18 @@ class Tuple {
     p = (data+attrOffset);
   }
 
+  void Set(int attrOffset, void* p) {
+    assert(attrs != NULL && p != NULL);
+    int attrLength = 0;
+    for (int i = 0; i < count; i++) {
+      if(attrs[i].offset == attrOffset) {
+        attrLength = attrs[i].attrLength;
+      }
+    }
+    memcpy(data+attrOffset, p, attrLength);
+  }
+
+
   void Get(const char* attrName, int& intAttr) const {
     assert(attrs != NULL);
     for (int i = 0; i < count; i++) {

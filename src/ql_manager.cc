@@ -228,6 +228,11 @@ RC QL_Manager::Insert(const char *relName,
   rc = smm.LoadRecord(relName, size, buf);
   if (rc != 0) return rc;
 
+  Printer p(attr, attrCount);
+  p.PrintHeader(cout);
+  p.Print(cout, buf);
+  p.PrintFooter(cout);
+
   delete [] attr;
   delete [] buf;
   int i;
@@ -370,7 +375,7 @@ RC QL_Manager::Delete(const char *relName_,
 // Update from the relName all tuples that satisfy conditions
 //
 RC QL_Manager::Update(const char *relName_,
-                      const RelAttr &updAttr,
+                      const RelAttr &updAttr_,
                       const int bIsValue,
                       const RelAttr &rhsRelAttr,
                       const Value &rhsValue,
@@ -389,14 +394,14 @@ RC QL_Manager::Update(const char *relName_,
     conditions[i] = conditions_[i];
   }
 
-  RelAttr ra;
-  ra.relName = relName;
-  ra.attrName = updAttr.attrName;
-  rc = smm.SemCheck(ra);
+  RelAttr updAttr;
+  updAttr.relName = relName;
+  updAttr.attrName = updAttr_.attrName;
+  rc = smm.SemCheck(updAttr);
   if (rc != 0) return rc;
 
   Condition cond;
-  cond.lhsAttr = ra;
+  cond.lhsAttr = updAttr;
   cond.bRhsIsAttr = (bIsValue == TRUE ? FALSE : TRUE);
   cond.rhsAttr.attrName = rhsRelAttr.attrName;
   cond.rhsAttr.relName = relName;
@@ -405,8 +410,8 @@ RC QL_Manager::Update(const char *relName_,
   cond.rhsValue.data = rhsValue.data;
 
   if (bIsValue != TRUE) {
-    ra.attrName = rhsRelAttr.attrName;
-    rc = smm.SemCheck(ra);
+    updAttr.attrName = rhsRelAttr.attrName;
+    rc = smm.SemCheck(updAttr);
     if (rc != 0) return rc;
   }
 
@@ -441,6 +446,104 @@ RC QL_Manager::Update(const char *relName_,
     rc = smm.SemCheck(conditions[i]);
     if (rc != 0) return rc;
   }
+
+  Iterator* it;
+  // handle halloween problem by not choosing indexscan on an attr when the attr
+  // is the one being updated.
+  if(smm.IsAttrIndexed(updAttr.relName, updAttr.attrName)) {
+    // temporarily make attr unindexed
+    rc = smm.DropIndexFromAttrCatAlone(updAttr.relName, updAttr.attrName);
+    if (rc != 0) return rc;
+
+    it = GetLeafIterator(relName, nConditions, conditions);
+
+    rc = smm.ResetIndexFromAttrCatAlone(updAttr.relName, updAttr.attrName);
+    if (rc != 0) return rc;
+  } else {
+    it = GetLeafIterator(relName, nConditions, conditions);
+  }
+
+  if(bQueryPlans == TRUE)
+    cout << "\n" << it->Explain() << "\n";
+
+  Tuple t = it->GetTuple();
+  rc = it->Open();
+  if (rc != 0) return rc;
+
+  void * val = NULL;
+  if(bIsValue == TRUE)
+    val = rhsValue.data;
+  else
+    t.Get(rhsRelAttr.attrName, val);
+
+  Printer p(t);
+  p.PrintHeader(cout);
+
+  RM_FileHandle fh;
+  rc =	rmm.OpenFile(relName, fh);
+  if (rc != 0) return rc;
+
+  int attrCount = -1;
+  int updAttrOffset = -1;
+  DataAttrInfo * attributes;
+  rc = smm.GetFromTable(relName, attrCount, attributes);
+  if(rc != 0) return rc;
+  IX_IndexHandle * indexes = new IX_IndexHandle[attrCount];
+  for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1 && 
+       strcmp(attributes[i].attrName, updAttr.attrName) == 0) {
+      ixm.OpenIndex(relName, attributes[i].indexNo, indexes[i]);
+    }
+    if(strcmp(attributes[i].attrName, updAttr.attrName) == 0) {
+      updAttrOffset = attributes[i].offset;
+    }
+  }
+
+  while(1) {
+    rc = it->GetNext(t);
+    if(rc ==  it->Eof())
+      break;
+    if (rc != 0) return rc;
+
+    RM_Record rec;
+    
+    for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1 && 
+       strcmp(attributes[i].attrName, updAttr.attrName) == 0) {
+        void * pKey;
+        t.Get(attributes[i].offset, pKey);
+        rc = indexes[i].DeleteEntry(pKey, t.GetRid());
+        if (rc != 0) return rc;
+        rc = indexes[i].InsertEntry(val, t.GetRid());
+        if (rc != 0) return rc;
+      }
+    }
+
+    t.Set(updAttrOffset, val);
+    char * newbuf;
+    t.GetData(newbuf);
+    rec.Set(newbuf, it->TupleLength(), t.GetRid());
+    rc = fh.UpdateRec(rec);
+    if (rc != 0) return rc;
+
+    p.Print(cout, t);
+  }
+
+  p.PrintFooter(cout);
+  rc = it->Close();
+  if (rc != 0) return rc;
+
+  for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1 && 
+       strcmp(attributes[i].attrName, updAttr.attrName) == 0) {
+      RC rc = ixm.CloseIndex(indexes[i]);
+      if(rc != 0 ) return rc;
+    }
+  }
+  delete [] indexes;
+
+  rc =	rmm.CloseFile(fh);
+  if (rc != 0) return rc;
 
   int i;
 

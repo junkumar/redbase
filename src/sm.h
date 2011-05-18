@@ -89,6 +89,14 @@ class SM_Manager {
                 int buflen,
                 const char buf[]);
 
+  bool IsAttrIndexed(const char* relName, const char* attrName) const;
+                                                                
+  // temp operations on attrcat to make index appear to be missing
+  RC DropIndexFromAttrCatAlone(const char *relName,
+                               const char *attrName);
+  RC ResetIndexFromAttrCatAlone(const char *relName,
+                                const char *attrName);
+
  private:
   RM_Manager& rmm;
   IX_Manager& ixm;

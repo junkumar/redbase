@@ -30,6 +30,10 @@ Overall Design:
 
 Update
 - could just be delete + insert - not efficient - two passes over everything
+
+  // handle halloween problem by not choosing indexscan on an attr when the attr
+  // is the one being updated.
+
 ---------------------------------------
 
 Key Data Structures:
