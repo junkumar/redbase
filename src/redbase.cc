@@ -33,11 +33,11 @@ int main(int argc, char *argv[])
   // that was executed, and the second should be the name of the
   // database.
   if (argc != 2) {
-    cerr << "Usage: " << argv[0] << " dbname \n";
+    cerr << "Usage: " << argv[0] << " dbname\n";
     exit(1);
   }
   char *dbname = argv[1];
-    
+
   // initialize RedBase components
   PF_Manager pfm;
   RM_Manager rmm(pfm);

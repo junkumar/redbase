@@ -295,6 +295,63 @@ RC QL_Manager::Delete(const char *relName_,
   if(bQueryPlans == TRUE)
     cout << "\n" << it->Explain() << "\n";
 
+  Tuple t = it->GetTuple();
+  rc = it->Open();
+  if (rc != 0) return rc;
+
+  Printer p(t);
+  p.PrintHeader(cout);
+
+  RM_FileHandle fh;
+  rc =	rmm.OpenFile(relName, fh);
+  if (rc != 0) return rc;
+
+  int attrCount = -1;
+  DataAttrInfo * attributes;
+  rc = smm.GetFromTable(relName, attrCount, attributes);
+  if(rc != 0) return rc;
+  IX_IndexHandle * indexes = new IX_IndexHandle[attrCount];
+  for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1) {
+      ixm.OpenIndex(relName, attributes[i].indexNo, indexes[i]);
+    }
+  }
+
+  while(1) {
+    rc = it->GetNext(t);
+    if(rc ==  it->Eof())
+      break;
+    if (rc != 0) return rc;
+
+    rc = fh.DeleteRec(t.GetRid());
+    if (rc != 0) return rc;
+
+    for (int i = 0; i < attrCount; i++) {
+      if(attributes[i].indexNo != -1) {
+        void * pKey;
+        t.Get(attributes[i].offset, pKey);
+        indexes[i].DeleteEntry(pKey, t.GetRid());
+      }
+    }
+
+    p.Print(cout, t);
+  }
+
+  p.PrintFooter(cout);
+  rc = it->Close();
+  if (rc != 0) return rc;
+
+  for (int i = 0; i < attrCount; i++) {
+    if(attributes[i].indexNo != -1) {
+      RC rc = ixm.CloseIndex(indexes[i]);
+      if(rc != 0 ) return rc;
+    }
+  }
+  delete [] indexes;
+
+  rc =	rmm.CloseFile(fh);
+  if (rc != 0) return rc;
+ 
   int i;
 
   cout << "Delete\n";

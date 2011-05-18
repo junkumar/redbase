@@ -194,6 +194,7 @@ RC IndexScan::GetNext(Tuple &t)
 
     if(recordIn) {
       t.Set(buf);
+      t.SetRid(rid);
       found = true;
     }
   } // while

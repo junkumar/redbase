@@ -7,6 +7,7 @@
 
 #include "redbase.h"
 #include "data_attr_info.h"
+#include "rm_rid.h"
 #include <sstream>
 
 using namespace std;
@@ -16,10 +17,10 @@ class DataAttrInfo;
 // abstraction to hide details of offsets and type conversions
 class Tuple {
  public:
-  Tuple(int ct, int length_): count(ct), length(length_) {
+ Tuple(int ct, int length_): count(ct), length(length_), rid(-1, -1) {
     data = new char[length];
   }
-  Tuple(const Tuple& rhs): count(rhs.count), length(rhs.length) {
+ Tuple(const Tuple& rhs): count(rhs.count), length(rhs.length), rid(-1, -1) {
     data = new char[length];
     memcpy(data, rhs.data, length);
     SetAttr(rhs.GetAttributes());
@@ -45,6 +46,11 @@ class Tuple {
         return;
       }
     }
+  }
+
+  void Get(int attrOffset, void*& p) const {
+    assert(attrs != NULL);
+    p = (data+attrOffset);
   }
 
   void Get(const char* attrName, int& intAttr) const {
@@ -76,11 +82,16 @@ class Tuple {
       }
     }
   }
+  // only useful for leaf level iterators
+  RID GetRid() const { return rid; }
+  void SetRid(RID r) { rid = r; }
+
  private:
   char * data;
   DataAttrInfo * attrs;
   int count;
   int length;
+  RID rid;
 };
 
 namespace {
@@ -126,7 +137,11 @@ class Iterator {
   // return must be good enough to use with Tuple::SetAttr()
   virtual DataAttrInfo* GetAttr() const { return attrs; }
   virtual int GetAttrCount() const { return attrCount; }
-
+  virtual Tuple GetTuple() const { 
+    Tuple t(GetAttrCount(), TupleLength());
+    t.SetAttr(this->GetAttr());
+    return t;
+  }
   virtual int TupleLength() const {
     int l = 0;
     DataAttrInfo* a = GetAttr();
@@ -136,6 +151,7 @@ class Iterator {
   }
   
   virtual string Explain() const { return explain.str(); }
+
 
  protected:
   bool bIterOpen;

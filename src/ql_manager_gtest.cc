@@ -60,6 +60,12 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_NE(rc, 0);
 
     command.str("");
+    command << "echo \"print soaps;\" | ./redbase "
+            << dbname << " | ./counter.pl " ;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 1);
+
+    command.str("");
     command << "echo \"load soaps(\\\"../soaps.data\\\");\" | ./redbase " 
             << dbname;
     cerr << command.str();
@@ -67,28 +73,46 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     command.str("");
-    command << "echo \"queryplans on;delete from soaps where soapid = 133;\" | ./redbase " 
-            << dbname;
+    command << "echo \"print soaps;\" | ./redbase "
+            << dbname << " | ./counter.pl " ;
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_EQ(rc >> 8, 10);
+
+    command.str("");
+    command << "echo \"queryplans on;delete from soaps where soapid = 133;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 1);
     
     command.str("");
     command << "echo \"queryplans on;delete from soaps where network = \\\"CBS\\\" and rating > 1.0;\" | ./redbase " 
-            << dbname;
+            << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_EQ(rc >> 8, 3);
 
     command.str("");
     command << "echo \"queryplans on;delete from soaps where soapid > 3 and rating > 1.0;\" | ./redbase " 
-            << dbname;
+            << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_EQ(rc >> 8, 3);
+
+    command.str("");
+    command << "echo \"print soaps;\" | ./redbase "
+            << dbname << " | ./counter.pl " ;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 3);
 
     command.str("");
     command << "echo \"queryplans on;delete from soaps;\" | ./redbase " 
-            << dbname;
+            << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
-    ASSERT_EQ(rc, 0);
+    ASSERT_EQ(rc >> 8, 3);
+
+    command.str("");
+    command << "echo \"print soaps;\" | ./redbase "
+            << dbname << " | ./counter.pl " ;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 0);
 
     command.str("");
     command << "echo \"queryplans on;delete from soaps where sname = \\\"The Good Wife\\\";\" | ./redbase " 

@@ -377,7 +377,7 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
     // deletion done
     return 0;
   } else {
-    cerr << "root underflow" << endl;
+    // cerr << "root underflow" << endl;
     
     if(hdr.height == 1) { // root is also leaf
       return 0; //leave empty leaf-root around.

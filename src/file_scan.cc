@@ -121,6 +121,7 @@ RC FileScan::GetNext(Tuple &t)
     return RM_FNOTOPEN;
   
   RM_Record rec;
+  RID recrid;
   bool found = false;
   RC rc;
 
@@ -130,6 +131,7 @@ RC FileScan::GetNext(Tuple &t)
 
     char * buf;
     rec.GetData(buf);
+    rec.GetRid(recrid);
 
     bool recordIn = true;
     for (int i = 0; i < nOFilters; i++) {
@@ -163,9 +165,11 @@ RC FileScan::GetNext(Tuple &t)
 
     if(recordIn) {
       t.Set(buf);
+      t.SetRid(recrid);
       found = true;
     }
   } // while
 
   return rc;
 }
+

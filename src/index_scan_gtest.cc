@@ -96,14 +96,8 @@ TEST_F(IndexScanTest, Cons) {
       if(rc ==  fs.Eof())
         break;
       EXPECT_EQ(rc, 0);
-      int in = -1;
-      float out = -1;
-      char bw[3]; bw[2] = 0;
-      t.Get("in", in);
-      t.Get("out", out);
-      t.Get("bw", bw);
 
-      cerr << in << "\t" << out << "\t" << bw << endl;
+      cerr << t << "\t" << t.GetRid() << endl;
       ns++;
     }
     
