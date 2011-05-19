@@ -57,7 +57,7 @@ QL_SOURCES     = statistics.cc ql_manager.cc ql_error.cc file_scan.cc \
 UTILS_SOURCES  = dbcreate.cc dbdestroy.cc redbase.cc
 PARSER_SOURCES = scan.c parse.c nodes.c interp.c
 TESTER_SOURCES = pf_test1.cc pf_test2.cc pf_test3.cc rm_test.cc \
-	         ix_test.cc parser_test.cc
+	         ix_test.cc parser_test.cc ix_testkpg_2.cc
 GTEST_SOURCES  = $(GTEST_ROOT)/src/gtest-all.cc
 
 PF_OBJECTS     = $(addprefix $(BUILD_DIR), $(PF_SOURCES:.cc=.o))
@@ -97,7 +97,7 @@ all: $(LIBRARIES) $(UTILS) tags gtest
 
 clean: tags-clean
 	rm -f $(BUILD_DIR)*.o $(BUILD_DIR)*.d y.output y.tab.h \
-	parse.c	scan.c test.out \
+	parse.c	scan.c test.out testrel.* \
 	$(LIBRARIES) $(EXECUTABLES) gtest $(BUILD_DIR)*.d.*
 
 testers: all $(TESTS)

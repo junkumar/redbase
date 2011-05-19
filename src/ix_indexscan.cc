@@ -14,6 +14,8 @@ IX_IndexScan::IX_IndexScan(): bOpen(false), desc(false), eof(false), lastNode(NU
   pixh = NULL;
   currNode = NULL;
   currPos = -1;
+  currKey = NULL;
+  currRid = RID(-1, -1);
   c = EQ_OP;
   value = NULL;
 }
@@ -66,6 +68,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
                        value_,
                        pinHint);
 
+
   c = compOp;
   if(value_ != NULL) {
     value = value_; // TODO deep copy ?
@@ -90,6 +93,8 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
   if(eof)
     return IX_EOF;
 
+  bool currDeleted = false;
+
   // first time in
   if(currNode == NULL && currPos == -1) {
     // pixh->Print(cerr);
@@ -100,51 +105,94 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
       currNode = pixh->FetchNode(pixh->FindLargestLeaf()->GetPageRID());
       currPos = currNode->GetNumKeys(); // 1 past
     }
+    currDeleted = false;
+  } else { // check if the entry at curr was deleted
+    if (currKey != NULL && currNode != NULL && currPos != -1) {
+      char* key = NULL;
+      int ret = currNode->GetKey(currPos, (void*&)key);
+      if(ret == -1) 
+        return IX_PF; // TODO better error
+      
+      if(currNode->CmpKey(key, currKey) != 0) {
+        currDeleted = true;          
+      } else {
+        if(!(currRid == currNode->GetAddr(currPos)))
+          currDeleted = true;
+      }
+    }
   }
-  
+
   for( ;
        (currNode != NULL);
        /* see end of loop */ ) 
   {
-    // cerr << "GetNextEntry j's RID was " << j->GetPageRID() << endl;
+    // cerr << "GetNextEntry currPos was " << currPos << endl;
     int i = -1;
+
+
     if(!desc) {
       // first time in for loop ?
-      i = currPos+1;
+      if(!currDeleted) {
+        i = currPos+1;
+      } else {
+        i = currPos;
+        // cerr << "GetNextEntry deletion at curr ! Staying at pos " 
+        //      << currPos << std::endl;
+        currDeleted = false;
+      }
 
       for (; i < currNode->GetNumKeys(); i++) 
       {
-        currPos = i; // save Node in object state for later.
-
         char* key = NULL;
         int ret = currNode->GetKey(i, (void*&)key);
         numScanned++;
         if(ret == -1) 
           return IX_PF; // TODO better error
-        //std::cerr << "GetNextEntry curr entry " << *(int*)key << std::endl;
+        // std::cerr << "GetNextEntry curr entry " << *(int*)key << std::endl;
+
+        // save Node in object state for later.
+        currPos = i;
+        if (currKey == NULL)
+          currKey = (void*) new char[pixh->GetAttrLength()];
+        memcpy(currKey, key, pixh->GetAttrLength());
+        currRid = currNode->GetAddr(i);
 
         if(pred->eval(key, pred->initOp())) {
-          // std::cerr << "GetNextRec pred match for RID " << current << std::endl;
           k = key;
           rid = currNode->GetAddr(i);
+          // std::cerr << "GetNextRec pred match for entry " << *(int*)key << " " 
+          //           << rid << std::endl;
           return 0;
         }
       }
     } else { // Descending
       // first time in for loop ?
-      i = currPos-1;
+      if(!currDeleted) {
+        i = currPos-1;
+      } else {
+        i = currPos;
+        // std::cerr << "GetNextEntry deletion at curr ! Staying at pos " 
+        //           << currPos << std::endl;
+        currDeleted = false;
+      }
 
       for (; i >= 0; i--) 
       {
-        currPos = i; // save Node in object state for later.
-
         // std::cerr << "GetNextRec ret pos " << currPos << std::endl;
         char* key = NULL;
         int ret = currNode->GetKey(i, (void*&)key);
         numScanned++;
         if(ret == -1) 
           return IX_PF; // TODO better error
-      
+        // std::cerr << "GetNextEntry curr entry " << *(int*)key << std::endl;
+
+        // save Node in object state for later.
+        currPos = i;
+        if (currKey == NULL)
+          currKey = (void*) new char[pixh->GetAttrLength()];
+        memcpy(currKey, key, pixh->GetAttrLength());
+        currRid = currNode->GetAddr(i);
+
         if(pred->eval(key, pred->initOp())) {
           // std::cerr << "GetNextRec pred match for RID " << current << std::endl;
           k = key;
@@ -184,11 +232,16 @@ RC IX_IndexScan::CloseScan()
     return IX_FNOTOPEN;
   assert(pixh != NULL || pred != NULL || bOpen);
   bOpen = false;
-  if (pred != NULL)
+  if(pred != NULL)
     delete pred;
   pred = NULL;
   currNode = NULL;
   currPos = -1;
+  if(currKey != NULL) {
+    delete [] currKey;
+    currKey = NULL;
+  }
+  currRid = RID(-1, -1);
   lastNode = NULL;
   eof = false;
   return 0;
@@ -220,7 +273,7 @@ RC IX_IndexScan::OpOptimize()
   RID r(-1, -1);
 
   if(currNode != NULL) delete currNode;
-  currNode = pixh->FetchNode(pixh->FindLeaf(value)->GetPageRID().Page());
+  currNode = pixh->FetchNode(pixh->FindLeafForceRight(value)->GetPageRID().Page());
   currPos = currNode->FindKey((const void*&)value);
 
   // find rightmost version of a value and go left from there.
@@ -287,5 +340,12 @@ RC IX_IndexScan::OpOptimize()
       currPos = -1;
     }
   }
+
+  int first = -1;
+  if(currNode != NULL) first = currNode->GetPageRID().Page();
+  // cerr << "first is " << first << endl;
+  int last = -1;
+  if(lastNode != NULL) last = lastNode->GetPageRID().Page();
+  // cerr << "last  is " << last << endl;
   return 0;
 }

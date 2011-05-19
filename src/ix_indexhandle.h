@@ -79,6 +79,8 @@ class IX_IndexHandle {
   BtreeNode* DupScanLeftFind(BtreeNode* right,
                              void *pData,
                              const RID& rid);
+  // hack for indexscan::OpOptimize
+  BtreeNode* FindLeafForceRight(const void* pData);
 
   BtreeNode* FetchNode(RID r) const;
   BtreeNode* FetchNode(PageNum p) const;

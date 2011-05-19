@@ -7,6 +7,7 @@ src/test2
 src/test.out
 src/pf_test*
 src/rm_testTA*
+src/ix_testkpg_2*
 src/rm_test
 src/ix_test
 src/parser_test
@@ -16,5 +17,7 @@ src/y.tab.h
 src/gtest
 src/TAGS
 src/submit*
+src/qlfile
+src/gtestfile
 build/
 lib/

@@ -1,4 +1,5 @@
 #include "ix_indexhandle.h"
+#include "rm_error.h"
 
 IX_IndexHandle::IX_IndexHandle()
   :bFileOpen(false), pfHandle(NULL), bHdrChanged(false)
@@ -586,7 +587,10 @@ BtreeNode* IX_IndexHandle::FindSmallestLeaf()
     // start with a fresh path
     if(path[i] != NULL) {
       RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
-      if (rc != 0) return NULL;
+      if(rc < 0) {
+        PrintErrorAll(rc);
+      }
+      if (rc < 0) return NULL;
       delete path[i];
       path[i] = NULL;
     }
@@ -690,6 +694,9 @@ BtreeNode* IX_IndexHandle::FindLeaf(const void *pData)
 
     pathP[i-1] = pos;
   }
+
+
+
   return path[hdr.height-1];
 }
 
@@ -707,6 +714,9 @@ BtreeNode* IX_IndexHandle::FetchNode(RID r) const
   if(r.Page() < 0) return NULL;
   PF_PageHandle ph;
   RC rc = GetThisPage(r.Page(), ph);
+  if(rc != 0) { 
+    PrintErrorAll(rc);
+  }
   if(rc!=0) return NULL;
 
   // rc = pfHandle->MarkDirty(r.Page());
@@ -799,4 +809,52 @@ void IX_IndexHandle::Print(ostream & os, int level, RID r) const {
   if(level == 1 && node->GetRight() == -1)
     os << endl; //blank after rightmost leaf
   if(node!=NULL) delete node;
+}
+
+// hack for indexscan::OpOptimize
+// FindLeaf() does not really return rightmost node that has a key. This happens
+// when there are duplicates that span multiple btree nodes.
+// The strict rightmost guarantee is mainly required for
+// IX_IndexScan::OpOptimize()
+// In terms of usage this method is a drop-in replacement for FindLeaf() and will
+// call FindLeaf() in turn.
+BtreeNode* IX_IndexHandle::FindLeafForceRight(const void* pData)
+{
+  FindLeaf(pData);
+  //see if duplicates for this value exist in the next node to the right and
+  //return that node if true.
+  // have a right node ?
+  if(path[hdr.height-1]->GetRight() != -1) {
+    // cerr << "bingo: dups to the right at leaf " << *(int*)pData << " withR\n";
+
+    // at last position in node ?
+    int pos = path[hdr.height-1]->FindKey(pData);
+    if ( pos != -1 &&
+         pos == path[hdr.height-1]->GetNumKeys() - 1) {
+
+      // cerr << "bingo: dups to the right at leaf " << *(int*)pData << " lastPos\n";
+      // cerr << "bingo: right page at " << path[hdr.height-1]->GetRight() << "\n";
+
+      BtreeNode* r = FetchNode(path[hdr.height-1]->GetRight());
+      if( r != NULL) {
+        // cerr << "bingo: dups to the right at leaf " << *(int*)pData << " nonNUllR\n";
+
+        void* k = NULL;
+        r->GetKey(0, k);
+        if(r->CmpKey(k, pData) == 0) {
+          // cerr << "bingo: dups to the right at leaf " << *(int*)pData << "\n";
+
+          RC rc = pfHandle->UnpinPage(path[hdr.height-1]->GetPageRID().Page());
+          if(rc < 0) {
+            PrintErrorAll(rc);
+          }
+          if (rc < 0) return NULL;
+          delete path[hdr.height-1];
+          path[hdr.height-1] = FetchNode(r->GetPageRID());
+          pathP[hdr.height-2]++;
+        }
+      }
+    }
+  }
+  return path[hdr.height-1];
 }

@@ -53,6 +53,8 @@ class IX_IndexScan {
   IX_IndexHandle* pixh;
   BtreeNode* currNode;
   int currPos;
+  void* currKey; // saved to check for delete on scan
+  RID currRid; // saved to check for delete on scan
   bool bOpen;
   bool desc; // Is scan order ascending(def) or descending ?
   bool eof; // early EOF set by btree analysis - set by OpOpt
