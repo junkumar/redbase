@@ -6,35 +6,36 @@
 #include "ql_error.h"
 #include "sm.h"
 #include <algorithm>
+#include "predicate.h"
+#include "parser.h"
 
 using namespace std;
 
 NestedLoopJoin::
-NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
-               const char * rJoinAttr,   // name of join key - right
-               Iterator *    lhsIt_,      // access for left i/p to join -R
+NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
                Iterator *    rhsIt_,      // access for right i/p to join -S
-               
-               //Cond **outFilter,   // Ptr to the output filter
-               //Cond **rightFilter, // Ptr to filter applied on right i
+               RC& status,
+               int nOutFilters,
+               const Condition outFilters[]
                //FldSpec  * proj_list,
                // int        n_out_flds,
-               RC   & status)
+               )
   :lhsIt(lhsIt_), rhsIt(rhsIt_),
    left(lhsIt->GetAttrCount(), lhsIt->TupleLength()),
-   right(rhsIt->GetAttrCount(), rhsIt->TupleLength())
+   right(rhsIt->GetAttrCount(), rhsIt->TupleLength()),
+   nOFilters(nOutFilters), oFilters(NULL)
 {
   if(lhsIt == NULL || rhsIt == NULL) {
     status = SM_NOSUCHTABLE;
     return;
   }
 
-  if(lJoinAttr == NULL || rJoinAttr == NULL) {
-    status = QL_BADJOINKEY;
-    return;
-  }
+  // if(lJoinAttr == NULL || rJoinAttr == NULL) {
+  //   status = QL_BADJOINKEY;
+  //   return;
+  // }
 
-  attrCount = lhsIt->GetAttrCount() + rhsIt->GetAttrCount() - 1;
+  attrCount = lhsIt->GetAttrCount() + rhsIt->GetAttrCount();
   assert(attrCount > 0);
 
   attrs = new DataAttrInfo[attrCount];
@@ -42,40 +43,27 @@ NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
   std::copy(lhsIt->GetAttr(), lhsIt->GetAttr() + lhsIt->GetAttrCount(),
             attrs);
 
-  rKey.offset = -1;
-  lKey.offset = -1;
+  // rKey.offset = -1;
+  // lKey.offset = -1;
 
   DataAttrInfo * rattrs = rhsIt->GetAttr();
-  bool jKeyPassed = false;
   for(int i = 0, j = lhsIt->GetAttrCount(); i < rhsIt->GetAttrCount(); i++) {
-    if(strcmp(rattrs[i].attrName, rJoinAttr) == 0) {
-      rKey = rattrs[i];
-      jKeyPassed = true;
-      continue;
-    }
+    // if(strcmp(rattrs[i].attrName, rJoinAttr) == 0) {
+    //   // rKey = rattrs[i];
+    //   continue;
+    // }
     attrs[j] = rattrs[i];
     attrs[j].offset += lhsIt->TupleLength();
-    if(jKeyPassed)
-      attrs[j].offset -= rKey.attrLength;
     j++;
   }
   
   DataAttrInfo * lattrs = lhsIt->GetAttr();
   for(int i = 0; i < lhsIt->GetAttrCount(); i++) {
-    if(strcmp(lattrs[i].attrName, lJoinAttr) == 0) {
-      lKey = lattrs[i];
-    }
+    // if(strcmp(lattrs[i].attrName, lJoinAttr) == 0) {
+    //   // lKey = lattrs[i];
+    // }
   }
 
-  if(rKey.offset == -1 || lKey.offset == -1) {
-    status = QL_BADJOINKEY;
-    return;
-  }
-
-  if(rKey.attrType != lKey.attrType) {
-    status = QL_JOINKEYTYPEMISMATCH;
-    return;
-  }
 
   char * buf = new char[TupleLength()];
   memset(buf, 0, TupleLength());
@@ -84,6 +72,72 @@ NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
   right.Set(buf);
   right.SetAttr(rhsIt->GetAttr());
   delete buf;
+
+  oFilters = new Condition[nOFilters];
+  lKeys = new DataAttrInfo[nOFilters];
+  rKeys = new DataAttrInfo[nOFilters];
+
+  for(int i = 0; i < nOFilters; i++) {
+    oFilters[i] = outFilters[i]; // shallow copy
+    
+    // cerr << oFilters[i] << endl;
+    
+    bool lfound = false;
+    bool rfound = false;
+
+    for(int k = 0; k < lhsIt->GetAttrCount(); k++) {
+      if(strcmp(lattrs[k].attrName, oFilters[i].lhsAttr.attrName) == 0) {
+        lKeys[i] = lattrs[k];
+        lfound = true;
+        continue;
+      }
+    }
+
+    for(int k = 0; k < rhsIt->GetAttrCount(); k++) {
+      if(strcmp(rattrs[k].attrName, oFilters[i].rhsAttr.attrName) == 0) {
+        rKeys[i] = rattrs[k];
+        rfound = true;
+        continue;
+      }
+    }
+
+    if(!lfound || !rfound) {
+      status = QL_BADJOINKEY;
+      return;
+    }
+
+    if(rKeys[i].offset == -1 || lKeys[i].offset == -1) {
+      status = QL_BADJOINKEY;
+      return;
+    }
+    
+    // cerr << "right " << rKeys[i].offset << endl;
+    // cerr << "left  " << lKeys[i].offset << endl;
+    // cerr << "right " << rKeys[i].attrType << endl;
+    // cerr << "left  " << lKeys[i].attrType << endl;
+    // cerr << "right relName " << rKeys[i].relName << endl;
+    // cerr << "left  relName " << lKeys[i].relName << endl;
+
+    // cerr << "right " << rKeys[i].attrName << " " << outFilters[i].rhsAttr.attrName
+    //      << endl;
+    // cerr << "left  " << lKeys[i].attrName << " " << outFilters[i].lhsAttr.attrName
+    //      << endl;
+
+    if(rKeys[i].attrType != lKeys[i].attrType) {
+      status = QL_JOINKEYTYPEMISMATCH;
+      return;
+    }
+
+  }
+   
+  explain << "NestedLoopJoin\n";
+  if(nOFilters > 0) {
+    explain << "   nConditions = " << nOFilters << "\n";
+    for (int i = 0; i < nOutFilters; i++)
+      explain << "   conditions[" << i << "]:" << oFilters[i] << "\n";
+    explain << "----" << lhsIt->Explain();
+    explain << "----" << rhsIt->Explain();
+  }
 
   status = 0;
 }
@@ -96,6 +150,8 @@ RC NestedLoopJoin::IsValid()
 NestedLoopJoin::~NestedLoopJoin()
 {
   delete [] attrs;
+  if(oFilters != NULL)
+    delete [] oFilters;
 }
 
 RC NestedLoopJoin::Open()
@@ -131,6 +187,7 @@ RC NestedLoopJoin::Close()
   memset(buf, 0, TupleLength());
   left.Set(buf);
   right.Set(buf);
+  delete [] buf;
 
   bIterOpen = false;
   return 0;
@@ -144,9 +201,10 @@ RC NestedLoopJoin::GetNext(Tuple &t)
     return QL_FNOTOPEN;
   
   bool joined = false;
-  
+  RC rc;
+
   while(!joined) {
-    RC rc = rhsIt->GetNext(right);
+    rc = rhsIt->GetNext(right);
     if (rc == rhsIt->Eof()) { // end of rhs - start again
       if((rc = rhsIt->Close()))
         return rc;
@@ -158,16 +216,36 @@ RC NestedLoopJoin::GetNext(Tuple &t)
       rc = rhsIt->GetNext(right);
     }
 
-    // check for join
-    void * a = NULL;
-    void * b = NULL;
-    left.Get(lKey.attrName, a);
-    right.Get(rKey.attrName, b);
+    bool recordIn = true;
+    for (int i = 0; i < nOFilters; i++) {
+      Condition cond = oFilters[i];
+      DataAttrInfo condAttr;
+      RID r;  
 
-    // cerr << left << " - " << right << endl;
+      Predicate p(lKeys[i].attrType,
+                  lKeys[i].attrLength,
+                  lKeys[i].offset,
+                  cond.op,
+                  NULL,
+                  NO_HINT);
 
-    if(CmpKey(lKey.attrType, lKey.attrLength, a, b) == 0) {
-      joined = true;
+      // check for join
+      void * b = NULL;
+      right.Get(rKeys[i].attrName, b);
+
+      const char * abuf;
+      left.GetData(abuf);
+      // cerr << left << " - " << right << endl;
+
+      if(p.eval(abuf, (char*)b, cond.op)) {
+        recordIn = true;
+      } else {
+        recordIn = false;
+        break;
+      }
+    } // for
+
+    if(recordIn) {
       char * buf = new char[TupleLength()];
       memset(buf, 0, TupleLength());
 
@@ -180,39 +258,13 @@ RC NestedLoopJoin::GetNext(Tuple &t)
 
       memcpy(buf + left.GetLength(), 
              rbuf,
-             rKey.offset);
-      memcpy(buf + left.GetLength() + rKey.offset, 
-             rbuf + rKey.offset + rKey.attrLength,
-             right.GetLength() - rKey.attrLength - rKey.offset);
+             right.GetLength());
+
       t.Set(buf);
       delete buf;
-      return 0;
+      joined = true;
     }
   } // while
-}
 
-int NestedLoopJoin::CmpKey(AttrType attrType, int attrLength, 
-                           const void* a,
-                           const void* b) const
-{
-  if (attrType == STRING) {
-    return memcmp(a, b, attrLength);
-  } 
-
-  if (attrType == FLOAT) {
-    typedef float MyType;
-    if ( *(MyType*)a >  *(MyType*)b ) return 1;
-    if ( *(MyType*)a == *(MyType*)b ) return 0;
-    if ( *(MyType*)a <  *(MyType*)b ) return -1;
-  }
-
-  if (attrType == INT) {
-    typedef int MyType;
-    if ( *(MyType*)a >  *(MyType*)b ) return 1;
-    if ( *(MyType*)a == *(MyType*)b ) return 0;
-    if ( *(MyType*)a <  *(MyType*)b ) return -1;
-  }
-
-  assert("should never get here - bad attrtype");
-  return 0; // to satisfy gcc warnings
+  return rc;
 }

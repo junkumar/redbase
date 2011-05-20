@@ -157,6 +157,41 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if (rc != 0) return rc;
   }
 
+  if(nRelations == 2) {
+    
+    Iterator* lfs = GetLeafIterator(relations[0], 0, conditions);
+    Iterator* rfs = GetLeafIterator(relations[1], 0, conditions);
+
+    RC status = -1;
+    NestedLoopJoin fs(lfs, rfs, status, nConditions, conditions);
+    if (status != 0) return status;
+
+    Iterator *it = &fs;
+
+    if(bQueryPlans == TRUE)
+      cout << "\n" << it->Explain() << "\n";
+  
+    Tuple t = it->GetTuple();
+    RC rc = it->Open();
+    if (rc != 0) return rc;
+
+    Printer p(t);
+    p.PrintHeader(cout);
+
+    while(1) {
+      rc = it->GetNext(t);
+      if(rc ==  it->Eof())
+        break;
+      if (rc != 0) return rc;
+
+
+      p.Print(cout, t);
+    }
+
+    p.PrintFooter(cout);
+    rc = it->Close();
+    if (rc != 0) return rc;
+  }
 
   cout << "Select\n";
 

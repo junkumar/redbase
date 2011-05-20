@@ -16,16 +16,17 @@ using namespace std;
 
 class NestedLoopJoin: public Iterator {
  public:
-  NestedLoopJoin(const char * lJoinAttr,   // name of join key - left
-                 const char * rJoinAttr,   // name of join key - right
+  NestedLoopJoin(
                  Iterator *    lhsIt,      // access for left i/p to join -R
                  Iterator *    rhsIt,      // access for right i/p to join -S
-               
-                 //Cond **outFilter,   // Ptr to the output filter
-                 //Cond **rightFilter, // Ptr to filter applied on right i
+                 RC& status,
+                 int nOutFilters = 0,
+                 // join keys are specified
+                 // as conditions. NULL implies cross product
+                 const Condition outFilters[] = NULL  
                  //FldSpec  * proj_list,
                  // int        n_out_flds,
-                 RC   & status);
+                 );
 
   virtual ~NestedLoopJoin();
 
@@ -37,17 +38,14 @@ class NestedLoopJoin: public Iterator {
   virtual RC Eof() const { return QL_EOF; }
 
  private:
-  int CmpKey(AttrType attrType, int attrLength, 
-             const void* a,
-             const void* b) const;
-
- private:
-  DataAttrInfo lKey; // offset of join key in the left iterator
-  DataAttrInfo rKey; // offset of join key in the right iterator
   Iterator* lhsIt;
   Iterator* rhsIt;
   Tuple left;
   Tuple right;
+  int nOFilters;
+  Condition* oFilters; // join keys
+  DataAttrInfo* lKeys; // offset of join key in the left iterator
+  DataAttrInfo* rKeys; // offset of join key in the right iterator
 };
 
 #endif // NESTEDLOOPJOIN_H

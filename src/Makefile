@@ -105,7 +105,9 @@ testers: all $(TESTS)
 test: testers gtest
 #	./pf_test1
 	./rm_test
+	./rm_testTA
 	./ix_test
+	./ix_testkpg_2
 	./gtest
 
 tag tags: 

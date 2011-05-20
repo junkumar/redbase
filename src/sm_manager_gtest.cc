@@ -202,7 +202,7 @@ TEST_F(SM_ManagerTest, CreateDrop) {
     command.str("wc -l data | perl -nle '@a = split /\\s+/; print $a[1]'");
     rc = system (command.str().c_str());
 
-
+    #if 0
     command.str("");
     command << "echo \"load in(\\\"../data.2700\\\");\" | ./redbase " 
             << dbname;
@@ -219,6 +219,7 @@ TEST_F(SM_ManagerTest, CreateDrop) {
 
     command.str("wc -l data.2700 data | grep total | perl -nle '@a = split /\\s+/; print $a[1]'");
     rc = system (command.str().c_str());
+    #endif -- too slow
 
     stringstream command2;
     command2 << "./dbdestroy " << dbname;

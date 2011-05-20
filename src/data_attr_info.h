@@ -11,6 +11,19 @@
 #include "redbase.h"      // For definition of MAXNAME
 #include "catalog.h"
 
+/* ostream &operator<<(ostream &s, const DataAttrInfo &ai) */
+/* { */
+/*    return */
+/*       s << " relName=" << ai.relName */
+/*         << " attrName=" << ai.attrName */
+/*         << " attrType=" <<  */
+/*      (ai.attrType == INT ? "INT" : */
+/*       ai.attrType == FLOAT ? "FLOAT" : "STRING") */
+/*         << " attrLength=" << ai.attrLength */
+/*         << " offset=" << ai.offset */
+/*         << " indexNo=" << ai.indexNo; */
+/* } */
+
 //
 // DataAttrInfo
 //
@@ -24,6 +37,7 @@ struct DataAttrInfo
   DataAttrInfo() {
     memset(relName, 0, MAXNAME + 1);
     memset(attrName, 0, MAXNAME + 1);
+    offset = -1;
   };
 
   DataAttrInfo(const AttrInfo &a ) {
@@ -73,5 +87,6 @@ struct DataAttrInfo
   char     relName[MAXNAME+1];    // Relation name
   char     attrName[MAXNAME+1];   // Attribute name
 };
+
 
 #endif // _ATTR_INFO

@@ -161,7 +161,7 @@ RC FileScan::GetNext(Tuple &t)
         recordIn = false;
         break;
       }
-    }
+    } // for
 
     if(recordIn) {
       t.Set(buf);

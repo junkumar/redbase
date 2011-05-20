@@ -9,7 +9,6 @@
 #include <iostream>
 #include "redbase.h"
 #include "pf.h"
-
 //
 // Structure declarations and output functions
 //

@@ -28,8 +28,12 @@ TEST_F(QL_ManagerTest, Cons) {
     command.str("");
     command << "echo \"create table soaps(soapid  i, sname  c28, network  c4, rating  f);\" | ./redbase " 
             << dbname;
-    cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
 
+    command.str("");
+    command << "echo \"create table stars(starid  i, stname  c20, plays  c12, soapid  i);\" | ./redbase " 
+            << dbname;
     rc = system (command.str().c_str());
     ASSERT_EQ(rc, 0);
 
@@ -73,10 +77,24 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     command.str("");
+    command << "echo \"load stars(\\\"../stars.data\\\");\" | ./redbase " 
+            << dbname;
+    cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+
+    command.str("");
     command << "echo \"print soaps;\" | ./redbase "
             << dbname << " | ./counter.pl " ;
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 10);
+
+    command.str("");
+    command << "echo \"queryplans on;select * from soaps, stars where soaps.soapid = stars.soapid;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 29);
 
     command.str("");
     command << "echo \"queryplans on;update soaps set rating = 4.1 where soapid = 133;\" | ./redbase " 

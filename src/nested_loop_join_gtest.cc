@@ -94,7 +94,18 @@ TEST_F(NestedLoopJoinTest, Cons) {
     FileScan rfs(smm, rmm, "in", status, cond);
     ASSERT_EQ(status, 0);
 
-    NestedLoopJoin fs("in", "in", &lfs, &rfs, status);
+    Condition jcond;
+    jcond.op = EQ_OP;
+    jcond.lhsAttr.relName = "left";
+    jcond.rhsAttr.relName = "right";
+    jcond.bRhsIsAttr = TRUE;
+    jcond.lhsAttr.attrName = "in";
+    jcond.rhsAttr.attrName = "in";
+
+    Condition conds[5];
+    conds[0] = jcond;
+
+    NestedLoopJoin fs(&lfs, &rfs, status, 1, conds);
     ASSERT_EQ(status, 0);
 
     rc=fs.Open();
@@ -119,11 +130,22 @@ TEST_F(NestedLoopJoinTest, Cons) {
     EXPECT_EQ(5, ns);
     (rc=fs.Close());
     ASSERT_EQ(rc, 0);
-
-    {
-      NestedLoopJoin fs("in", "out", &lfs, &rfs, status);
+ 
+    { // bad types
+      conds[0].lhsAttr.attrName = "in";
+      conds[0].rhsAttr.attrName = "out";
+      NestedLoopJoin fs(&lfs, &rfs, status, 1, conds);
       ASSERT_EQ(status, QL_JOINKEYTYPEMISMATCH);
     }
+
+
+    { // bad attrname
+      conds[0].lhsAttr.attrName = "infdfdffdfdfdfdf";
+      conds[0].rhsAttr.attrName = "out";
+      NestedLoopJoin fs(&lfs, &rfs, status, 1, conds);
+      ASSERT_EQ(status, QL_BADJOINKEY);
+    }
+
 
     { // different relations
 
@@ -133,7 +155,9 @@ TEST_F(NestedLoopJoinTest, Cons) {
       FileScan rfs(smm, rmm, "stars", status, cond);
       ASSERT_EQ(status, 0);
 
-      NestedLoopJoin fs("in", "soapid", &lfs, &rfs, status);
+      conds[0].lhsAttr.attrName = "in";
+      conds[0].rhsAttr.attrName = "soapid";
+      NestedLoopJoin fs(&lfs, &rfs, status, 1, conds);
       ASSERT_EQ(status, 0);
       rc=fs.Open();
       ASSERT_EQ(rc, 0);
@@ -149,7 +173,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
         EXPECT_EQ(rc, 0);
         if(rc != 0)
           PrintErrorAll(rc);
-        // cerr << t << endl;
+        cerr << t << endl;
         ns++;
         if(ns > 20) ASSERT_EQ(1, 0);
       }
@@ -167,7 +191,9 @@ TEST_F(NestedLoopJoinTest, Cons) {
       FileScan rfs(smm, rmm, "stars", status, cond);
       ASSERT_EQ(status, 0);
 
-      NestedLoopJoin fs("bw", "stname", &lfs, &rfs, status);
+      conds[0].lhsAttr.attrName = "bw";
+      conds[0].rhsAttr.attrName = "stname";
+      NestedLoopJoin fs(&lfs, &rfs, status, 1, conds);
       ASSERT_EQ(status, 0);
       rc=fs.Open();
       ASSERT_EQ(rc, 0);
@@ -211,7 +237,9 @@ TEST_F(NestedLoopJoinTest, Cons) {
       FileScan rfs(smm, rmm, "stars", status, cond2);
       ASSERT_EQ(status, 0);
 
-      NestedLoopJoin fs("bw", "plays", &lfs, &rfs, status);
+      conds[0].lhsAttr.attrName = "bw";
+      conds[0].rhsAttr.attrName = "plays";
+      NestedLoopJoin fs(&lfs, &rfs, status, 1, conds);
       ASSERT_EQ(status, 0);
       rc=fs.Open();
       ASSERT_EQ(rc, 0);
@@ -233,6 +261,107 @@ TEST_F(NestedLoopJoinTest, Cons) {
       }
     
       EXPECT_EQ(1, ns);
+      (rc=fs.Close());
+      ASSERT_EQ(rc, 0);
+    }
+
+    { // cross product
+
+      IndexScan lfs(smm, rmm, ixm, "in", "bw", status, cond);
+      ASSERT_EQ(status, 0);
+
+      int ac = -1;
+      DataAttrInfo * attr;
+      smm.GetFromTable("stars", ac, attr);
+      Condition cond2;
+      cond2.op = EQ_OP;
+      cond2.lhsAttr.attrName = attr[0].attrName;
+      cond2.lhsAttr.relName = attr[0].relName;
+      cond2.rhsValue.data = NULL;
+      cond2.rhsValue.data = FALSE;
+
+      FileScan rfs(smm, rmm, "stars", status, cond2);
+      ASSERT_EQ(status, 0);
+
+      //rc = smm.Print("in");
+      //rc = smm.Print("stars");
+
+      conds[0].lhsAttr.attrName = "bw";
+      conds[0].rhsAttr.attrName = "plays";
+      NestedLoopJoin fs(&lfs, &rfs, status, 0, conds);
+      ASSERT_EQ(status, 0);
+      rc=fs.Open();
+      ASSERT_EQ(rc, 0);
+
+      Tuple t(fs.GetAttrCount(), fs.TupleLength());
+      t.SetAttr(fs.GetAttr());
+
+      int ns = 0;
+      while(1) {
+        rc = fs.GetNext(t);
+        if(rc ==  fs.Eof())
+          break;
+        EXPECT_EQ(rc, 0);
+        if(rc != 0)
+          PrintErrorAll(rc);
+        //cerr << t << endl;
+        ns++;
+      }
+    
+      EXPECT_EQ(29*5, ns);
+      (rc=fs.Close());
+      ASSERT_EQ(rc, 0);
+    }
+
+    { // cross product - more than 1 condition
+
+      IndexScan lfs(smm, rmm, ixm, "in", "bw", status, cond);
+      ASSERT_EQ(status, 0);
+
+      int ac = -1;
+      DataAttrInfo * attr;
+      smm.GetFromTable("stars", ac, attr);
+      Condition cond2;
+      cond2.op = EQ_OP;
+      cond2.lhsAttr.attrName = attr[0].attrName;
+      cond2.lhsAttr.relName = attr[0].relName;
+      cond2.rhsValue.data = NULL;
+      cond2.rhsValue.data = FALSE;
+
+      FileScan rfs(smm, rmm, "stars", status, cond2);
+      ASSERT_EQ(status, 0);
+
+      // rc = smm.Print("in");
+      // rc = smm.Print("stars");
+
+      conds[0].lhsAttr.attrName = "in";
+      conds[0].rhsAttr.attrName = "soapid";
+      conds[0].op = EQ_OP;
+
+      conds[1].lhsAttr.attrName = "in";
+      conds[1].rhsAttr.attrName = "starid";
+      conds[1].op = GT_OP;
+      NestedLoopJoin fs(&lfs, &rfs, status, 2, conds);
+      ASSERT_EQ(status, 0);
+      rc=fs.Open();
+      ASSERT_EQ(rc, 0);
+
+      Tuple t(fs.GetAttrCount(), fs.TupleLength());
+      t.SetAttr(fs.GetAttr());
+
+      int ns = 0;
+      while(1) {
+        rc = fs.GetNext(t);
+        if(rc ==  fs.Eof())
+          break;
+        EXPECT_EQ(rc, 0);
+        if(rc != 0)
+          PrintErrorAll(rc);
+        // cerr << t << endl;
+        ns++;
+      }
+    
+      EXPECT_EQ(2, ns);
       (rc=fs.Close());
       ASSERT_EQ(rc, 0);
     }

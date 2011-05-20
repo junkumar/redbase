@@ -581,7 +581,7 @@ void PrintError(RC rc)
 //
 // Desc: Parse redbase commands
 //
-void RBparse(PF_Manager &pfm, SM_Manager &smm, QL_Manager &qlm)
+RC RBparse(PF_Manager &pfm, SM_Manager &smm, QL_Manager &qlm)
 {
    RC rc;
 
@@ -612,6 +612,7 @@ void RBparse(PF_Manager &pfm, SM_Manager &smm, QL_Manager &qlm)
                bExit = TRUE;
          }
    }
+   return rc;
 }
 
 //
