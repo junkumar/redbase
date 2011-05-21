@@ -26,10 +26,10 @@ const char *QL_ErrorMsg[] = {
   (char*)"QL_ALREADYOPEN Iterator already open.",
   (char*)"QL_BADATTR Bad Attribute",
   (char*)"QL_DUPREL Duplicate Table names",
-  (char*)"bad open",
+  (char*)"QL_RELMISSINGFROMFROM Relation in WHERE missing from FROM",
   (char*)"QL_FNOTOPEN Iterator is not open",
   (char*)"QL_JOINKEYTYPEMISMATCH Type mismatch",
-  (char*)"Bad Table/Relation",
+  (char*)"QL_BADOPEN QL Manager is in bad state or not open",
   (char*)"QL_EOF end of input on iterator",
 };
 

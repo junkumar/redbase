@@ -59,7 +59,6 @@ FileScan::FileScan(SM_Manager& smm,
     oFilters[i] = outFilters[i]; // shallow copy
   }
 
-
   explain << "FileScan\n";
   explain << "   relName = " << relName << "\n";
   if(cond.rhsValue.data != NULL)
@@ -69,7 +68,13 @@ FileScan::FileScan(SM_Manager& smm,
     for (int i = 0; i < nOutFilters; i++)
       explain << "   conditions[" << i << "]:" << oFilters[i] << "\n";
   }
+
   status = 0;
+}
+
+string FileScan::Explain()  
+{
+  return indent + explain.str();
 }
 
 RC FileScan::IsValid()

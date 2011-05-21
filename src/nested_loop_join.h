@@ -33,6 +33,7 @@ class NestedLoopJoin: public Iterator {
   virtual RC Open();
   virtual RC GetNext(Tuple &t);
   virtual RC Close();
+  virtual string Explain();
 
   RC IsValid();
   virtual RC Eof() const { return QL_EOF; }

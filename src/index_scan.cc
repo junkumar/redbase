@@ -91,6 +91,11 @@ IndexScan::IndexScan(SM_Manager& smm,
   status = 0;
 }
 
+string IndexScan::Explain()
+{
+  return indent + explain.str();
+}
+
 RC IndexScan::IsValid()
 {
   return (attrCount != -1 && attrs != NULL) ? 0 : SM_BADTABLE;

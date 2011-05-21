@@ -30,11 +30,6 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
     return;
   }
 
-  // if(lJoinAttr == NULL || rJoinAttr == NULL) {
-  //   status = QL_BADJOINKEY;
-  //   return;
-  // }
-
   attrCount = lhsIt->GetAttrCount() + rhsIt->GetAttrCount();
   assert(attrCount > 0);
 
@@ -43,27 +38,14 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
   std::copy(lhsIt->GetAttr(), lhsIt->GetAttr() + lhsIt->GetAttrCount(),
             attrs);
 
-  // rKey.offset = -1;
-  // lKey.offset = -1;
-
   DataAttrInfo * rattrs = rhsIt->GetAttr();
   for(int i = 0, j = lhsIt->GetAttrCount(); i < rhsIt->GetAttrCount(); i++) {
-    // if(strcmp(rattrs[i].attrName, rJoinAttr) == 0) {
-    //   // rKey = rattrs[i];
-    //   continue;
-    // }
     attrs[j] = rattrs[i];
     attrs[j].offset += lhsIt->TupleLength();
     j++;
   }
   
   DataAttrInfo * lattrs = lhsIt->GetAttr();
-  for(int i = 0; i < lhsIt->GetAttrCount(); i++) {
-    // if(strcmp(lattrs[i].attrName, lJoinAttr) == 0) {
-    //   // lKey = lattrs[i];
-    // }
-  }
-
 
   char * buf = new char[TupleLength()];
   memset(buf, 0, TupleLength());
@@ -86,6 +68,8 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
     bool rfound = false;
 
     for(int k = 0; k < lhsIt->GetAttrCount(); k++) {
+      // cerr << "lhs attr for " << k << "- " << lattrs[k].attrName << endl;
+      // cerr << "cond attr for " << k << "- " << oFilters[i].lhsAttr.attrName << endl;
       if(strcmp(lattrs[k].attrName, oFilters[i].lhsAttr.attrName) == 0) {
         lKeys[i] = lattrs[k];
         lfound = true;
@@ -94,6 +78,8 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
     }
 
     for(int k = 0; k < rhsIt->GetAttrCount(); k++) {
+      // cerr << "rhs attr for " << k << "- " << rattrs[k].attrName << endl;
+      // cerr << "cond attr for " << k << "- " << oFilters[i].rhsAttr.attrName << endl;
       if(strcmp(rattrs[k].attrName, oFilters[i].rhsAttr.attrName) == 0) {
         rKeys[i] = rattrs[k];
         rfound = true;
@@ -101,7 +87,31 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
       }
     }
 
+    if(!lfound || !rfound) { // reverse pair and try
+      lfound = false;
+      rfound = false;
+
+      for(int k = 0; k < lhsIt->GetAttrCount(); k++) {
+        if(strcmp(lattrs[k].attrName, oFilters[i].rhsAttr.attrName) == 0) {
+          lKeys[i] = lattrs[k];
+          lfound = true;
+          continue;
+        }
+      }
+
+      for(int k = 0; k < rhsIt->GetAttrCount(); k++) {
+        if(strcmp(rattrs[k].attrName, oFilters[i].lhsAttr.attrName) == 0) {
+          rKeys[i] = rattrs[k];
+          rfound = true;
+          continue;
+        }
+      }
+    }
+
+
     if(!lfound || !rfound) {
+      if(!lfound)
+        cerr << "bad lfound" << endl;
       status = QL_BADJOINKEY;
       return;
     }
@@ -127,19 +137,26 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
       status = QL_JOINKEYTYPEMISMATCH;
       return;
     }
-
   }
-   
+
   explain << "NestedLoopJoin\n";
   if(nOFilters > 0) {
     explain << "   nConditions = " << nOFilters << "\n";
     for (int i = 0; i < nOutFilters; i++)
       explain << "   conditions[" << i << "]:" << oFilters[i] << "\n";
-    explain << "----" << lhsIt->Explain();
-    explain << "----" << rhsIt->Explain();
   }
 
   status = 0;
+}
+
+string NestedLoopJoin::Explain() {
+  stringstream dyn;
+  dyn << indent << explain.str();
+  lhsIt->SetIndent(indent + "-----");
+  dyn << lhsIt->Explain();
+  rhsIt->SetIndent(indent + "-----");
+  dyn << rhsIt->Explain();
+  return dyn.str();
 }
 
 RC NestedLoopJoin::IsValid()

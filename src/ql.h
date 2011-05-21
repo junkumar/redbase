@@ -54,7 +54,22 @@ class QL_Manager {
   // operator tree
   Iterator* GetLeafIterator(const char *relName_,
                             int nConditions, const Condition conditions_[]);
+  RC PrintIterator(Iterator* it) const;
 
+  void GetCondsForSingleRelation(int nConditions,
+                                 Condition conditions[],
+                                 char* relName,
+                                 int& retCount, Condition*& retConds) const;
+
+  // get conditions that involve both relations. intermediate relations are
+  // possible from previous joins done so far - hence relsSoFar.
+  void GetCondsForTwoRelations(int nConditions,
+                               Condition conditions[],
+                               int nRelsSoFar,
+                               char* relations[],
+                               char* relName2,
+                               int& retCount, Condition*& retConds) const;
+  
  private:
   RM_Manager& rmm;
   IX_Manager& ixm;

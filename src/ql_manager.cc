@@ -19,12 +19,38 @@
 #include "file_scan.h"
 #include "nested_loop_join.h"
 #include <map>
+#include <vector>
+#include <functional>
+
 
 using namespace std;
 
 namespace {
-  bool strlt (char* i,char* j) { return (strcmp(i,j) < 0); }
-  bool streq (char* i,char* j) { return (strcmp(i,j) == 0); }
+  bool strlt (char* i, char* j) { return (strcmp(i,j) < 0); }
+  bool streq (char* i, char* j) { return (strcmp(i,j) == 0); }
+
+  class npageslt : public std::binary_function<char*, char*, bool>
+  {
+  public:
+    npageslt(const SM_Manager& smm): psmm(&smm) {}
+    inline bool operator() (char* i, char* j) {
+      return (psmm->GetNumPages(i) < psmm->GetNumPages(j));
+    }
+  private:
+    const SM_Manager* psmm;
+  };
+
+  class nrecslt : public std::binary_function<char*, char*, bool>
+  {
+  public:
+    nrecslt(const SM_Manager& smm): psmm(&smm) {}
+    inline bool operator() (char* i, char* j) {
+      return (psmm->GetNumRecords(i) < psmm->GetNumRecords(j));
+    }
+  private:
+    const SM_Manager* psmm;
+  };
+
 };
 //
 // Constructor for the QL Manager
@@ -156,41 +182,81 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     rc = smm.SemCheck(conditions[i]);
     if (rc != 0) return rc;
   }
-
-  if(nRelations == 2) {
-    
-    Iterator* lfs = GetLeafIterator(relations[0], 0, conditions);
-    Iterator* rfs = GetLeafIterator(relations[1], 0, conditions);
-
-    RC status = -1;
-    NestedLoopJoin fs(lfs, rfs, status, nConditions, conditions);
-    if (status != 0) return status;
-
-    Iterator *it = &fs;
-
-    if(bQueryPlans == TRUE)
-      cout << "\n" << it->Explain() << "\n";
   
-    Tuple t = it->GetTuple();
-    RC rc = it->Open();
-    if (rc != 0) return rc;
+  cerr << "sem checks done" << endl;
 
-    Printer p(t);
-    p.PrintHeader(cout);
-
-    while(1) {
-      rc = it->GetNext(t);
-      if(rc ==  it->Eof())
+  // ensure that all relations mentioned in conditions are in the from clause
+  for (int i = 0; i < nConditions; i++) {
+    bool lfound = false;
+    for (int j = 0; j < nRelations; j++) {
+      if(strcmp(conditions[i].lhsAttr.relName, relations[j]) == 0) {
+        lfound = true;
         break;
-      if (rc != 0) return rc;
+      }
+    }
+    if(!lfound) 
+      return QL_RELMISSINGFROMFROM;
+
+    if(conditions[i].bRhsIsAttr == TRUE) {
+      bool rfound = false;
+      for (int j = 0; j < nRelations; j++) {
+        if(strcmp(conditions[i].rhsAttr.relName, relations[j]) == 0) {
+          rfound = true;
+          break;
+        }
+      }
+      if(!rfound) 
+        return QL_RELMISSINGFROMFROM;
+    }
+  }
 
 
-      p.Print(cout, t);
+  if(nRelations == 1) {
+    Iterator* it = GetLeafIterator(relations[0], nConditions, conditions);
+    RC rc = PrintIterator(it);
+    if(rc != 0) return rc;
+  }
+
+  if(nRelations >= 2) {
+    // Heuristic - join smaller operands first - sort relations by numRecords
+    nrecslt _n(smm);
+    sort(relations, 
+         relations + nRelations,
+         _n);
+
+    // Heuristic - left-deep join tree shape
+    Condition* lcond = NULL;
+    int lcount = -1;
+    GetCondsForSingleRelation(nConditions, conditions, relations[0], lcount,
+                              lcond);
+    Iterator* lfs = GetLeafIterator(relations[0], lcount, lcond);
+    if(lcount != 0) delete [] lcond;
+    Iterator* it = lfs;
+    
+    for(int i = 1; i < nRelations; i++) {
+      Condition* rcond = NULL;
+      int rcount = -1;
+      GetCondsForSingleRelation(nConditions, conditions, relations[i], rcount,
+                                rcond);
+      Iterator* rfs = GetLeafIterator(relations[i], rcount, rcond);
+      if(rcount != 0) delete [] rcond;
+
+      
+      Condition* jcond = NULL;
+      int jcount = -1;
+      GetCondsForTwoRelations(nConditions, conditions, i, relations, relations[i],
+                              jcount, jcond);
+      RC status = -1;
+      NestedLoopJoin* newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
+      if (status != 0) return status;
+      if(jcount != 0) delete [] jcond;
+
+      it = newit;
     }
 
-    p.PrintFooter(cout);
-    rc = it->Close();
-    if (rc != 0) return rc;
+
+    RC rc = PrintIterator(it);
+    if(rc != 0) return rc;
   }
 
   cout << "Select\n";
@@ -203,7 +269,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   for (i = 0; i < nRelations; i++)
     cout << "   relations[" << i << "] " << relations[i] << "\n";
 
-  cout << "   nCondtions = " << nConditions << "\n";
+  cout << "   nConditions = " << nConditions << "\n";
   for (i = 0; i < nConditions; i++)
     cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
@@ -219,6 +285,95 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   delete [] relations;
   delete [] conditions;
   return 0;
+}
+
+
+
+RC QL_Manager::PrintIterator(Iterator* it) const {
+  if(bQueryPlans == TRUE)
+    cout << "\n" << it->Explain() << "\n";
+  
+  Tuple t = it->GetTuple();
+  RC rc = it->Open();
+  if (rc != 0) return rc;
+
+  Printer p(t);
+  p.PrintHeader(cout);
+
+  while(1) {
+    rc = it->GetNext(t);
+    if(rc ==  it->Eof())
+      break;
+    if (rc != 0) return rc;
+
+
+    p.Print(cout, t);
+  }
+
+  p.PrintFooter(cout);
+  rc = it->Close();
+  if (rc != 0) return rc;
+  return 0;
+}
+
+void QL_Manager::GetCondsForSingleRelation(int nConditions,
+                                           Condition conditions[],
+                                           char* relName,
+                                           int& retCount, Condition*& retConds)
+  const
+{
+  vector<int> v;
+
+  for(int j = 0; j < nConditions; j++) {
+    if(conditions[j].bRhsIsAttr == TRUE)
+      continue;
+    if(strcmp(conditions[j].lhsAttr.relName, relName) == 0) {
+      v.push_back(j);
+    }
+  }
+  
+  retCount = v.size();
+  if(retCount == 0) 
+    return;
+  retConds = new Condition[retCount];
+  for(int i = 0; i < retCount; i++)
+    retConds[i] = conditions[v[i]];
+  return;
+}
+
+void QL_Manager::GetCondsForTwoRelations(int nConditions,
+                                         Condition conditions[],
+                                         int nRelsSoFar,
+                                         char* relations[],
+                                         char* relName2,
+                                         int& retCount, Condition*& retConds)
+  const
+{
+  vector<int> v;
+
+  for(int i = 0; i < nRelsSoFar; i++) {
+    char* relName1 = relations[i];
+    for(int j = 0; j < nConditions; j++) {
+      if(conditions[j].bRhsIsAttr == FALSE)
+        continue;
+      if(strcmp(conditions[j].lhsAttr.relName, relName1) == 0
+         && strcmp(conditions[j].rhsAttr.relName, relName2) == 0) {
+        v.push_back(j);
+      }
+      if(strcmp(conditions[j].lhsAttr.relName, relName2) == 0
+         && strcmp(conditions[j].rhsAttr.relName, relName1) == 0) {
+        v.push_back(j);
+      }
+    }
+  }
+
+  retCount = v.size();
+  if(retCount == 0) 
+    return;
+  retConds = new Condition[retCount];
+  for(int i = 0; i < retCount; i++)
+    retConds[i] = conditions[v[i]];
+  return;
 }
 
 //

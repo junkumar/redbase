@@ -1121,3 +1121,23 @@ RC SM_Manager::SemCheck(const Condition& cond) const {
   }
   return 0;
 }
+
+RC SM_Manager::GetNumPages(const char* relName) const
+{
+  DataRelInfo r;
+  RID rid;
+  RC rc = GetRelFromCat(relName, r, rid);
+  if(rc != 0) return rc;
+
+  return r.numPages;
+}
+
+RC SM_Manager::GetNumRecords(const char* relName) const
+{
+  DataRelInfo r;
+  RID rid;
+  RC rc = GetRelFromCat(relName, r, rid);
+  if(rc != 0) return rc;
+
+  return r.numRecords;
+}

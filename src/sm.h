@@ -73,6 +73,9 @@ class SM_Manager {
                     DataAttrInfo& attr,
                     RID& rid) const;
 
+  RC GetNumPages(const char* relName) const;
+  RC GetNumRecords(const char* relName) const;
+
   // Semantic checks for various parts of queries
   RC SemCheck(const char* relName) const;
   RC SemCheck(const RelAttr& ra) const;

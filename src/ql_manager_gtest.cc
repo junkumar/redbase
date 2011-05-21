@@ -38,6 +38,12 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     command.str("");
+    command << "echo \"CREATE TABLE networks(nid  i, name c4, viewers i);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
+    command.str("");
     command << "echo \"create index soaps(soapid);\" | ./redbase " 
             << dbname;
     rc = system (command.str().c_str());
@@ -83,6 +89,12 @@ TEST_F(QL_ManagerTest, Cons) {
     rc = system (command.str().c_str());
     ASSERT_EQ(rc, 0);
 
+    command.str("");
+    command << "echo \"load networks(\\\"../networks.data\\\");\" | ./redbase " 
+            << dbname;
+    cerr << command.str();
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
 
     command.str("");
     command << "echo \"print soaps;\" | ./redbase "
@@ -91,10 +103,35 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc >> 8, 10);
 
     command.str("");
-    command << "echo \"queryplans on;select * from soaps, stars where soaps.soapid = stars.soapid;\" | ./redbase " 
-            << dbname << "| ./counter.pl ";
+    command << "echo \"print stars;\" | ./redbase "
+            << dbname << " | ./counter.pl " ;
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 29);
+
+    command.str("");
+    command << "echo \"print networks;\" | ./redbase "
+            << dbname << " | ./counter.pl " ;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 4);
+
+    command.str("");
+    command << "echo \"queryplans on;select * from stars, soaps where soaps.soapid = stars.soapid;\" | ./redbase " 
+            << dbname << "| grep tuple | ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 29);
+
+    command.str("");
+    command << "echo \"queryplans on;select * from soaps, stars;\" | ./redbase " 
+            << dbname << "| grep tuple | ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 290-256); //actual 290 but shown as 290-256 - system
+
+    command.str("");
+    command << "echo \"queryplans on;select * from stars, networks, soaps where soaps.soapid = stars.soapid and soaps.network = networks.name;\" | ./redbase " 
+            << dbname << " | ./counter.pl ";
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc >> 8, 29);
+
 
     command.str("");
     command << "echo \"queryplans on;update soaps set rating = 4.1 where soapid = 133;\" | ./redbase " 

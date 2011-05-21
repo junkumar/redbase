@@ -135,7 +135,7 @@ namespace {
 
 class Iterator {
  public:
-  Iterator():bIterOpen(false) {}
+ Iterator():bIterOpen(false), indent("") {}
   virtual ~Iterator() {}
 
   virtual RC Open() = 0;
@@ -162,7 +162,11 @@ class Iterator {
     return l;
   }
   
-  virtual string Explain() const { return explain.str(); }
+  virtual string Explain() = 0;
+
+  virtual void SetIndent(const string& indent_) { 
+    indent = indent_;
+  }
 
 
  protected:
@@ -170,6 +174,7 @@ class Iterator {
   DataAttrInfo* attrs;
   int attrCount;
   stringstream explain;
+  string indent;
 };
 
 #endif // ITERATOR_H
