@@ -247,8 +247,13 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       GetCondsForTwoRelations(nConditions, conditions, i, relations, relations[i],
                               jcount, jcond);
       RC status = -1;
-      NestedLoopJoin* newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
-      if (status != 0) return status;
+      NestedLoopJoin* newit;
+      if(i == nRelations - 1)
+        newit = new NestedLoopJoin(it, rfs, status, jcount, jcond, nSelAttrs, selAttrs);
+      else
+        newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
+ 
+     if (status != 0) return status;
       if(jcount != 0) delete [] jcond;
 
       it = newit;
