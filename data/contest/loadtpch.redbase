@@ -1,0 +1,81 @@
+CREATE TABLE NATION   ( N_NATIONKEY     i4,
+                        N_NAME          c25,
+                        N_REGIONKEY     i4,
+                        N_COMMENT       c152 );
+
+CREATE TABLE REGION   ( R_REGIONKEY     i4,
+                        R_NAME          c25,
+                        R_COMMENT       c152 );
+
+CREATE TABLE PART     ( P_PARTKEY       i4,
+                        P_NAME          c55,
+                        P_MFGR          c25,
+                        P_BRAND         c10,
+                        P_TYPE          c25,
+                        P_SIZE          i4,
+                        P_CONTAINER     c10,
+                        P_RETAILPRICE   f4,
+                        P_COMMENT       c23 );
+
+CREATE TABLE SUPPLIER ( S_SUPPKEY       i4,
+                        S_NAME          c25,
+                        S_ADDRESS       c40,
+                        S_NATIONKEY     i4,
+                        S_PHONE         c15,
+                        S_ACCTBAL       f4,
+                        S_COMMENT       c101 );
+
+CREATE TABLE PARTSUPP ( PS_PARTKEY      i4,
+                        PS_SUPPKEY      i4,
+                        PS_AVAILQTY     i4,
+                        PS_SUPPLYCOST   f4,
+                        PS_COMMENT      c199 );
+
+CREATE TABLE CUSTOMER ( C_CUSTKEY       i4,
+                        C_NAME          c25,
+                        C_ADDRESS       c40,
+                        C_NATIONKEY     i4,
+                        C_PHONE         c15,
+                        C_ACCTBAL       f4,
+                        C_MKTSEGMENT    c10,
+                        C_COMMENT       c117 );
+
+CREATE TABLE ORDERS   ( O_ORDERKEY      i4,
+                        O_CUSTKEY       i4,
+                        O_ORDERSTATUS   c1,
+                        O_TOTALPRICE    f4,
+                        O_ORDERDATE     c10,
+                        O_ORDERPRIORITY c15,  
+                        O_CLERK         c15, 
+                        O_SHIPPRIORITY  i4,
+                        O_COMMENT       c79 );
+
+CREATE TABLE LINEITEM ( L_ORDERKEY      i4,
+                        L_PARTKEY       i4,
+                        L_SUPPKEY       i4,
+                        L_LINENUMBER    i4,
+                        L_QUANTITY      f4,
+                        L_EXTENDEDPRICE f4,
+                        L_DISCOUNT      f4,
+                        L_TAX           f4,
+                        L_RETURNFLAG    c1,
+                        L_LINESTATUS    c1,
+                        L_SHIPDATE      c10,
+                        L_COMMITDATE    c10,
+                        L_RECEIPTDATE   c10,
+                        L_SHIPINSTRUCT  c25,
+                        L_SHIPMODE      c10,
+                        L_COMMENT       c44 );
+
+LOAD NATION   ("/usr/class/cs346/redbase/data/contest/nation.data");
+LOAD REGION   ("/usr/class/cs346/redbase/data/contest/region.data");
+LOAD PART     ("/usr/class/cs346/redbase/data/contest/part.data");
+LOAD SUPPLIER ("/usr/class/cs346/redbase/data/contest/supplier.data");
+LOAD PARTSUPP ("/usr/class/cs346/redbase/data/contest/partsupp.data");
+LOAD CUSTOMER ("/usr/class/cs346/redbase/data/contest/customer.data");
+LOAD ORDERS   ("/usr/class/cs346/redbase/data/contest/orders.data");
+LOAD LINEITEM ("/usr/class/cs346/redbase/data/contest/lineitem.data");
+
+help;
+
+exit;
