@@ -206,7 +206,7 @@ TEST_F(IX_IndexScanTest, OpOptimizeAsc) {
   EXPECT_EQ(numRecs, 2);
   // EXPECT_EQ(numScanned, (val-0)*2);
   EXPECT_LT(numScanned, (count)*2);
-
+  //cerr << "numScanned " << numScanned << endl;
 
   // cerr << "LT_OP " << endl;
 
@@ -380,13 +380,13 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   (rc=fs.CloseScan());
   ASSERT_EQ(rc, 0);
   EXPECT_EQ(numRecs, 2);
-  EXPECT_EQ(numScanned, (val-0)*2);
+  EXPECT_LT(numScanned, (val-0)*2);
 
 
   val = 260;
   (rc=fs.OpenScan(ifh, LT_OP, &val, NO_HINT, true));
   ASSERT_EQ(rc, 0);
-  cerr << "LT_OP " << endl;
+  // cerr << "LT_OP " << endl;
 
   numScanned = 0;
   numRecs = 0;
@@ -469,7 +469,7 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   (rc=fs.CloseScan());
   ASSERT_EQ(rc, 0);
   ASSERT_EQ(numRecs, (count-val+1)*2);
-  EXPECT_EQ(numScanned, (count)*2);
+  EXPECT_LT(numScanned, (count)*2);
 
   // cerr << "NE_OP " << endl;
 
@@ -493,3 +493,33 @@ TEST_F(IX_IndexScanTest, OpOptimizeDesc) {
   ASSERT_EQ(numRecs, (count-1)*2);
   EXPECT_EQ(numScanned, (count)*2);
 }
+
+// // Needs contest db to exist.
+// TEST_F(IX_IndexScanTest, Customer) {
+// 	IX_IndexScan fs;
+// 	RC rc;
+  
+//   IX_IndexHandle cfh;
+//   rc =	ixm.OpenIndex("contest/CUSTOMER", 73, cfh);
+//   ASSERT_EQ(rc, 0);
+
+
+//   (rc=fs.OpenScan(cfh, NO_OP, NULL, NO_HINT));
+//   ASSERT_EQ(rc, 0);
+
+//   int numRecs = 0;
+//   while(1) {
+//     RID rid; 
+//     rc = fs.GetNextEntry(rid);
+//     if(rc == IX_EOF)
+//       break;
+//     EXPECT_EQ(rc, 0);
+//     // cerr << pBuf->num << "\t" << rid << endl;
+//     numRecs++;
+//   }
+
+//   (rc=fs.CloseScan());
+//   ASSERT_EQ(rc, 0);
+//   EXPECT_EQ(numRecs, 1500);
+
+// }

@@ -48,7 +48,8 @@ class IX_IndexScan {
   bool IsOpen() const { return (bOpen && pred != NULL && pixh != NULL); }
  private:
   RC OpOptimize(); // Optimizes based on value of c, value and resets state
-
+  RC EarlyExitOptimize(void* now);
+ private:
   Predicate* pred;
   IX_IndexHandle* pixh;
   BtreeNode* currNode;
@@ -58,6 +59,7 @@ class IX_IndexScan {
   bool bOpen;
   bool desc; // Is scan order ascending(def) or descending ?
   bool eof; // early EOF set by btree analysis - set by OpOpt
+  bool foundOne; // flag that is set by getNext if it is ever successful
   BtreeNode* lastNode; // last node setup by OpOpt
   CompOp c; // save Op for OpOpt
   void* value; // save Op for OpOpt

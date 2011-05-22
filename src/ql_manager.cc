@@ -877,9 +877,16 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
   RC status = -1;
   Iterator* it;
 
-  if(chosenCond != NULL)
+  if(chosenCond != NULL) {
+    bool desc = false;
+    if(chosenCond->op == EQ_OP ||
+       chosenCond->op == GT_OP ||
+       chosenCond->op == GE_OP)
+      desc = true; // more optimal
+
     it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
-                       *chosenCond, nFilters, filters);
+                       *chosenCond, nFilters, filters, desc);
+  }
   else
     it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
                        NULLCONDITION, nFilters, filters);

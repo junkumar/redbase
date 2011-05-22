@@ -60,6 +60,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
   bOpen = true;
   if(desc) 
     this->desc = true;
+  foundOne = false;
 
   pred = new Predicate(pixh->GetAttrType(),
                        pixh->GetAttrLength(),
@@ -162,7 +163,15 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
           rid = currNode->GetAddr(i);
           // std::cerr << "GetNextRec pred match for entry " << *(int*)key << " " 
           //           << rid << std::endl;
+          foundOne = true;
           return 0;
+        } else {
+          if(foundOne) {
+            RC rc = EarlyExitOptimize(key);
+            if(rc != 0) return rc;
+            if(eof)
+              return IX_EOF;
+          }
         }
       }
     } else { // Descending
@@ -197,7 +206,15 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
           // std::cerr << "GetNextRec pred match for RID " << current << std::endl;
           k = key;
           rid = currNode->GetAddr(i);
+          foundOne = true;
           return 0;
+        } else {
+          if(foundOne) {
+            RC rc = EarlyExitOptimize(key);
+            if(rc != 0) return rc;
+            if(eof)
+              return IX_EOF;
+          }
         }
       }
 
@@ -208,18 +225,25 @@ RC IX_IndexScan::GetNextEntry(void *& k, RID &rid, int& numScanned)
     // Advance to a new page
     if(!desc) {
       PageNum right = currNode->GetRight();
+      // cerr << "IX_INDEXSCAN moved to new page " << right << endl;
+      pixh->UnPin(currNode->GetPageRID().Page());
       delete currNode;
       currNode = NULL;
       currNode = pixh->FetchNode(right);
+      if(currNode != NULL)
+        pixh->Pin(currNode->GetPageRID().Page());
       currPos = -1;
     }
     else {
       PageNum left = currNode->GetLeft();
+      pixh->UnPin(currNode->GetPageRID().Page());
       delete currNode;
       currNode = NULL;
       currNode = pixh->FetchNode(left);
-      if(currNode != NULL)
+      if(currNode != NULL) {
+        pixh->Pin(currNode->GetPageRID().Page());
         currPos = currNode->GetNumKeys();
+      }
     }
   } // for j
 
@@ -256,6 +280,45 @@ RC IX_IndexScan::ResetState()
   eof = false;
 
   return this->OpOptimize();
+}
+
+// exit early if we know we will not find other useful values thanks to sorted
+// nature
+RC IX_IndexScan::EarlyExitOptimize(void* now)
+{
+  // cerr << "in early exit opt" << endl;
+
+  if(!bOpen)
+    return IX_FNOTOPEN;
+
+  if(value == NULL)
+    return 0; //nothing to optimize
+
+  // no opt possible
+  if(c == NE_OP || c == NO_OP)
+    return 0;
+
+
+  if(currNode != NULL) {
+
+    int cmp = currNode->CmpKey(now, value);
+    if(c == EQ_OP && cmp != 0) {
+      // cerr << "in early exit opt 3 cmp was " << cmp << endl;
+      eof = true;
+      return 0;
+    }
+    if((c == LT_OP || c == LE_OP) && cmp > 0 && !desc) {
+      // cerr << "in early exit opt 3 cmp was " << cmp << endl;
+      eof = true;
+      return 0;
+    }
+    if((c == GT_OP || c == GE_OP) && cmp < 0 && desc) {
+      // cerr << "in early exit opt 3 cmp was " << cmp << endl;
+      eof = true;
+      return 0;
+    }
+  }
+  return 0;
 }
 
 // Set up current pointers based on btree
