@@ -264,8 +264,7 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &ixh)
     PF_PrintError(rc2);
     return rc2;
   }
-  // TODO - is there a cleaner way than reaching into innards like this ?
-  delete ixh.pfHandle;
+  ixh.~IX_IndexHandle();
   ixh.pfHandle = NULL;
   ixh.bFileOpen = false;
   return 0;
