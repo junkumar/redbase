@@ -24,8 +24,6 @@ class NestedLoopJoin: public Iterator {
                  // join keys are specified
                  // as conditions. NULL implies cross product
                  const Condition outFilters[] = NULL  
-                 //FldSpec  * proj_list,
-                 // int        n_out_flds,
                  );
 
   virtual ~NestedLoopJoin();
