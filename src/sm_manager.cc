@@ -402,7 +402,8 @@ RC SM_Manager::CreateIndex(const char *relName,
   rc = ixm.CloseIndex(ixh);
   if(rc !=0) return rc;
 
-  return (0);
+  delete [] attributes;
+  return 0;
 }
 
 RC SM_Manager::DropIndex(const char *relName,
@@ -698,8 +699,11 @@ RC SM_Manager::Load(const char *relName,
   }
 
   char * buf = new char[size];
+
   int numLines = 0;
   while(!ifs.eof()) {
+    memset(buf, 0, size);
+
     string line;
     getline(ifs, line);
     if(line.length() == 0) continue; // ignore last newline
@@ -730,7 +734,12 @@ RC SM_Manager::Load(const char *relName,
           cerr << "SM_Manager::Load truncating to " 
                << attributes[i].attrLength << " - " << val << endl; 
         }
-        memcpy(buf + attributes[i].offset, val.c_str(), attributes[i].attrLength);
+        if(val.length() < attributes[i].attrLength)
+          memcpy(buf + attributes[i].offset, val.c_str(),
+                 val.length());
+        else
+          memcpy(buf + attributes[i].offset, val.c_str(),
+                 attributes[i].attrLength);
       }
       i++;
     }

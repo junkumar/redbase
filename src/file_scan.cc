@@ -64,9 +64,9 @@ FileScan::FileScan(SM_Manager& smm,
   if(cond.rhsValue.data != NULL)
     explain << "   ScanCond = " << cond << "\n";
   if(nOFilters > 0) {
-    explain << "   nConditions = " << nOFilters << "\n";
+    explain << "   nFilters = " << nOFilters << "\n";
     for (int i = 0; i < nOutFilters; i++)
-      explain << "   conditions[" << i << "]:" << oFilters[i] << "\n";
+      explain << "   filters[" << i << "]:" << oFilters[i] << "\n";
   }
 
   status = 0;

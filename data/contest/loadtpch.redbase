@@ -67,14 +67,14 @@ CREATE TABLE LINEITEM ( L_ORDERKEY      i4,
                         L_SHIPMODE      c10,
                         L_COMMENT       c44 );
 
-LOAD NATION   ("/usr/class/cs346/redbase/data/contest/nation.data");
-LOAD REGION   ("/usr/class/cs346/redbase/data/contest/region.data");
-LOAD PART     ("/usr/class/cs346/redbase/data/contest/part.data");
-LOAD SUPPLIER ("/usr/class/cs346/redbase/data/contest/supplier.data");
-LOAD PARTSUPP ("/usr/class/cs346/redbase/data/contest/partsupp.data");
-LOAD CUSTOMER ("/usr/class/cs346/redbase/data/contest/customer.data");
-LOAD ORDERS   ("/usr/class/cs346/redbase/data/contest/orders.data");
-LOAD LINEITEM ("/usr/class/cs346/redbase/data/contest/lineitem.data");
+LOAD NATION   ("../../data/contest/nation.data");
+LOAD REGION   ("../../data/contest/region.data");
+LOAD PART     ("../../data/contest/part.data");
+LOAD SUPPLIER ("../../data/contest/supplier.data");
+LOAD PARTSUPP ("../../data/contest/partsupp.data");
+LOAD CUSTOMER ("../../data/contest/customer.data");
+LOAD ORDERS   ("../../data/contest/orders.data");
+LOAD LINEITEM ("../../data/contest/lineitem.data");
 
 help;
 

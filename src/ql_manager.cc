@@ -18,6 +18,8 @@
 #include "index_scan.h"
 #include "file_scan.h"
 #include "nested_loop_join.h"
+#include "parser.h"
+#include "projection.h"
 #include <map>
 #include <vector>
 #include <functional>
@@ -134,9 +136,10 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       RC rc = smm.GetFromTable(relations[i], ac, aa);
       if (rc != 0) return rc;
       nSelAttrs += ac;
-      delete aa;
+      delete [] aa;
     }
     
+    delete [] selAttrs;
     selAttrs = new RelAttr[nSelAttrs];
     int j = 0;
     for (int i = 0; i < nRelations; i++) {
@@ -149,14 +152,17 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
         selAttrs[j].relName = relations[i];
         j++;
       }
-      delete aa;
+      delete [] aa;
     }
   } // if rewrite select "*"
 
   for (i = 0; i < nSelAttrs; i++) {
-    if(selAttrs[i].relName == NULL) {
+    if(selAttrs[i].relName == NULL) 
+    {
       RC rc = smm.FindRelForAttr(selAttrs[i], nRelations, relations);
       if (rc != 0) return rc;
+    } else {
+      selAttrs[i].relName = strdup(selAttrs[i].relName);
     }
     RC rc = smm.SemCheck(selAttrs[i]);
     if (rc != 0) return rc;
@@ -166,6 +172,8 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if(conditions[i].lhsAttr.relName == NULL) {
       RC rc = smm.FindRelForAttr(conditions[i].lhsAttr, nRelations, relations);
       if (rc != 0) return rc;
+    } else {
+      conditions[i].lhsAttr.relName = strdup(conditions[i].lhsAttr.relName);
     }
     RC rc = smm.SemCheck(conditions[i].lhsAttr);
     if (rc != 0) return rc;
@@ -174,6 +182,8 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       if(conditions[i].rhsAttr.relName == NULL) {
         RC rc = smm.FindRelForAttr(conditions[i].rhsAttr, nRelations, relations);
         if (rc != 0) return rc;
+      } else {
+        conditions[i].rhsAttr.relName = strdup(conditions[i].rhsAttr.relName);
       }
       RC rc = smm.SemCheck(conditions[i].rhsAttr);
       if (rc != 0) return rc;
@@ -183,7 +193,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if (rc != 0) return rc;
   }
   
-  cerr << "sem checks done" << endl;
+  // cerr << "sem checks done" << endl;
 
   // ensure that all relations mentioned in conditions are in the from clause
   for (int i = 0; i < nConditions; i++) {
@@ -210,9 +220,12 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     }
   }
 
+  Iterator* it = NULL;
 
   if(nRelations == 1) {
-    Iterator* it = GetLeafIterator(relations[0], nConditions, conditions);
+    it = GetLeafIterator(relations[0], nConditions, conditions);
+    RC status;
+    it = new Projection(it, status, nSelAttrs, selAttrs);
     RC rc = PrintIterator(it);
     if(rc != 0) return rc;
   }
@@ -229,9 +242,8 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     int lcount = -1;
     GetCondsForSingleRelation(nConditions, conditions, relations[0], lcount,
                               lcond);
-    Iterator* lfs = GetLeafIterator(relations[0], lcount, lcond);
+    it = GetLeafIterator(relations[0], lcount, lcond);
     if(lcount != 0) delete [] lcond;
-    Iterator* it = lfs;
     
     for(int i = 1; i < nRelations; i++) {
       Condition* rcond = NULL;
@@ -247,13 +259,13 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       GetCondsForTwoRelations(nConditions, conditions, i, relations, relations[i],
                               jcount, jcond);
       RC status = -1;
-      NestedLoopJoin* newit;
+      Iterator* newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
+      if (status != 0) return status;
+
       if(i == nRelations - 1)
-        newit = new NestedLoopJoin(it, rfs, status, jcount, jcond, nSelAttrs, selAttrs);
-      else
-        newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
- 
-     if (status != 0) return status;
+        newit = new Projection(newit, status, nSelAttrs, selAttrs);
+      if (status != 0) return status;
+
       if(jcount != 0) delete [] jcond;
 
       it = newit;
@@ -278,16 +290,24 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   for (i = 0; i < nConditions; i++)
     cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
+  // recursively delete iterators
+  delete it;
 
-
-  if(SELECTSTAR)
-    for(int i = 0; i < nSelAttrs; i++)
+  for(int i = 0; i < nSelAttrs; i++) {
+    if(SELECTSTAR)
       free(selAttrs[i].attrName);
+    free(selAttrs[i].relName);
+  }
   delete [] selAttrs;
   for (i = 0; i < nRelations; i++) {
     free(relations[i]);
   }
   delete [] relations;
+  for(int i = 0; i < nConditions; i++) {
+    free(conditions[i].lhsAttr.relName);
+    if(conditions[i].bRhsIsAttr == TRUE)
+      free(conditions[i].rhsAttr.relName);
+  }
   delete [] conditions;
   return 0;
 }
@@ -538,9 +558,7 @@ RC QL_Manager::Delete(const char *relName_,
   }
 
   p.PrintFooter(cout);
-  rc = it->Close();
-  if (rc != 0) return rc;
-
+  
   for (int i = 0; i < attrCount; i++) {
     if(attributes[i].indexNo != -1) {
       RC rc = ixm.CloseIndex(indexes[i]);
@@ -548,20 +566,24 @@ RC QL_Manager::Delete(const char *relName_,
     }
   }
   delete [] indexes;
-
+  delete [] attributes;
+  
   rc =	rmm.CloseFile(fh);
   if (rc != 0) return rc;
  
-  int i;
-
   cout << "Delete\n";
 
   cout << "   relName = " << relName << "\n";
   cout << "   nCondtions = " << nConditions << "\n";
-  for (i = 0; i < nConditions; i++)
+  for (int i = 0; i < nConditions; i++)
     cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
   delete [] conditions;
+  rc = it->Close();
+  if (rc != 0) return rc;
+
+  //delete it;
+  cerr << "done with delete it" << endl;
   return 0;
 }
 
@@ -735,12 +757,14 @@ RC QL_Manager::Update(const char *relName_,
       if(rc != 0 ) return rc;
     }
   }
+
   delete [] indexes;
+  delete [] attributes;
 
   rc =	rmm.CloseFile(fh);
   if (rc != 0) return rc;
 
-  int i;
+  delete it;
 
   cout << "Update\n";
 
@@ -751,10 +775,10 @@ RC QL_Manager::Update(const char *relName_,
   else
     cout << "   rhs is attribute: " << rhsRelAttr << "\n";
 
-  cout << "   nCondtions = " << nConditions << "\n";
-  for (i = 0; i < nConditions; i++)
+  cout << "   nConditions = " << nConditions << "\n";
+  for (int i = 0; i < nConditions; i++)
     cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
-
+  delete [] conditions;
   return 0;
 }
 
@@ -844,6 +868,7 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
       PrintErrorAll(status);
       return NULL;
     }
+    delete [] filters;
     delete [] attributes;
     return it;
   }

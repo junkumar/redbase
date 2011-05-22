@@ -83,9 +83,9 @@ IndexScan::IndexScan(SM_Manager& smm,
   if(cond.rhsValue.data != NULL)
     explain << "   ScanCond = " << cond << "\n";
   if(nOutFilters > 0) {
-    explain << "   nConditions = " << nOutFilters << "\n";
+    explain << "   nFilters = " << nOutFilters << "\n";
     for (int i = 0; i < nOutFilters; i++)
-      explain << "   conditions[" << i << "]:" << outFilters[i] << "\n";
+      explain << "   filters[" << i << "]:" << outFilters[i] << "\n";
   }
 
   status = 0;
@@ -185,7 +185,7 @@ RC IndexScan::GetNext(Tuple &t)
       char * rhs = (char*)cond.rhsValue.data;
       if(cond.bRhsIsAttr == TRUE) {
         DataAttrInfo rhsAttr;
-        RID r;  
+        RID r;
         rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, rhsAttr, r);
         if (rc != 0) return rc;
         rhs = (buf + rhsAttr.offset);

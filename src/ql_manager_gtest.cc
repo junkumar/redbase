@@ -115,11 +115,11 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc >> 8, 4);
 
     command.str("");
-    command << "echo \"queryplans on;select * from stars, soaps where soaps.soapid = stars.soapid;\" | ./redbase " 
+    command << "echo \"queryplans on;select sname, stname from stars, soaps where soaps.soapid = stars.soapid;\" | ./redbase " 
             << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 29);
-    exit(0);
+
     command.str("");
     command << "echo \"queryplans on;select * from soaps, stars;\" | ./redbase " 
             << dbname << "| grep tuple | ./counter.pl ";

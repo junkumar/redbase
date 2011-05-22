@@ -37,8 +37,7 @@ where C_PHONE > "11-8";
 
 print io;
 
-
-
+exit;
 create index LINEITEM(L_ORDERKEY);
 reset buffer;
 reset io;

@@ -53,11 +53,13 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
   left.SetAttr(lhsIt->GetAttr());
   right.Set(buf);
   right.SetAttr(rhsIt->GetAttr());
-  delete buf;
+  delete [] buf;
 
-  oFilters = new Condition[nOFilters];
-  lKeys = new DataAttrInfo[nOFilters];
-  rKeys = new DataAttrInfo[nOFilters];
+  if(nOFilters > 0) {
+    oFilters = new Condition[nOFilters];
+    lKeys = new DataAttrInfo[nOFilters];
+    rKeys = new DataAttrInfo[nOFilters];
+  }
 
   for(int i = 0; i < nOFilters; i++) {
     oFilters[i] = outFilters[i]; // shallow copy
@@ -141,9 +143,9 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
 
   explain << "NestedLoopJoin\n";
   if(nOFilters > 0) {
-    explain << "   nConditions = " << nOFilters << "\n";
+    explain << "   nFilters = " << nOFilters << "\n";
     for (int i = 0; i < nOutFilters; i++)
-      explain << "   conditions[" << i << "]:" << oFilters[i] << "\n";
+      explain << "   filters[" << i << "]:" << oFilters[i] << "\n";
   }
 
   status = 0;
@@ -166,9 +168,14 @@ RC NestedLoopJoin::IsValid()
 
 NestedLoopJoin::~NestedLoopJoin()
 {
+  delete lhsIt;
+  delete rhsIt;
   delete [] attrs;
-  if(oFilters != NULL)
+  if(nOFilters != 0) {
     delete [] oFilters;
+    delete [] rKeys;
+    delete [] lKeys;
+  }
 }
 
 RC NestedLoopJoin::Open()
@@ -263,7 +270,8 @@ RC NestedLoopJoin::GetNext(Tuple &t)
     } // for
 
     if(recordIn) {
-      char * buf = new char[TupleLength()];
+      char * buf;
+      t.GetData(buf);
       memset(buf, 0, TupleLength());
 
       char *lbuf;
@@ -277,8 +285,6 @@ RC NestedLoopJoin::GetNext(Tuple &t)
              rbuf,
              right.GetLength());
 
-      t.Set(buf);
-      delete buf;
       joined = true;
     }
   } // while
