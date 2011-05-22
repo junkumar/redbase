@@ -410,6 +410,17 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID& rid)
   }
 }
 
+RC IX_IndexHandle::Pin(PageNum p) {
+  PF_PageHandle ph;
+  RC rc = pfHandle->GetThisPage(p, ph); 
+  return rc;
+}
+
+RC IX_IndexHandle::UnPin(PageNum p) {
+  RC rc = pfHandle->UnpinPage(p); 
+  return rc;
+}
+
 //Unpinning version that will unpin after every call correctly
 RC IX_IndexHandle::GetThisPage(PageNum p, PF_PageHandle& ph) const {
   RC rc = pfHandle->GetThisPage(p, ph); 

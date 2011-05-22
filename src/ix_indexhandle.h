@@ -95,6 +95,9 @@ class IX_IndexHandle {
   BtreeNode* GetRoot() const;
   void Print(ostream&, int level = -1, RID r = RID(-1,-1)) const;
 
+  RC Pin(PageNum p);
+  RC UnPin(PageNum p);
+
  private:
   //Unpinning version that will unpin after every call correctly
   RC GetThisPage(PageNum p, PF_PageHandle& ph) const;
