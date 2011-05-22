@@ -17,9 +17,12 @@ IX_IndexHandle::~IX_IndexHandle()
     // unpin old root page 
     pfHandle->UnpinPage(hdr.rootPage);
     delete root;
+    root = NULL;
   }
-  if(pathP != NULL)
+  if(pathP != NULL) {
     delete [] pathP;
+    pathP = NULL;
+  }
   if(path != NULL) {
     // path[0] is root
     for (int i = 1; i < hdr.height; i++) 
@@ -29,11 +32,16 @@ IX_IndexHandle::~IX_IndexHandle()
         // delete path[i]; - better leak than crash
       }
     delete [] path;
+    path = NULL;
   }
-  if(pfHandle != NULL)
+  if(pfHandle != NULL) {
     delete pfHandle;
-  if(treeLargest != NULL)
+    pfHandle = NULL;
+  }
+  if(treeLargest != NULL) {
     delete [] (char*) treeLargest;
+    treeLargest = NULL;
+  }
 }
 
 // 0 indicates success
