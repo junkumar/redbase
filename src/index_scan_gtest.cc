@@ -188,7 +188,7 @@ TEST_F(IndexScanTest, Contest) {
       EXPECT_EQ(rc, 0);
 
       //cerr << t << "\t" << t.GetRid() << endl;
-      cerr << ns << " records so far" << endl;
+      //cerr << ns << " records so far" << endl;
       ns++;
     }
     

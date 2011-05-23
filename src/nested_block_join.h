@@ -31,8 +31,10 @@ class NestedBlockJoin: public NestedLoopJoin {
       pageSize = lhsIt->GetNumSlotsPerPage();
 
       cerr << "nPages, pageSize " << nPages << ", " << pageSize << endl;
-        
-      int nBlocks = ceil(float(nPages)/blockSize);
+       
+      double p = nPages;
+      p = ceil(p/blockSize);
+      int nBlocks = p;
       for(int j = 0; j < nBlocks; j++) {
         // RM page 0 is header - so things start at 1
         blocks.push_back(1 + j*blockSize);

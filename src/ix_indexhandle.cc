@@ -188,7 +188,8 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID& rid)
 
     // unpin old root page 
     RC rc = pfHandle->UnpinPage(hdr.rootPage);
-    if (rc != 0) return rc;
+    if (rc < 0) 
+      return rc;
 
     // make new root node
     PF_PageHandle ph;
@@ -649,7 +650,7 @@ BtreeNode* IX_IndexHandle::FindLargestLeaf()
     // start with a fresh path
     if(path[i] != NULL) {
       RC rc = pfHandle->UnpinPage(path[i]->GetPageRID().Page());
-      if (rc != 0) return NULL;
+      if (rc < 0) return NULL;
       delete path[i];
       path[i] = NULL;
     }
