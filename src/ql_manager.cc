@@ -304,19 +304,19 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if(rc != 0) return rc;
   }
 
-  cout << "Select\n";
+  // cout << "Select\n";
 
-  cout << "   nSelAttrs = " << nSelAttrs << "\n";
-  for (i = 0; i < nSelAttrs; i++)
-    cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
+  // cout << "   nSelAttrs = " << nSelAttrs << "\n";
+  // for (i = 0; i < nSelAttrs; i++)
+  //   cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
 
-  cout << "   nRelations = " << nRelations << "\n";
-  for (i = 0; i < nRelations; i++)
-    cout << "   relations[" << i << "] " << relations[i] << "\n";
+  // cout << "   nRelations = " << nRelations << "\n";
+  // for (i = 0; i < nRelations; i++)
+  //   cout << "   relations[" << i << "] " << relations[i] << "\n";
 
-  cout << "   nConditions = " << nConditions << "\n";
-  for (i = 0; i < nConditions; i++)
-    cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+  // cout << "   nConditions = " << nConditions << "\n";
+  // for (i = 0; i < nConditions; i++)
+  //   cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
   // recursively delete iterators
   delete it;
@@ -480,12 +480,12 @@ RC QL_Manager::Insert(const char *relName,
   delete [] buf;
   int i;
 
-  cout << "Insert\n";
+  // cout << "Insert\n";
 
-  cout << "   relName = " << relName << "\n";
-  cout << "   nValues = " << nValues << "\n";
-  for (i = 0; i < nValues; i++)
-    cout << "   values[" << i << "]:" << values[i] << "\n";
+  // cout << "   relName = " << relName << "\n";
+  // cout << "   nValues = " << nValues << "\n";
+  // for (i = 0; i < nValues; i++)
+  //   cout << "   values[" << i << "]:" << values[i] << "\n";
 
   return 0;
 }
@@ -599,19 +599,19 @@ RC QL_Manager::Delete(const char *relName_,
   rc =	rmm.CloseFile(fh);
   if (rc != 0) return rc;
  
-  cout << "Delete\n";
+  // cout << "Delete\n";
 
-  cout << "   relName = " << relName << "\n";
-  cout << "   nCondtions = " << nConditions << "\n";
-  for (int i = 0; i < nConditions; i++)
-    cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+  // cout << "   relName = " << relName << "\n";
+  // cout << "   nCondtions = " << nConditions << "\n";
+  // for (int i = 0; i < nConditions; i++)
+  //   cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
   delete [] conditions;
   rc = it->Close();
   if (rc != 0) return rc;
 
   //delete it;
-  cerr << "done with delete it" << endl;
+  //cerr << "done with delete it" << endl;
   return 0;
 }
 
@@ -794,18 +794,18 @@ RC QL_Manager::Update(const char *relName_,
 
   delete it;
 
-  cout << "Update\n";
+  // cout << "Update\n";
 
-  cout << "   relName = " << relName << "\n";
-  cout << "   updAttr:" << updAttr << "\n";
-  if (bIsValue)
-    cout << "   rhs is value: " << rhsValue << "\n";
-  else
-    cout << "   rhs is attribute: " << rhsRelAttr << "\n";
+  // cout << "   relName = " << relName << "\n";
+  // cout << "   updAttr:" << updAttr << "\n";
+  // if (bIsValue)
+  //   cout << "   rhs is value: " << rhsValue << "\n";
+  // else
+  //   cout << "   rhs is attribute: " << rhsRelAttr << "\n";
 
-  cout << "   nConditions = " << nConditions << "\n";
-  for (int i = 0; i < nConditions; i++)
-    cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+  // cout << "   nConditions = " << nConditions << "\n";
+  // for (int i = 0; i < nConditions; i++)
+  //   cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
   delete [] conditions;
   return 0;
 }

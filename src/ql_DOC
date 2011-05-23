@@ -19,150 +19,74 @@ Minibase documentation on cs.wisc.edu
 
 Overall Design:
  
-  This is an implemenation of the system catalogs as relations within
-  the database along with commands required to bootstrap and interact
-  with tables/indexes in the database. 
+  This implementation of RQL is an instance of the iterator model. All physical
+  operators are implemented as iterators. These iterators can be composed of
+  other iterators in turn leading to a flexible composition of iterators.
 
-   relcat and attrcat are built as RM files with fixed schemas.
-   A struct called DataRelInfo was created (much like DataAttrInfo) to
-   represent each record in relcat. Each record in attrcat is
-   basically a DataAttrInfo struct.
+  Complete semantic checking of queries submitted is performed. See the various
+  SM_Manager::SemCheck() methods in sm_manager.cc. Basic rewrites are performed
+  to expand "select *" and all the conditions.
 
-Update
-- could just be delete + insert - not efficient - two passes over everything
+  Conversion from the logical query plan to the physical plan is mainly done via
+  heuristics. Only left-deep join trees are considered. The primary statistics
+  used during plan selection are the number of pages in the relation and number
+  of records in the relation. Relations are ordered so that the smaller relation
+  is chosen as the outer for a join when possible.
 
-  // handle halloween problem by not choosing indexscan on an attr when the attr
-  // is the one being updated.
+  Indexes are preferred whenever conditions allow them to be. Filters are pushed
+  down as far as possible. Most operators also support an output side filtering
+  for the filters that cannot be pushed down any further. For index scans
+  different orders(ascending/descending) are used based on the operation (<, >,
+  =) required to permit early exits for optimization.
+
+  Whenever the right iterator is an index scan for a join operator an
+  NestedLoopIndexJoin (NLIJ) is considered. Similarly, whenever the left
+  iterator is detected as a file scan a NestedBlockJoin is considered. A basic
+  NestedLoopJoin exists for non-leaf joins and to also implement cross-product
+  functionality.
+  
+  A separate per-record implementation for Insert clause was done without
+  reusing the existing bulk loader to ensure that operations on catalogs and
+  other meta operations are not done too often.
+  
+  The Update clause is implemented separately and not as a reuse of the
+  Delete/Insert clause methods to ensure that a single pass is used instead of
+  two passes. The Update clause handles the halloween problem by not choosing an
+  index-scan on an attribute when the attribute is the one being updated.
+
+ 
 
 ---------------------------------------
 
-Key Data Structures:
+Physical Operators Implemented (fully):
 
-  
-   The items maintained in relcat include -
+  FileScan
+  IndexScan
+  NestedLoopJoin
+  Projection
+  NestedLoopIndexJoin (derives from NLJ)
+  NestedBlockJoin (derives from NLJ)
 
-recordSize;            // Size per row
-attrCount;             // # of attributes
-numPages;              // # of pages used by relation
-numRecords;            // # of records in relation
-relName[MAXNAME+1];    // Relation name
+  Filter is not implemented separately, but as a part of all above operators.
+  The Projection and Join iterators in turn contain other iterators to allow for
+  flexible composition.
 
-   Currently numPages and numRecords are populated by
-   SM_Manager::Load() but other DML will also have to keep these
-   correct in order for them to be useful system statistics.
-    
+  See iterator.h for the interface of class Iterator that all these operators
+  derive from. iterator.h also contains the definition of the Tuple class that
+  is passed around by these operators.
+
 ---------------------------------------
 
 Testing:
 
-   Automated unit tests were used to test each class. A popular test
-   harness - google-test, which is in the
-   same style as JUnit was used to make testing fast and automatic.
-   See sm_manager_gtest.cc.
-   Data files were created and used for testing alongside testing with
-   the suggested stars/soaps data.
+   Automated unit tests were used to test each class. 
+   See *_gtest.cc for each iterator implemented.
+   Additionally ql_test.[1-7] are other full RQL scripts.
 
 ---------------------------------------
 
 Bugs/Known Issues:
     
-   Wish there was a way to print the index as if it were a
-   relation. I considered making the index available as a full
-   relation by making entries in relcat/attrcat but decided against it
-   so that users would not be stopped from creating tables with
-   .number suffixes.
 
 ---------------------------------------
-
-1 (a) Since the system catalogs are accessed very frequently, we
-suggested that you open the catalogs for a database when the database
-is opened, and then keep the catalogs open until the database is
-closed. Did you implement this scheme? Why or why not?
-
-Yes. I implemented this scheme because I decided that the open handles
-to the catalog are a very useful convenience in the code along with
-being an efficiency improvement so that extra IOs or filesystem
-operations are not performed to get the catalogs everytime a query is
-executed.
-
-See SM_Manager::OpenDB() at 
-sm_manager.cc:50 for an example of initialization of handles to the
-catalogs. These data members are now used directly whenever I need to
-access the catalogs instead of opening them each time.
-
-
-(b) If you implemented the scheme in (a), then updates to the catalogs
-may not be reflected onto disk immediately. For example, if you open a
-catalog a second time (to implement the help utility, for example, or
-to print the contents of a catalog), then you may not see the most
-current version of the catalog. How do you handle this issue?
-
-I handle this issue by intercepting calls to the catalog. This is
-single-user, single-access system so all calls have to go through the
-same instance of SM_Manager. Within a given instance of SM_Manager, I
-intercept all calls to the catalogs and serve them out of the objects
-within the SM_Manager class that keep filehandles open to the catalog
-at all times. 
-
-See SM_Manager::Print() at 
-sm_manager.cc:599 for an example of intercepts.
-
-
-2 If you're in the middle of a bulk load and something goes wrong, what
-does your bulk load utility do? Your answer may differ depending on
-what went wrong; if so, describe the different cases. Briefly discuss
-when your solution is appropriate and when it may not be appropriate.
-
-See SM_Manager::Load() at 
-sm_manager.cc:513 
-
-case a. Input file is empty.
-Not considered an error. Nothing is loaded.
-
-case b. Input file has wrong number of columns. (line 515)
-Instant failure at the point (at the row) where this is encountered.
-Better fail than load bad data in this case.
-Inappropriate when dealing with lots of dirty data and trying to make
-a best effort load.
-
-case c. Input file has wrong type information for attributes (line 513)
-No easy way to tell if the data in ascii is correct or not. Here the
-user's judgement is trusted. Truncate floats and read them as
-ints. Read ints as floats if required. If a string attribute is
-incorrectly indicated as a float/int binary reinterpretation will
-result. On other hand if float/int are claimed as ints then their
-ascii representation is used.
-This behavior is mostly inherited from std::stringstream
-Inappropriate when strict type-aware loading is needed and if strict
-rules are available for the inputs. These rules will need to also be
-provided along with input schema.
-
-case d. Failure in inserting records or index entries
-Instant failure at the point (at the row) where this is encountered.
-Inappropriate sometimes because we now have a partially loaded
-file. No support for all-or-nothing semantics.
-
-3 When the "create index" command is invoked, how do you generate the
-filename and index number that are used as parameters in the call to
-IX_Manager::CreateIndex()? Are there any limitations to your approach? 
-
-I use the offset of the column as its index number and -1 to indicate
-that there is no index.
-
-See SM_Manager::CreateIndex at
-sm_manager.cc:336
- 
-Advantages
-- guaranteed non-negative unique number - so can distinguish between columns
-- always guaranteed to exist
-- attribute lengths and number of attributes are fixed - so no chance
-of having indexNo exceed the limits of int unintentionally.
-- no need to scan other indexes to generate an index number.
-
-Disadvantages
-- limited to a single index per attribute - but redbase limits this
-any way.
-- if alter table was allowed and attributes were removed then will
-have to adjust all offsets and index numbers of indexes on disk for
-all other columns potentially.
 
