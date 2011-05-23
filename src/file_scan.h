@@ -8,6 +8,7 @@
 #include "redbase.h"
 #include "iterator.h"
 #include "rm.h"
+#include "sm.h"
 
 using namespace std;
 
@@ -30,6 +31,10 @@ class FileScan: public Iterator {
 
   RC IsValid();
   virtual RC Eof() const { return RM_EOF; }
+  virtual int GetNumPages() const { return psmm->GetNumPages(relName); }
+  virtual int GetNumSlotsPerPage() const { return rfs.GetNumSlotsPerPage(); }
+  virtual int GetNumRecords() const { return psmm->GetNumRecords(relName); }
+  virtual RC GotoPage(PageNum p) { return rfs.GotoPage(p); }
 
  private:
   RM_FileScan rfs;

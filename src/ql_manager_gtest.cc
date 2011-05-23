@@ -49,6 +49,12 @@ TEST_F(QL_ManagerTest, Cons) {
     rc = system (command.str().c_str());
     ASSERT_EQ(rc, 0);
 
+    command.str("");
+    command << "echo \"create index stars(soapid);\" | ./redbase " 
+            << dbname;
+    rc = system (command.str().c_str());
+    ASSERT_EQ(rc, 0);
+
     // wrong number of attrs
     command.str("");
     command << "echo \"insert into soaps values(\\\"The Good Wife\\\", \\\"CBS\\\", 4.0);\" | ./redbase " 
@@ -115,14 +121,14 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc >> 8, 4);
 
     command.str("");
-    command << "echo \"queryplans on;select sname, stname from stars, soaps where soaps.soapid = stars.soapid;\" | ./redbase " 
+    command << "echo \"queryplans on;reset io; select sname, stname from stars, soaps where soaps.soapid = stars.soapid; print io;\" | ./redbase " 
             << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 29);
 
     command.str("");
-    command << "echo \"queryplans on;select * from soaps, stars;\" | ./redbase " 
-            << dbname << "| grep tuple | ./counter.pl ";
+    command << "echo \"queryplans on;reset io; select * from soaps, stars; print io;\" | ./redbase " 
+            << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 290-256); //actual 290 but shown as 290-256 - system
 

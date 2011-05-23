@@ -52,8 +52,13 @@ class QL_Manager {
   RC IsValid() const;
   // Choose between filescan and indexscan for first operation - leaf level of
   // operator tree
-  Iterator* GetLeafIterator(const char *relName_,
-                            int nConditions, const Condition conditions_[]);
+  // to see if NLIJ is possible, join condition is passed down
+  Iterator* GetLeafIterator(const char *relName,
+                            int nConditions, 
+                            const Condition conditions[],
+                            int nJoinConditions = 0,
+                            const Condition jconditions[] = NULL);
+
   RC PrintIterator(Iterator* it) const;
 
   void GetCondsForSingleRelation(int nConditions,

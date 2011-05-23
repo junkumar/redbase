@@ -21,3 +21,5 @@ src/qlfile
 src/gtestfile
 build/
 lib/
+src/contest
+nested_scratch

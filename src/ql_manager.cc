@@ -18,6 +18,8 @@
 #include "index_scan.h"
 #include "file_scan.h"
 #include "nested_loop_join.h"
+#include "nested_loop_index_join.h"
+#include "nested_block_join.h"
 #include "parser.h"
 #include "projection.h"
 #include <map>
@@ -246,31 +248,57 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if(lcount != 0) delete [] lcond;
     
     for(int i = 1; i < nRelations; i++) {
+      Condition* jcond = NULL;
+      int jcount = 0;
+      GetCondsForTwoRelations(nConditions, conditions, i, relations, relations[i],
+                              jcount, jcond);
+
+
       Condition* rcond = NULL;
       int rcount = -1;
       GetCondsForSingleRelation(nConditions, conditions, relations[i], rcount,
                                 rcond);
-      Iterator* rfs = GetLeafIterator(relations[i], rcount, rcond);
+      Iterator* rfs = GetLeafIterator(relations[i], rcount, rcond, jcount, jcond);
       if(rcount != 0) delete [] rcond;
 
-      
-      Condition* jcond = NULL;
-      int jcount = -1;
-      GetCondsForTwoRelations(nConditions, conditions, i, relations, relations[i],
-                              jcount, jcond);
-      RC status = -1;
-      Iterator* newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
-      if (status != 0) return status;
+      Iterator* newit = NULL;
 
-      if(i == nRelations - 1)
+      if(i == 1) {
+        FileScan* fit = dynamic_cast<FileScan*>(it);
+        RC status = -1;
+        if(fit != NULL)
+          newit = new NestedBlockJoin(fit, rfs, status, jcount, jcond);
+        else
+          newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
+        if (status != 0) return status;
+      }
+
+
+      IndexScan* ixit = dynamic_cast<IndexScan*>(rfs);
+      RC status = -1;
+      if(ixit != NULL) {
+        newit = new NestedLoopIndexJoin(it, ixit, status, jcount, jcond);
+        if (status != 0) return status;
+      }
+      else
+        if(newit == NULL) {
+          newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
+          if (status != 0) return status;
+        }
+
+      // cout << "Select done with NBJ init\n";
+
+      if(i == nRelations - 1) {
         newit = new Projection(newit, status, nSelAttrs, selAttrs);
-      if (status != 0) return status;
+        if (status != 0) return status;
+      }
 
       if(jcount != 0) delete [] jcond;
 
       it = newit;
     }
 
+    // cout << "Select done with for relations\n";
 
     RC rc = PrintIterator(it);
     if(rc != 0) return rc;
@@ -787,8 +815,11 @@ RC QL_Manager::Update(const char *relName_,
 // operator tree
 // REturned iterator should be deleted by user after use.
 Iterator* QL_Manager::GetLeafIterator(const char *relName,
-                                      int nConditions, const Condition conditions[])
-{  
+                                      int nConditions, 
+                                      const Condition conditions[],
+                                      int nJoinConditions,
+                                      const Condition jconditions[])
+{
   RC invalid = IsValid(); if(invalid) return NULL;
 
   if(relName == NULL) {
@@ -805,21 +836,24 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
   const Condition * chosenCond = NULL;
   Condition * filters = NULL;
   int nFilters = -1;
+  Condition jBased = NULLCONDITION;
 
-  map<string, const Condition*> keys;
+  map<string, const Condition*> jkeys;
 
-  for(int j = 0; j < nConditions; j++) {
-    if(strcmp(conditions[j].lhsAttr.relName, relName) == 0) {
-      keys[string(conditions[j].lhsAttr.attrName)] = &conditions[j];
+  // cerr << relName << " nJoinConditions was " << nJoinConditions << endl;
+            
+  for(int j = 0; j < nJoinConditions; j++) {
+    if(strcmp(jconditions[j].lhsAttr.relName, relName) == 0) {
+      jkeys[string(jconditions[j].lhsAttr.attrName)] = &jconditions[j];
     }
 
-    if(conditions[j].bRhsIsAttr == TRUE &&
-       strcmp(conditions[j].rhsAttr.relName, relName) == 0) {
-      keys[string(conditions[j].rhsAttr.attrName)] = &conditions[j];
+    if(jconditions[j].bRhsIsAttr == TRUE &&
+       strcmp(jconditions[j].rhsAttr.relName, relName) == 0) {
+      jkeys[string(jconditions[j].rhsAttr.attrName)] = &jconditions[j];
     }
   }
   
-  for(map<string, const Condition*>::iterator it = keys.begin(); it != keys.end(); it++) {
+  for(map<string, const Condition*>::iterator it = jkeys.begin(); it != jkeys.end(); it++) {
     // Pick last numerical index or at least one non-numeric index
     for (int i = 0; i < attrCount; i++) {
       if(attributes[i].indexNo != -1 && 
@@ -828,13 +862,23 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
         if(chosenIndex == NULL ||
            attributes[i].attrType == INT || attributes[i].attrType == FLOAT) {
           chosenIndex = attributes[i].attrName;
-          chosenCond = it->second;
+          jBased = *(it->second);
+          jBased.lhsAttr.attrName = chosenIndex;
+          jBased.bRhsIsAttr = FALSE;
+          jBased.rhsValue.type = attributes[i].attrType;
+          jBased.rhsValue.data = NULL;
+
+          chosenCond = &jBased;
+
+          // cerr << "chose index for iscan based on join condition " <<
+          //   *(chosenCond) << endl;
         }
       }
     }
   }
 
-  if(chosenCond == NULL) {
+  // if join conds resulted in chosenCond
+  if(chosenCond != NULL) {
     nFilters = nConditions;
     filters = new Condition[nFilters];
     for(int j = 0; j < nConditions; j++) {
@@ -843,17 +887,56 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
       }
     }
   } else {
-    nFilters = nConditions - 1;
-    filters = new Condition[nFilters];
-    for(int j = 0, k = 0; j < nConditions; j++) {
-      if(chosenCond != &(conditions[j])) {
-        filters[k] = conditions[j];
-        k++;
+    // (chosenCond == NULL) // prefer join cond based index
+    map<string, const Condition*> keys;
+
+    for(int j = 0; j < nConditions; j++) {
+      if(strcmp(conditions[j].lhsAttr.relName, relName) == 0) {
+        keys[string(conditions[j].lhsAttr.attrName)] = &conditions[j];
+      }
+
+      if(conditions[j].bRhsIsAttr == TRUE &&
+         strcmp(conditions[j].rhsAttr.relName, relName) == 0) {
+        keys[string(conditions[j].rhsAttr.attrName)] = &conditions[j];
+      }
+    }
+  
+    for(map<string, const Condition*>::iterator it = keys.begin(); it != keys.end(); it++) {
+      // Pick last numerical index or at least one non-numeric index
+      for (int i = 0; i < attrCount; i++) {
+        if(attributes[i].indexNo != -1 && 
+           strcmp(it->first.c_str(), attributes[i].attrName) == 0) {
+          nIndexes++;
+          if(chosenIndex == NULL ||
+             attributes[i].attrType == INT || attributes[i].attrType == FLOAT) {
+            chosenIndex = attributes[i].attrName;
+            chosenCond = it->second;
+          }
+        }
+      }
+    }
+  
+    if(chosenCond == NULL) {
+      nFilters = nConditions;
+      filters = new Condition[nFilters];
+      for(int j = 0; j < nConditions; j++) {
+        if(chosenCond != &(conditions[j])) {
+          filters[j] = conditions[j];
+        }
+      }
+    } else {
+      nFilters = nConditions - 1;
+      filters = new Condition[nFilters];
+      for(int j = 0, k = 0; j < nConditions; j++) {
+        if(chosenCond != &(conditions[j])) {
+          filters[k] = conditions[j];
+          k++;
+        }
       }
     }
   }
 
-  if(nConditions == 0 || nIndexes == 0) {
+  if(chosenCond == NULL && (nConditions == 0 || nIndexes == 0)) {
     Condition cond = NULLCONDITION;
 
     RC status = -1;

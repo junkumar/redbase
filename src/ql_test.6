@@ -1,0 +1,39 @@
+/* for NBJ testing.  */
+
+!ls
+
+CREATE TABLE NATION   ( N_NATIONKEY     i4,
+                        N_NAME          c25,
+                        N_REGIONKEY     i4,
+                        N_COMMENT       c152 );
+
+CREATE TABLE CUSTOMER ( C_CUSTKEY       i4,
+                        C_NAME          c25,
+                        C_ADDRESS       c40,
+                        C_NATIONKEY     i4,
+                        C_PHONE         c15,
+                        C_ACCTBAL       f4,
+                        C_MKTSEGMENT    c10,
+                        C_COMMENT       c117 );
+
+
+CREATE TABLE SUPPLIER ( S_SUPPKEY       i4,
+                        S_NAME          c25,
+                        S_ADDRESS       c40,
+                        S_NATIONKEY     i4,
+                        S_PHONE         c15,
+                        S_ACCTBAL       f4,
+                        S_COMMENT       c101 );
+
+load NATION("../../data/contest/nation.data");
+load CUSTOMER("../../data/contest/customer.data");
+load SUPPLIER("../../data/contest/supplier.data");
+
+print relcat;
+
+queryplans on;
+select * from NATION, SUPPLIER where S_NATIONKEY = N_NATIONKEY;
+select C_CUSTKEY from CUSTOMER, NATION where C_NATIONKEY = N_NATIONKEY;
+print io;
+
+exit;

@@ -205,6 +205,8 @@ class RM_FileScan {
   RC CloseScan ();                             // Close the scan
   bool IsOpen() const { return (bOpen && prmh != NULL && pred != NULL); }
   void resetState() { current = RID(1, -1); }
+  RC GotoPage(PageNum p);
+  int GetNumSlotsPerPage() const { return prmh->GetNumSlots(); }
  private:
   Predicate * pred;
   RM_FileHandle * prmh;

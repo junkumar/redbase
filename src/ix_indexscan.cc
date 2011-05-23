@@ -75,6 +75,12 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &fileHandle,
     value = value_; // TODO deep copy ?
     OpOptimize();
   }
+  
+  // cerr << "IX_IndexScan::OpenScan with value ";
+  // if(value == NULL)
+  //   cerr << "NULL" << endl;
+  // else 
+  //   cerr << *(int*)value << endl;
   // pixh->Print(cerr);
   return 0;
 }
@@ -262,7 +268,7 @@ RC IX_IndexScan::CloseScan()
   currNode = NULL;
   currPos = -1;
   if(currKey != NULL) {
-    delete [] currKey;
+    delete [] ((char*) currKey);
     currKey = NULL;
   }
   currRid = RID(-1, -1);
@@ -278,6 +284,7 @@ RC IX_IndexScan::ResetState()
   currPos = -1;
   lastNode = NULL;
   eof = false;
+  foundOne = false;
 
   return this->OpOptimize();
 }

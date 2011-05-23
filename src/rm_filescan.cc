@@ -76,6 +76,23 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
   return 0;
 }
 
+RC RM_FileScan::GotoPage(PageNum p)
+{
+  if(!bOpen)
+    return RM_FNOTOPEN;
+  assert(prmh != NULL && pred != NULL && bOpen);
+
+  current = RID(p, -1);
+
+  // set up to be at the slot before the first slot with data
+  RM_Record rec;
+  RC rc = GetNextRec(rec);
+  RID rid;
+  rec.GetRid(rid);
+  current = RID(p, rid.Slot()-1);
+  return 0;
+}
+
 RC RM_FileScan::GetNextRec     (RM_Record &rec)
 {
   if(!bOpen)

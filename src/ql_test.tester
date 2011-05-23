@@ -52,7 +52,8 @@ else
 			echo running test '#' $testnum '****************' >> $OUTPUT
 			$DBHOME/dbdestroy $TESTDB || :
 			$DBHOME/dbcreate  $TESTDB
-			valgrind --leak-check=full --suppressions=valgrind.supp $DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
+			$DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
+#			valgrind --leak-check=full --suppressions=valgrind.supp $DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
 		else
 			echo I can not find a test number $testnum. >> $OUTPUT
 		endif

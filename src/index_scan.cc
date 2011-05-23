@@ -20,16 +20,16 @@ IndexScan::IndexScan(SM_Manager& smm,
                      bool desc)
   :ifs(IX_IndexScan()), prmm(&rmm), pixm(&ixm), psmm(&smm),
    rmh(RM_FileHandle()), ixh(IX_IndexHandle()), relName(relName_),
-   nOFilters(nOutFilters), oFilters(NULL)
+   nOFilters(nOutFilters), oFilters(NULL), attrName(indexAttrName)
 {
-  if(relName == NULL || indexAttrName == NULL) {
+  if(relName_ == NULL || indexAttrName == NULL) {
     status = SM_NOSUCHTABLE;
     return;
   }
 
   attrCount = -1;
   attrs = NULL;
-  RC rc = smm.GetFromTable(relName, attrCount, attrs);
+  RC rc = smm.GetFromTable(relName.c_str(), attrCount, attrs);
   if (rc != 0) { 
     status = rc;
     return;
@@ -47,26 +47,31 @@ IndexScan::IndexScan(SM_Manager& smm,
   assert(cond.rhsValue.data == NULL || cond.bRhsIsAttr == FALSE); 
   // only conditions
   // on index key can be pushed down.
-  assert(strcmp(cond.lhsAttr.attrName, indexAttrName) == 0);
-  assert(strcmp(cond.lhsAttr.relName, relName) == 0);
+  assert(strcmp(cond.lhsAttr.attrName, indexAttrName) == 0 ||
+         strcmp(cond.rhsAttr.attrName, indexAttrName) == 0);
+  assert(strcmp(cond.lhsAttr.relName, relName.c_str()) == 0 ||
+         strcmp(cond.rhsAttr.relName, relName.c_str()) == 0);
 
-  rc = prmm->OpenFile(relName, rmh);
+  rc = prmm->OpenFile(relName.c_str(), rmh);
   if (rc != 0) { 
     status = rc;
     return;
   }
 
-  rc = pixm->OpenIndex(relName, indexNo, ixh);
+  rc = pixm->OpenIndex(relName.c_str(), indexNo, ixh);
   if (rc != 0) {
     status = rc;
     return;
   }
 
-  rc = ifs.OpenScan(ixh, 
-                    cond.op,
-                    cond.rhsValue.data,
-                    NO_HINT,
-                    desc);
+  // rc = ifs.OpenScan(ixh, 
+  //                   cond.op,
+  //                   cond.rhsValue.data,
+  //                   NO_HINT,
+  //                   desc);
+  this->desc = desc;
+  this->c = cond.op;
+  rc = ReOpenScan(cond.rhsValue.data);
   if (rc != 0) { 
     status = rc;
     return;
@@ -78,7 +83,7 @@ IndexScan::IndexScan(SM_Manager& smm,
   }
 
   explain << "IndexScan\n";
-  explain << "   relName = " << relName << "\n";
+  explain << "   relName = " << relName.c_str() << "\n";
   explain << "   attrName = " << indexAttrName << "\n";
   if(cond.rhsValue.data != NULL)
     explain << "   ScanCond = " << cond << "\n";
@@ -89,6 +94,21 @@ IndexScan::IndexScan(SM_Manager& smm,
   }
 
   status = 0;
+}
+
+// will close if already open
+// made available for NLIJ to use
+// only value is new, rest of the index attr condition is the same
+RC IndexScan::ReOpenScan(void* newData)
+{
+  if(ifs.IsOpen())
+    ifs.CloseScan();
+
+  return ifs.OpenScan(ixh, 
+                      c,
+                      newData,
+                      NO_HINT,
+                      desc);
 }
 
 string IndexScan::Explain()
@@ -172,7 +192,7 @@ RC IndexScan::GetNext(Tuple &t)
       Condition cond = oFilters[i];
       DataAttrInfo condAttr;
       RID r;  
-      rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, condAttr, r);
+      rc = psmm->GetAttrFromCat(relName.c_str(), cond.lhsAttr.attrName, condAttr, r);
       if (rc != 0) return rc;
 
       Predicate p(condAttr.attrType,
@@ -186,10 +206,10 @@ RC IndexScan::GetNext(Tuple &t)
       if(cond.bRhsIsAttr == TRUE) {
         DataAttrInfo rhsAttr;
         RID r;
-        rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, rhsAttr, r);
+        rc = psmm->GetAttrFromCat(relName.c_str(), cond.lhsAttr.attrName, rhsAttr, r);
         if (rc != 0) return rc;
         rhs = (buf + rhsAttr.offset);
-      }       
+      }
    
       if(!p.eval(buf, rhs, cond.op)) {
         recordIn = false;

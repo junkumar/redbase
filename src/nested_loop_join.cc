@@ -143,9 +143,9 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
 
   explain << "NestedLoopJoin\n";
   if(nOFilters > 0) {
-    explain << "   nFilters = " << nOFilters << "\n";
+    explain << "   nJoinConds = " << nOFilters << "\n";
     for (int i = 0; i < nOutFilters; i++)
-      explain << "   filters[" << i << "]:" << oFilters[i] << "\n";
+      explain << "   joinConds[" << i << "]:" << oFilters[i] << "\n";
   }
 
   status = 0;
@@ -236,58 +236,64 @@ RC NestedLoopJoin::GetNext(Tuple &t)
       if (rc == lhsIt->Eof()) { // end of both - exit
         return QL_EOF;
       }
+      // cerr << "NestedLoopJoin::GetNext() leftvalue " << left << endl;
+      rc = ReopenIfIndexJoin(left);
       rc = rhsIt->Open();
       rc = rhsIt->GetNext(right);
     }
 
-    bool recordIn = true;
-    for (int i = 0; i < nOFilters; i++) {
-      Condition cond = oFilters[i];
-      DataAttrInfo condAttr;
-      RID r;  
-
-      Predicate p(lKeys[i].attrType,
-                  lKeys[i].attrLength,
-                  lKeys[i].offset,
-                  cond.op,
-                  NULL,
-                  NO_HINT);
-
-      // check for join
-      void * b = NULL;
-      right.Get(rKeys[i].attrName, b);
-
-      const char * abuf;
-      left.GetData(abuf);
-      // cerr << left << " - " << right << endl;
-
-      if(p.eval(abuf, (char*)b, cond.op)) {
-        recordIn = true;
-      } else {
-        recordIn = false;
-        break;
-      }
-    } // for
-
-    if(recordIn) {
-      char * buf;
-      t.GetData(buf);
-      memset(buf, 0, TupleLength());
-
-      char *lbuf;
-      left.GetData(lbuf);
-      memcpy(buf, lbuf, left.GetLength());
-
-      char *rbuf;
-      right.GetData(rbuf);
-
-      memcpy(buf + left.GetLength(), 
-             rbuf,
-             right.GetLength());
-
-      joined = true;
-    }
+    EvalJoin(t, joined);
   } // while
 
   return rc;
+}
+
+void NestedLoopJoin::EvalJoin(Tuple &t, bool& joined) {
+  bool recordIn = true;
+  for (int i = 0; i < nOFilters; i++) {
+    Condition cond = oFilters[i];
+    DataAttrInfo condAttr;
+    RID r;  
+
+    Predicate p(lKeys[i].attrType,
+                lKeys[i].attrLength,
+                lKeys[i].offset,
+                cond.op,
+                NULL,
+                NO_HINT);
+
+    // check for join
+    void * b = NULL;
+    right.Get(rKeys[i].attrName, b);
+
+    const char * abuf;
+    left.GetData(abuf);
+    // cerr << left << " - " << right << endl;
+
+    if(p.eval(abuf, (char*)b, cond.op)) {
+      recordIn = true;
+    } else {
+      recordIn = false;
+      break;
+    }
+  } // for each filter
+
+  if(recordIn) {
+    char * buf;
+    t.GetData(buf);
+    memset(buf, 0, TupleLength());
+
+    char *lbuf;
+    left.GetData(lbuf);
+    memcpy(buf, lbuf, left.GetLength());
+
+    char *rbuf;
+    right.GetData(rbuf);
+
+    memcpy(buf + left.GetLength(), 
+           rbuf,
+           right.GetLength());
+
+    joined = true;
+  }
 }

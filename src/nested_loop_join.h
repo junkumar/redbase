@@ -36,7 +36,14 @@ class NestedLoopJoin: public Iterator {
   RC IsValid();
   virtual RC Eof() const { return QL_EOF; }
 
- private:
+  // only used by derived class NLIJ
+  // RC virtual ReopenIfIndexJoin(const char* newValue) { return 0; }
+  RC virtual ReopenIfIndexJoin(const Tuple& t) { return 0; }
+  
+ protected:
+  void virtual EvalJoin(Tuple &t, bool& joined);
+
+ protected:
   Iterator* lhsIt;
   Iterator* rhsIt;
   Tuple left;

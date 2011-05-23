@@ -36,16 +36,27 @@ class IndexScan: public Iterator {
   RC IsValid();
   virtual RC Eof() const { return IX_EOF; }
 
+  // will close if already open
+  // made available for NLIJ to use
+  // only value is new, rest of the index attr condition is the same
+  virtual RC ReOpenScan(void* newData);
+  virtual string GetIndexAttr() const { return attrName; }
+  virtual string GetIndexRel() const { return relName; }
+
  private:
   IX_IndexScan ifs;
   IX_Manager* pixm;
   RM_Manager* prmm;
   SM_Manager* psmm;
-  const char * relName;
+  string relName;
+  string attrName;
   RM_FileHandle rmh;
   IX_IndexHandle ixh;
   int nOFilters;
   Condition* oFilters;
+  // options used to open scan
+  bool desc;
+  CompOp c;
 };
 
 #endif // INDEXSCAN_H
