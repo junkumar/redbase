@@ -30,7 +30,7 @@ class NestedBlockJoin: public NestedLoopJoin {
       nPages = lhsIt->GetNumPages();
       pageSize = lhsIt->GetNumSlotsPerPage();
 
-      cerr << "nPages, pageSize " << nPages << ", " << pageSize << endl;
+      // cerr << "nPages, pageSize " << nPages << ", " << pageSize << endl;
        
       double p = nPages;
       p = ceil(p/blockSize);
@@ -38,7 +38,7 @@ class NestedBlockJoin: public NestedLoopJoin {
       for(int j = 0; j < nBlocks; j++) {
         // RM page 0 is header - so things start at 1
         blocks.push_back(1 + j*blockSize);
-        cerr << j << "th block - start page " <<  blocks[j] << endl;
+        // cerr << j << "th block - start page " <<  blocks[j] << endl;
       }
       blockIt = blocks.begin();
       left_rc = 0;
@@ -83,7 +83,7 @@ class NestedBlockJoin: public NestedLoopJoin {
           // nrecs++;
           // lhsIt++;
           // cout << left << " - " << right << endl;
-          EvalJoin(t, joined);
+          EvalJoin(t, joined, &left, &right);
 
           left_rc = lhsIt->GetNext(left);
 

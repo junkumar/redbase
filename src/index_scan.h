@@ -13,7 +13,7 @@
 
 using namespace std;
 
-class IndexScan: public Iterator {
+class IndexScan: public SortedIterator {
  public:
   IndexScan(SM_Manager& smm,
             RM_Manager& rmm,
@@ -42,6 +42,7 @@ class IndexScan: public Iterator {
   virtual RC ReOpenScan(void* newData);
   virtual string GetIndexAttr() const { return attrName; }
   virtual string GetIndexRel() const { return relName; }
+  virtual bool IsDesc() const { return ifs.IsDesc(); }
 
  private:
   IX_IndexScan ifs;

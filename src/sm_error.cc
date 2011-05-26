@@ -34,6 +34,7 @@ const char *SM_ErrorMsg[] = {
   (char*)"SM_TYPEMISMATCH Types do not match.",
   (char*)"SM_BADOP Bad operator in condition.",
   (char*)"SM_AMBGATTR Attribute ambiguous - more than 1 relation contains same attr.",
+  (char*)"SM_BADPARAM Bad parameters used with set on commandline",
 };
 
 //

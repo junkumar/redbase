@@ -46,6 +46,7 @@ class IX_IndexScan {
   RC ResetState();
   
   bool IsOpen() const { return (bOpen && pred != NULL && pixh != NULL); }
+  bool IsDesc() const { return desc; }
  private:
   RC OpOptimize(); // Optimizes based on value of c, value and resets state
   RC EarlyExitOptimize(void* now);

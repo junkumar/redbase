@@ -858,11 +858,26 @@ RC SM_Manager::Print(const char *relName)
 RC SM_Manager::Set(const char *paramName, const char *value)
 {
   RC invalid = IsValid(); if(invalid) return invalid;
+  if(paramName == NULL || value  == NULL)
+    return SM_BADPARAM;
 
-  // cout << "Set\n"
-  //      << "   paramName=" << paramName << "\n"
-  //      << "   value    =" << value << "\n";
-  return (0);
+  params[paramName] = string(value);
+  cout << "Set\n"
+       << "   paramName=" << paramName << "\n"
+       << "   value    =" << value << "\n";
+  return 0;
+}
+
+RC SM_Manager::Get(const string& paramName, string& value) const
+{
+  RC invalid = IsValid(); if(invalid) return invalid;
+  
+  map<string, string>::const_iterator it;
+  it = params.find(paramName);
+  if(it == params.end())
+    return SM_BADPARAM;
+  value = it->second;
+  return 0;
 }
 
 RC SM_Manager::Help()
