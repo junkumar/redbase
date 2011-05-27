@@ -242,18 +242,17 @@ RC NestedLoopJoin::GetNext(Tuple &t)
       rc = rhsIt->GetNext(right);
     }
 
-    EvalJoin(t, joined);
+    EvalJoin(t, joined, &left, &right);
   } // while
 
   return rc;
 }
 
-void NestedLoopJoin::EvalJoin(Tuple &t, bool& joined) {
+void NestedLoopJoin::EvalJoin(Tuple &t, bool& joined, Tuple* l, Tuple* r) {
   bool recordIn = true;
   for (int i = 0; i < nOFilters; i++) {
     Condition cond = oFilters[i];
     DataAttrInfo condAttr;
-    RID r;  
 
     Predicate p(lKeys[i].attrType,
                 lKeys[i].attrLength,
@@ -264,11 +263,11 @@ void NestedLoopJoin::EvalJoin(Tuple &t, bool& joined) {
 
     // check for join
     void * b = NULL;
-    right.Get(rKeys[i].attrName, b);
+    r->Get(rKeys[i].attrName, b);
 
     const char * abuf;
-    left.GetData(abuf);
-    // cerr << left << " - " << right << endl;
+    l->GetData(abuf);
+    // cerr << "EvalJoin():" << *l << " - " << *r << endl;
 
     if(p.eval(abuf, (char*)b, cond.op)) {
       recordIn = true;
@@ -284,15 +283,15 @@ void NestedLoopJoin::EvalJoin(Tuple &t, bool& joined) {
     memset(buf, 0, TupleLength());
 
     char *lbuf;
-    left.GetData(lbuf);
-    memcpy(buf, lbuf, left.GetLength());
+    l->GetData(lbuf);
+    memcpy(buf, lbuf, l->GetLength());
 
     char *rbuf;
-    right.GetData(rbuf);
+    r->GetData(rbuf);
 
-    memcpy(buf + left.GetLength(), 
+    memcpy(buf + l->GetLength(), 
            rbuf,
-           right.GetLength());
+           r->GetLength());
 
     joined = true;
   }

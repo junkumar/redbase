@@ -57,6 +57,7 @@ typedef enum{
     N_DELETE,
     N_UPDATE,
     N_RELATTR,
+    N_ORDERATTR,
     N_CONDITION,
     N_RELATTR_OR_VALUE,
     N_ATTRTYPE,
@@ -125,6 +126,7 @@ typedef struct node{
          struct node *relattrlist;
          struct node *rellist;
          struct node *conditionlist;
+         struct node *orderrelattr; 
       } QUERY;
 
       /* insert node */
@@ -153,6 +155,12 @@ typedef struct node{
          char *relname;
          char *attrname;
       } RELATTR;
+
+      /* order + relation attribute node */
+      struct{
+         int order;
+         struct node *relattr;
+      } ORDERATTR;
 
       /* condition node */
       struct{
@@ -208,12 +216,13 @@ NODE *load_node(char *relname, char *filename);
 NODE *set_node(char *paramName, char *string);
 NODE *help_node(char *relname);
 NODE *print_node(char *relname);
-NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist);
+NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist, NODE *order_relattr);
 NODE *insert_node(char *relname, NODE *valuelist);
 NODE *delete_node(char *relname, NODE *conditionlist);
 NODE *update_node(char *relname, NODE *relattr, NODE *value,
-		  NODE *conditionlist);
+                  NODE *conditionlist);
 NODE *relattr_node(char *relname, char *attrname);
+NODE *orderattr_node(int order, NODE *relattr);
 NODE *condition_node(NODE *lhsRelattr, CompOp op, NODE *rhsRelattrOrValue);
 NODE *value_node(AttrType type, void *value);
 NODE *relattr_or_value_node(NODE *relattr, NODE *value);

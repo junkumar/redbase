@@ -33,7 +33,8 @@ void SM_PrintError(RC rc);
 #define SM_TYPEMISMATCH    (START_SM_ERR - 9)
 #define SM_BADOP           (START_SM_ERR - 10)
 #define SM_AMBGATTR        (START_SM_ERR - 11)
+#define SM_BADPARAM        (START_SM_ERR - 12)
 
-#define SM_LASTERROR SM_AMBGATTR
+#define SM_LASTERROR SM_BADPARAM
 
 #endif // SM_ERROR_H

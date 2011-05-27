@@ -183,13 +183,15 @@ NODE *print_node(char *relname)
  * query_node: allocates, initializes, and returns a pointer to a new
  * query node having the indicated values.
  */
-NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist)
+NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist, 
+                 NODE *order_relattr)
 {
     NODE *n = newnode(N_QUERY);
 
     n->u.QUERY.relattrlist = relattrlist;
     n->u.QUERY.rellist = rellist;
     n->u.QUERY.conditionlist = conditionlist;
+    n->u.QUERY.orderrelattr = order_relattr;
     return n;
 }
 
@@ -235,6 +237,19 @@ NODE *update_node(char *relname, NODE *relattr, NODE *relorvalue,
     return n;
 }
 
+
+/*
+ * relattr_node: allocates, initializes, and returns a pointer to a new
+ * relattr node having the indicated values.
+ */
+NODE *orderattr_node(int order, NODE *relattr)
+{
+    NODE *n = newnode(N_ORDERATTR);
+
+    n -> u.ORDERATTR.order = order;
+    n -> u.ORDERATTR.relattr = relattr;
+    return n;
+}
 
 /*
  * relattr_node: allocates, initializes, and returns a pointer to a new

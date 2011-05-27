@@ -14,7 +14,7 @@
 
 using namespace std;
 
-class NestedLoopJoin: public Iterator {
+class NestedLoopJoin: public virtual Iterator {
  public:
   NestedLoopJoin(
                  Iterator *    lhsIt,      // access for left i/p to join -R
@@ -41,7 +41,7 @@ class NestedLoopJoin: public Iterator {
   RC virtual ReopenIfIndexJoin(const Tuple& t) { return 0; }
   
  protected:
-  void virtual EvalJoin(Tuple &t, bool& joined);
+  void virtual EvalJoin(Tuple &t, bool& joined, Tuple* l, Tuple* r);
 
  protected:
   Iterator* lhsIt;
@@ -50,8 +50,8 @@ class NestedLoopJoin: public Iterator {
   Tuple right;
   int nOFilters;
   Condition* oFilters; // join keys
-  DataAttrInfo* lKeys; // offset of join key in the left iterator
-  DataAttrInfo* rKeys; // offset of join key in the right iterator
+  DataAttrInfo* lKeys; // attrinfo of join key in the left iterator
+  DataAttrInfo* rKeys; // attrinfo of join key in the right iterator
 };
 
 #endif // NESTEDLOOPJOIN_H

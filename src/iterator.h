@@ -16,7 +16,7 @@ class DataAttrInfo;
 
 // abstraction to hide details of offsets and type conversions
 class Tuple {
- public:
+ public: 
  Tuple(int ct, int length_): count(ct), length(length_), rid(-1, -1) {
     data = new char[length];
   }
@@ -24,6 +24,14 @@ class Tuple {
     data = new char[length];
     memcpy(data, rhs.data, length);
     SetAttr(rhs.GetAttributes());
+  }
+
+  Tuple& operator=(const Tuple& rhs) {
+    if (this != &rhs) {
+      memcpy(data, rhs.data, length);
+      SetAttr(rhs.GetAttributes());
+    }
+    return *this;
   }
 
   ~Tuple() { delete [] data; }
@@ -133,6 +141,7 @@ namespace {
   }
 };
 
+
 class Iterator {
  public:
   Iterator():bIterOpen(false), indent("") {}
@@ -173,6 +182,13 @@ class Iterator {
   int attrCount;
   stringstream explain;
   string indent;
+};
+
+class SortedIterator : public virtual Iterator {
+ public:
+  virtual bool IsDesc() const { return desc; }
+ protected:
+  bool desc;
 };
 
 #endif // ITERATOR_H

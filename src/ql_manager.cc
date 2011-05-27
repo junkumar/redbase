@@ -1,4 +1,4 @@
-//
+ //
 // ql_manager.cc
 //
 
@@ -20,6 +20,8 @@
 #include "nested_loop_join.h"
 #include "nested_loop_index_join.h"
 #include "nested_block_join.h"
+#include "merge_join.h"
+#include "sort.h"
 #include "parser.h"
 #include "projection.h"
 #include <map>
@@ -87,7 +89,8 @@ QL_Manager::~QL_Manager()
 //
 RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
                       int nRelations, const char * const relations_[],
-                      int nConditions, const Condition conditions_[])
+                      int nConditions, const Condition conditions_[],
+                      int order, RelAttr orderAttr)
 {
   RC invalid = IsValid(); if(invalid) return invalid;
   int i;
@@ -117,7 +120,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   }
 
 
-  sort(relations, 
+  sort(relations,
        relations + nRelations,
        strlt);
 
@@ -226,9 +229,10 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
 
   if(nRelations == 1) {
     it = GetLeafIterator(relations[0], nConditions, conditions);
-    RC status;
-    it = new Projection(it, status, nSelAttrs, selAttrs);
-    RC rc = PrintIterator(it);
+    RC rc = MakeRootIterator(it, nSelAttrs, selAttrs, nRelations, relations,
+                             order, orderAttr);
+    if(rc != 0) return rc;
+    rc = PrintIterator(it);
     if(rc != 0) return rc;
   }
 
@@ -274,23 +278,85 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       }
 
 
-      IndexScan* ixit = dynamic_cast<IndexScan*>(rfs);
-      RC status = -1;
-      if(ixit != NULL) {
-        newit = new NestedLoopIndexJoin(it, ixit, status, jcount, jcond);
-        if (status != 0) return status;
+      IndexScan* rixit = dynamic_cast<IndexScan*>(rfs);
+      IndexScan* lixit = NULL;
+
+      // flag to see if index merge join is possible
+      int indexMergeCond = -1;
+      // look for equijoin (addl conditions are ok)
+      for(int k = 0; k < jcount; k++) {
+        if((jcond[k].op == EQ_OP) && 
+           (rixit != NULL) && 
+           (strcmp(rixit->GetIndexAttr().c_str(), jcond[k].lhsAttr.attrName) == 0
+            || strcmp(rixit->GetIndexAttr().c_str(), jcond[k].rhsAttr.attrName) ==
+            0)) {
+             indexMergeCond = k;
+             break;
+           }
       }
-      else
-        if(newit == NULL) {
-          newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
-          if (status != 0) return status;
+
+      string mj("");
+      smm.Get("mergejoin", mj);
+      if(mj == "no")
+        indexMergeCond = -1;
+
+
+      if(indexMergeCond > -1 && i == 1) {
+        Condition* lcond = NULL;
+        int lcount = -1;
+        GetCondsForSingleRelation(nConditions, conditions, relations[0], lcount,
+                                  lcond);
+   
+        delete it;
+        it = GetLeafIterator(relations[0], lcount, lcond, jcount, jcond);
+        if(lcount != 0) delete [] lcond;
+
+        lixit = dynamic_cast<IndexScan*>(it);
+
+        if((lixit == NULL) ||
+           (strcmp(lixit->GetIndexAttr().c_str(), jcond[indexMergeCond].lhsAttr.attrName) != 0
+            && strcmp(lixit->GetIndexAttr().c_str(), jcond[indexMergeCond].rhsAttr.attrName) !=
+            0)) {
+          indexMergeCond = -1;
+          cerr << "null lixit" << endl;
         }
+
+        if(lixit->IsDesc() != rixit->IsDesc()) {
+          indexMergeCond = -1;
+          cerr << "order mismatch" << endl;
+        }
+      }
+
+      bool nlijoin = true;
+      string nlij("");
+      smm.Get("nlij", nlij);
+      if(nlij == "no")
+        nlijoin = false;
+
+      if(indexMergeCond > -1 && i == 1) { //both have to be indexscans
+        RC status = -1;
+        newit = new MergeJoin(lixit, rixit, status, jcount, indexMergeCond, jcond);
+        if (status != 0) return status;
+      } else {
+        if(rixit != NULL && nlijoin) {
+          RC status = -1;
+          newit = new NestedLoopIndexJoin(it, rixit, status, jcount, jcond);
+          if (status != 0) return status;
+        }  else {
+          if(newit == NULL) {
+            RC status = -1;
+            newit = new NestedLoopJoin(it, rfs, status, jcount, jcond);
+            if (status != 0) return status;
+          }
+        }
+      }
 
       // cout << "Select done with NBJ init\n";
 
       if(i == nRelations - 1) {
-        newit = new Projection(newit, status, nSelAttrs, selAttrs);
-        if (status != 0) return status;
+        RC rc = MakeRootIterator(newit, nSelAttrs, selAttrs, nRelations, relations,
+                              order, orderAttr);
+        if(rc != 0) return rc;
       }
 
       if(jcount != 0) delete [] jcond;
@@ -304,19 +370,24 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if(rc != 0) return rc;
   }
 
-  // cout << "Select\n";
+  cout << "Select\n";
 
-  // cout << "   nSelAttrs = " << nSelAttrs << "\n";
-  // for (i = 0; i < nSelAttrs; i++)
-  //   cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
+  cout << "   nSelAttrs = " << nSelAttrs << "\n";
+  for (int i = 0; i < nSelAttrs; i++)
+    cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
 
-  // cout << "   nRelations = " << nRelations << "\n";
-  // for (i = 0; i < nRelations; i++)
-  //   cout << "   relations[" << i << "] " << relations[i] << "\n";
+  cout << "   nRelations = " << nRelations << "\n";
+  for (int i = 0; i < nRelations; i++)
+    cout << "   relations[" << i << "] " << relations[i] << "\n";
 
-  // cout << "   nConditions = " << nConditions << "\n";
-  // for (i = 0; i < nConditions; i++)
-  //   cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+  cout << "   nConditions = " << nConditions << "\n";
+  for (int i = 0; i < nConditions; i++)
+    cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+
+  if(order != 0) 
+    cout << "   orderAttr:" << orderAttr 
+         << ((order == -1) ? " DESC" : " ASC")
+         << "\n";
 
   // recursively delete iterators
   delete it;
@@ -340,7 +411,31 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   return 0;
 }
 
-
+RC QL_Manager::MakeRootIterator(Iterator*& newit,
+                                int nSelAttrs, const RelAttr selAttrs[],
+                                int nRelations, const char * const relations[],
+                                int order, RelAttr orderAttr) const
+{
+  RC status = -1;
+  newit = new Projection(newit, status, nSelAttrs, selAttrs);
+  if(status != 0) return status;
+  if(order != 0) {
+    bool desc = (order == -1) ? true : false;
+    RC rc = smm.FindRelForAttr(orderAttr, nRelations, relations);
+    if(rc != 0) return rc;
+    rc = smm.SemCheck(orderAttr);
+    if(rc != 0) return rc;
+    DataAttrInfo d;
+    RID rid;
+    rc = smm.GetAttrFromCat(orderAttr.relName, orderAttr.attrName, d,
+                            rid);
+    // TODO get DESC working
+    cout << "Making sort iterator\n";
+    newit = new Sort(newit, d.attrType, d.attrLength, d.offset, status, desc);
+    if(status != 0) return status;
+  }
+  return 0;
+}
 
 RC QL_Manager::PrintIterator(Iterator* it) const {
   if(bQueryPlans == TRUE)
@@ -478,13 +573,11 @@ RC QL_Manager::Insert(const char *relName,
 
   delete [] attr;
   delete [] buf;
-  int i;
-
   // cout << "Insert\n";
 
   // cout << "   relName = " << relName << "\n";
   // cout << "   nValues = " << nValues << "\n";
-  // for (i = 0; i < nValues; i++)
+  // for (int i = 0; i < nValues; i++)
   //   cout << "   values[" << i << "]:" << values[i] << "\n";
 
   return 0;

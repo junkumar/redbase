@@ -16,6 +16,8 @@
 #include "rm.h"
 #include "ix.h"
 #include "catalog.h"
+#include <string>
+#include <map>
 
 //
 // SM_Manager: provides data management
@@ -47,6 +49,9 @@ class SM_Manager {
 
   RC Set        (const char *paramName,         // set parameter to
                  const char *value);            //   value
+  RC Get        (const string& paramName,       // get parameter's
+                 string& value) const;          //   value
+
  public:
   RC IsValid() const;
   
@@ -107,6 +112,7 @@ class SM_Manager {
   RM_FileHandle relfh;
   RM_FileHandle attrfh;
   char cwd[1024];
+  map<string, string> params;
 };
 
 #endif // SM_H

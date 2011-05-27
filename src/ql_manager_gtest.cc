@@ -121,7 +121,7 @@ TEST_F(QL_ManagerTest, Cons) {
     ASSERT_EQ(rc >> 8, 4);
 
     command.str("");
-    command << "echo \"queryplans on;reset io; select sname, stname from stars, soaps where soaps.soapid = stars.soapid; print io;\" | ./redbase " 
+    command << "echo \"queryplans on;reset io; select * from stars, soaps where soaps.soapid = stars.soapid; print io;\" | ./redbase " 
             << dbname << "| ./counter.pl ";
     rc = system (command.str().c_str());
     ASSERT_EQ(rc >> 8, 29);

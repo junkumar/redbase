@@ -1,0 +1,19 @@
+/* for Merge Join testing.  */
+
+
+queryplans on;
+select C_CUSTKEY from CUSTOMER, ORDERS where C_CUSTKEY = O_CUSTKEY;
+print io;
+
+set mergejoin = "no";
+set nlij = "no";
+drop index CUSTOMER(C_CUSTKEY);
+drop index ORDERS(O_CUSTKEY);
+
+reset io;
+queryplans on;
+select C_CUSTKEY from CUSTOMER, ORDERS where C_CUSTKEY = O_CUSTKEY;
+print io;
+
+exit;
+
