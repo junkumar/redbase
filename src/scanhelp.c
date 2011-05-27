@@ -119,6 +119,14 @@ static int get_id(char *s)
       return yylval.ival = RW_FROM;
    if(!strcmp(string, "where"))
       return yylval.ival = RW_WHERE;
+   if(!strcmp(string, "order"))
+      return yylval.ival = RW_ORDER;
+   if(!strcmp(string, "by"))
+      return yylval.ival = RW_BY;
+   if(!strcmp(string, "desc"))
+      return yylval.ival = RW_DESC;
+   if(!strcmp(string, "asc"))
+      return yylval.ival = RW_ASC;
    if(!strcmp(string, "insert"))
       return yylval.ival = RW_INSERT;
    if(!strcmp(string, "delete"))

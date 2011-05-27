@@ -89,6 +89,10 @@ QL_Manager *pQlm;          // QL component manager
       RW_SELECT
       RW_FROM
       RW_WHERE
+      RW_ORDER
+      RW_BY
+      RW_DESC
+      RW_ASC
       RW_INSERT
       RW_DELETE
       RW_UPDATE
@@ -123,6 +127,8 @@ QL_Manager *pQlm;          // QL component manager
 
 %type   <sval>   opt_relname
 
+%type   <ival>   opt_asc_desc
+
 %type   <n>   command
       ddl
       dml
@@ -148,6 +154,8 @@ QL_Manager *pQlm;          // QL component manager
       non_mt_relation_list
       relation
       opt_where_clause
+      ordering_spec
+      opt_order_by_clause
       non_mt_cond_list
       condition
       relattr_or_value
@@ -351,9 +359,9 @@ exit
    ;
 
 query
-   : RW_SELECT non_mt_select_clause RW_FROM non_mt_relation_list opt_where_clause
+   : RW_SELECT non_mt_select_clause RW_FROM non_mt_relation_list opt_where_clause opt_order_by_clause
    {
-      $$ = query_node($2, $4, $5);
+     $$ = query_node($2, $4, $5, $6);
    }
    ;
 
@@ -374,7 +382,7 @@ delete
 update
    : RW_UPDATE T_STRING RW_SET relattr T_EQ relattr_or_value opt_where_clause
    {
-      $$ = update_node($2, $4, $6, $7);
+     $$ = update_node($2, $4, $6, $7);
    }
    ;
 
@@ -454,6 +462,40 @@ opt_where_clause
       $$ = NULL;
    }
    ;
+
+opt_order_by_clause
+   : nothing
+   {
+      $$ = orderattr_node(0, 0);
+   }
+   | RW_ORDER RW_BY ordering_spec
+   {
+     $$ = $3;
+   }
+   ;
+
+ordering_spec
+   : relattr opt_asc_desc
+   {
+     $$ = orderattr_node($2, $1);
+   }
+   ;
+
+opt_asc_desc
+  : RW_DESC
+  {
+    $$ = -1;
+  }
+  | RW_ASC
+  {
+    $$ = 1;
+  }
+  | nothing
+  {
+    $$ = 1;
+  }
+  ;
+
 
 non_mt_cond_list
    : condition RW_AND non_mt_cond_list

@@ -18,8 +18,9 @@ class TupleCmp {
  public:
   TupleCmp(AttrType     sortKeyType,
            int    sortKeyLength,
-           int     sortKeyOffset) 
-    :p(sortKeyType, sortKeyLength, sortKeyOffset, LT_OP, NULL, NO_HINT),
+           int     sortKeyOffset,
+           CompOp c) 
+    :c(c), p(sortKeyType, sortKeyLength, sortKeyOffset, c, NULL, NO_HINT),
     sortKeyOffset(sortKeyOffset)
     {}
   
@@ -29,11 +30,12 @@ class TupleCmp {
       rhs.Get(sortKeyOffset, b);
       const char * abuf;
       lhs.GetData(abuf);
-      return p.eval(abuf, (char*)b, LT_OP);
+      return p.eval(abuf, (char*)b, c);
   }
  private:
+  CompOp c;
   Predicate p;
-  int sortKeyOffset; 
+  int sortKeyOffset;
 };
 
 // Single key, single pass sort operator. Uses memory directly.
@@ -43,15 +45,17 @@ class Sort: public SortedIterator {
         AttrType     sortKeyType,
         int    sortKeyLength,
         int     sortKeyOffset,
-       RC& status) 
-     :cmp(sortKeyType, sortKeyLength, sortKeyOffset),
-    set(cmp), lhsIt(lhsIt)
+        RC& status,
+        bool desc=false) 
+     :cmp(sortKeyType, sortKeyLength, sortKeyOffset, (desc == true ? GT_OP : LT_OP)),
+      lhsIt(lhsIt), set(cmp)
     {
       if(lhsIt == NULL) {
         status = SM_NOSUCHTABLE;
         return;
       }
 
+      this->desc = desc;
       attrCount = lhsIt->GetAttrCount();
       attrs = new DataAttrInfo[attrCount];
       DataAttrInfo* cattrs = lhsIt->GetAttr();
@@ -69,6 +73,7 @@ class Sort: public SortedIterator {
 
       explain << "Sort\n";
       explain << "   SortKey=" << attr
+              << " " << (desc == true ? "DESC" : "ASC")
               << endl;
 
       status = 0;
@@ -128,8 +133,8 @@ class Sort: public SortedIterator {
   virtual RC Eof() const { return QL_EOF; }
 
  private:
-  Iterator* lhsIt;
   TupleCmp cmp;
+  Iterator* lhsIt;
   multiset<Tuple, TupleCmp> set;
   multiset<Tuple>::const_iterator it;
 };

@@ -45,6 +45,7 @@ static int mk_attr_infos(NODE *list, int max, AttrInfo attrInfos[]);
 static int parse_format_string(char *format_string, AttrType *type, int *len);
 static int mk_rel_attrs(NODE *list, int max, RelAttr relAttrs[]);
 static void mk_rel_attr(NODE *node, RelAttr &relAttr);
+static void mk_order_relattr(NODE *node, int& order, RelAttr &relAttr);
 static int mk_relations(NODE *list, int max, char *relations[]);
 static int mk_conditions(NODE *list, int max, Condition conditions[]);
 static int mk_values(NODE *list, int max, Value values[]);
@@ -54,6 +55,7 @@ static void echo_query(NODE *n);
 static void print_attrtypes(NODE *n);
 static void print_op(CompOp op);
 static void print_relattr(NODE *n);
+static void print_orderattr(NODE *n);
 static void print_value(NODE *n);
 static void print_condition(NODE *n);
 static void print_relattrs(NODE *n);
@@ -150,6 +152,8 @@ RC interp(NODE *n)
             char      *relations[MAXATTRS];
             int       nConditions = 0;
             Condition conditions[MAXATTRS];
+            int       order = 0; /* -1 desc, 0 no order, 1 asc */
+            RelAttr   orderAttr;
 
             /* Make a list of RelAttrs suitable for sending to Query */
             nSelAttrs = mk_rel_attrs(n->u.QUERY.relattrlist, MAXATTRS,
@@ -174,12 +178,16 @@ RC interp(NODE *n)
                break;
             }
 
+            /* Make the order by attr suitable for sending to Query */
+            mk_order_relattr(n->u.QUERY.orderrelattr, order, orderAttr);
+
             /* Make the call to Select */
             errval = pQlm->Select(nSelAttrs, relAttrs,
-                  nRelations, relations,
-                  nConditions, conditions);
+                                  nRelations, relations,
+                                  nConditions, conditions, 
+                                  order, orderAttr);
             break;
-         }   
+         }
 
       case N_INSERT:            /* for Insert() */
          {
@@ -331,6 +339,18 @@ static int mk_rel_attrs(NODE *list, int max, RelAttr relAttrs[])
 
    return i;
 }
+
+/*
+ * mk_order_relattr: converts an int and a single relation-attribute (<relation,
+ * attribute> pair) into a RelAttr
+ */
+static void mk_order_relattr(NODE *node, int& order, RelAttr &relAttr)
+{
+   order = node->u.ORDERATTR.order;
+   if(order != 0)
+     mk_rel_attr(node->u.ORDERATTR.relattr, relAttr);
+}
+
 
 /*
  * mk_rel_attr: converts a single relation-attribute (<relation,
@@ -611,11 +631,15 @@ static void echo_query(NODE *n)
          print_relattrs(n -> u.QUERY.relattrlist);
          printf("\n from ");
          print_relations(n -> u.QUERY.rellist);
-         printf("\n");
          if (n->u.QUERY.conditionlist) {
+            printf("\n");
             printf("where ");
             print_conditions(n->u.QUERY.conditionlist);
          }
+         if (n->u.QUERY.orderrelattr) {
+           print_orderattr(n->u.QUERY.orderrelattr);
+         }
+
          printf(";\n");
          break;
       case N_INSERT:            /* for Insert() */
@@ -697,6 +721,15 @@ static void print_op(CompOp op)
          break;
    }
 }
+
+static void print_orderattr(NODE *n)
+{
+   if (n->u.ORDERATTR.order != 0) {
+     printf("\norder by");
+     print_relattr(n->u.ORDERATTR.relattr);
+     printf(" %s", (n->u.ORDERATTR.order == 1 ? "ASC" : "DESC"));
+   }        
+}  
 
 static void print_relattr(NODE *n)
 {

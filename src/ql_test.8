@@ -1,9 +1,14 @@
 /* test order by */
 
+queryplans on;
+
 select * from NATION where N_NATIONKEY = 1;
-select * from NATION order by N_NATIONKEY;
-select * from NATION where N_NATIONKEY = 1 order by N_NATIONKEY desc;
+select * from NATION order by N_REGIONKEY;
+select * from NATION where N_NATIONKEY > 1 order by N_NATIONKEY desc;
 select * from NATION order by N_NATIONKEY asc;
+select * from NATION order by N_NAME;
+
+/* error - only one ordering key supported */
+select * from NATION order by N_NATIONKEY, N_NAME;
 
 exit;
- order by N_NATIONKEY;

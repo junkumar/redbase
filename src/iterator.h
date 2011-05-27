@@ -187,7 +187,7 @@ class Iterator {
 class SortedIterator : public virtual Iterator {
  public:
   virtual bool IsDesc() const { return desc; }
- private:
+ protected:
   bool desc;
 };
 

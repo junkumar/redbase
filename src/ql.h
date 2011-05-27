@@ -31,7 +31,9 @@ class QL_Manager {
               int   nRelations,                // # relations in from clause
               const char * const relations[],  // relations in from clause
               int   nConditions,               // # conditions in where clause
-              const Condition conditions[]);   // conditions in where clause
+              const Condition conditions[],    // conditions in where clause
+              int order,                       // order from order by clause
+              RelAttr orderAttr);              // the single attr ordered by
 
   RC Insert  (const char *relName,             // relation to insert into
               int   nValues,                   // # values
@@ -58,6 +60,11 @@ class QL_Manager {
                             const Condition conditions[],
                             int nJoinConditions = 0,
                             const Condition jconditions[] = NULL);
+
+  RC MakeRootIterator(Iterator*& newit,
+                      int nSelAttrs, const RelAttr selAttrs[],
+                      int nRelations, const char * const relations[],
+                      int order, RelAttr orderAttr) const;
 
   RC PrintIterator(Iterator* it) const;
 
