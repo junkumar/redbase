@@ -90,3 +90,162 @@ Bugs/Known Issues:
 
 ---------------------------------------
 
+Design Questions:
+
+1 Consider the following query Q:
+   Select R.A, T.D
+   From  R, S, T
+   Where R.A = S.B and T.D = S.C
+and indexes on R.A and S.C.
+
+
+create table stars(starid  i, stname  c20, plays  c12, soapid  i);
+create table soaps(soapid  i, sname  c28, network  c4, rating  f);
+create table networks(nid  i, name c4, viewers i);
+
+create index stars(soapid);
+create index soaps(network);
+
+select stars.soapid, networks.name
+from stars, soaps, networks
+where 
+	stars.soapid = soaps.soapid
+and	networks.name = soaps.network;	
+
+
+(a) Show the final physical plan your query optimizer will generate
+for Q in the plan pretty-print format you implemented (Assume equal
+relation sizes in case you use those. If you keep other statistics,
+make and state reasonable assumptions).
+
+Project
+   nProjections = 2
+      stars.soapid,networks.name,
+-----NestedLoopIndexJoin
+   nJoinConds = 1
+   joinConds[0]:
+      lhsAttr:stars.soapid
+      op= =
+      bRhsIsAttr=TRUE
+      rhsAttr:soaps.soapid
+----------NestedLoopIndexJoin
+   nJoinConds = 1
+   joinConds[0]:
+      lhsAttr:networks.name
+      op= =
+      bRhsIsAttr=TRUE
+      rhsAttr:soaps.network
+---------------FileScan
+   relName = networks
+---------------IndexScan
+   relName = soaps
+   attrName = network
+----------IndexScan
+   relName = stars
+   attrName = soapid
+
+
+The only statistics used were number of records and number of pages
+per relation.
+
+
+(b) Outline the steps taken by your query optimizer after the semantic
+checking phase in generating the plan for Q.
+
+Before the semantic checking, simple rewrites are done to convert "*"
+to a set of attributes and to fill in implict relations.
+
+After semantic checking,
+
+i. sort all relations by number of records, smallest first.
+ql_manager.cc:238
+
+(T, S, R)
+
+ii. A left-deep join tree is used for query shape - always.
+ql_manager.cc:250
+
+((T Join S) Join R))
+
+iii. A decision is made on filescan versus indexscan for the outermost
+relation. In this case a FileScan was chosen (with 0 filters pushed
+down) because there is no appropriate index based on join conditions
+and where clause.
+See QL_Manager::GetLeafIterator()
+ql_manager.cc:817
+
+This is chosen as the leftmost (outermost) join operand. 
+FileScan T.
+
+iv. For each relation next (in the join order)
+The inner iterator is chosen one at a time.
+GetLeafIterator() is called for the relation which choses a index or
+file scan based on conditions/join clause.
+ql_manager.cc:280
+
+IndexScan is chosen for both R and S.
+
+((FScan(T) Join IScan(S)) Join IScan(R)))
+
+v. The leaf iterator for each right hand operand is checked to see if
+it is an indexscan. If yes and if the right conditions/join exist then
+NestedLoopIndexJoin is chosen.
+ql_manager.cc:280
+
+Both joins chosen here were NLIJ.
+
+((FScan(T) NLIJ IScan(S)) NLIJ IScan(R)))
+
+(c) Does your plan use both available indexes? Why or why not? Does
+there exist a plan which uses both indexes?
+
+Yes, both are used. The assumption is that the join selectivity will
+be small enough so that using index lookups is the fastest way to get
+to join results. My optimizer does not really make different choices
+for equijoins versus cross-products but certain plans are made
+unavailable unless it is an equi-join. NLIJ is available to
+non-equi-joins as well.
+
+2 When processing an update/delete statement, if an index was
+available
+did you use it? Quote line numbers and file names of where you check
+whether you can use an index or not.
+
+Yes, indexes are used if possible.
+Same GetLeafIterator() call is used in both update/delete. 
+See QL_Manager::GetLeafIterator()
+ql_manager.cc:817
+
+ql_manager.cc:541 (QL_Manager::Delete)
+ql_manager.cc:696 (QL_Manager::Update)
+
+Update has some special conditions to avoid the halloween problem.
+
+
+3 How precisely do you construct and pass around the intermediate
+tuples
+that move through query plans as a result of iterator GetNext calls?
+How do you handle the schema information for these intermediate
+tuples? 
+
+There is a tuple type - Tuple.
+See iterator.h:18
+
+These tuples are used in all GetNext() and passed on between
+iterators.
+
+Each Tuple object contains a pointer to an DataAttrInfo class which
+contains the full schema. Each tuple usually points to the
+DataAttrInfo info in the Iterator class that it belongs to.
+All intermediate Tuples are tuples of an Iterator and that
+intermediate Iterator always contains the schema in a DataAttrInfo
+object itself.
+
+Tuples are usually constructed using
+
+Iterator it;
+...
+Tuple t = it.GetTuple();
+
+See NestedBlockJoin::GetNext() for a usage of Tuple.
+nested_block_join.h:59

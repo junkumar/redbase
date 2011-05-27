@@ -1,0 +1,31 @@
+/* for TA design Qs use case  */
+
+/*
+   Select R.A, T.D
+   From  R, S, T
+   Where R.A = S.B and T.D = S.C
+and indexes on R.A and S.C. 
+*/
+
+!ls
+create table stars(starid  i, stname  c20, plays  c12, soapid  i);
+create table soaps(soapid  i, sname  c28, network  c4, rating  f);
+create table networks(nid  i, name c4, viewers i);
+
+/* load tuples from ./tests/stars.data */
+load soaps("../soaps.data");
+load stars("../stars.data");
+load stars("../networks.data");
+
+create index stars(soapid);
+create index soaps(network);
+
+
+queryplans on;
+select stars.soapid, networks.name
+from stars, soaps, networks
+where 
+	stars.soapid = soaps.soapid
+and	networks.name = soaps.network;	
+
+exit;
