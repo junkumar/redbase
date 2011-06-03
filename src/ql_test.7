@@ -1,19 +1,53 @@
 /* for Merge Join testing.  */
 
+CREATE TABLE CUSTOMER ( C_CUSTKEY       i4,
+                        C_NAME          c25,
+                        C_ADDRESS       c40,
+                        C_NATIONKEY     i4,
+                        C_PHONE         c15,
+                        C_ACCTBAL       f4,
+                        C_MKTSEGMENT    c10,
+                        C_COMMENT       c117 );
+
+
+CREATE TABLE ORDERS   ( O_ORDERKEY      i4,
+                        O_CUSTKEY       i4,
+                        O_ORDERSTATUS   c1,
+                        O_TOTALPRICE    f4,
+                        O_ORDERDATE     c10,
+                        O_ORDERPRIORITY c15,  
+                        O_CLERK         c15, 
+                        O_SHIPPRIORITY  i4,
+                        O_COMMENT       c79 );
+
+load CUSTOMER("../../data/contest/customer.data");
+load ORDERS("../../data/contest/orders.data");
+
+/*
+create index CUSTOMER(C_CUSTKEY);
+create index ORDERS(O_CUSTKEY);
+*/
 
 queryplans on;
-select C_CUSTKEY from CUSTOMER, ORDERS where C_CUSTKEY = O_CUSTKEY;
+reset io;
+select C_CUSTKEY 
+from CUSTOMER, ORDERS 
+where C_CUSTKEY = O_CUSTKEY and C_CUSTKEY > 1490;
 print io;
-
+/*
 set mergejoin = "no";
 set nlij = "no";
+*/
 drop index CUSTOMER(C_CUSTKEY);
 drop index ORDERS(O_CUSTKEY);
 
 reset io;
 queryplans on;
-select C_CUSTKEY from CUSTOMER, ORDERS where C_CUSTKEY = O_CUSTKEY;
+select C_CUSTKEY
+from CUSTOMER, ORDERS
+where C_CUSTKEY = O_CUSTKEY and C_CUSTKEY > 1490;
 print io;
+
 
 exit;
 

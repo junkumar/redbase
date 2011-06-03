@@ -370,24 +370,24 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if(rc != 0) return rc;
   }
 
-  cout << "Select\n";
+  // cout << "Select\n";
 
-  cout << "   nSelAttrs = " << nSelAttrs << "\n";
-  for (int i = 0; i < nSelAttrs; i++)
-    cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
+  // cout << "   nSelAttrs = " << nSelAttrs << "\n";
+  // for (int i = 0; i < nSelAttrs; i++)
+  //   cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
 
-  cout << "   nRelations = " << nRelations << "\n";
-  for (int i = 0; i < nRelations; i++)
-    cout << "   relations[" << i << "] " << relations[i] << "\n";
+  // cout << "   nRelations = " << nRelations << "\n";
+  // for (int i = 0; i < nRelations; i++)
+  //   cout << "   relations[" << i << "] " << relations[i] << "\n";
 
-  cout << "   nConditions = " << nConditions << "\n";
-  for (int i = 0; i < nConditions; i++)
-    cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+  // cout << "   nConditions = " << nConditions << "\n";
+  // for (int i = 0; i < nConditions; i++)
+  //   cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
-  if(order != 0) 
-    cout << "   orderAttr:" << orderAttr 
-         << ((order == -1) ? " DESC" : " ASC")
-         << "\n";
+  // if(order != 0) 
+  //   cout << "   orderAttr:" << orderAttr 
+  //        << ((order == -1) ? " DESC" : " ASC")
+  //        << "\n";
 
   // recursively delete iterators
   delete it;
