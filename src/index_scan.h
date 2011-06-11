@@ -13,7 +13,7 @@
 
 using namespace std;
 
-class IndexScan: public SortedIterator {
+class IndexScan: public Iterator {
  public:
   IndexScan(SM_Manager& smm,
             RM_Manager& rmm,
@@ -56,7 +56,6 @@ class IndexScan: public SortedIterator {
   int nOFilters;
   Condition* oFilters;
   // options used to open scan
-  bool desc;
   CompOp c;
 };
 

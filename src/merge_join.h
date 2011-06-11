@@ -14,10 +14,10 @@
 using namespace std;
 
 // Merge two sorted iterators - equijoin+ only
-class MergeJoin: public NestedLoopJoin, public SortedIterator {
+class MergeJoin: public NestedLoopJoin {
  public:
-  MergeJoin(SortedIterator*    lhsIt,      // access for left i/p to join -R
-            SortedIterator*    rhsIt,      // access for right i/p to join -S
+  MergeJoin(Iterator*    lhsIt,      // access for left i/p to join -R
+            Iterator*    rhsIt,      // access for right i/p to join -S
             RC& status,
             int nJoinConds,
             int equiCond,        // the join condition that can be used as
@@ -46,7 +46,6 @@ class MergeJoin: public NestedLoopJoin, public SortedIterator {
   virtual RC GetNext(Tuple &t);
 
  private:
-  bool desc;
   bool firstOpen;
   Iterator* curr;
   Iterator* other;

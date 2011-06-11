@@ -14,6 +14,8 @@
 #include "rm.h"
 #include "printer.h"
 #include "catalog.h"
+#include <set>
+#include <string>
 
 using namespace std;
 
@@ -95,6 +97,7 @@ RC SM_Manager::CreateTable(const char *relName,
 
   RID rid;
   RC rc;
+  set<string> uniq;
 
   DataAttrInfo * d = new DataAttrInfo[attrCount];
   int size = 0;
@@ -103,6 +106,13 @@ RC SM_Manager::CreateTable(const char *relName,
     d[i].offset = size;
     size += attributes[i].attrLength;
     strcpy (d[i].relName, relName);
+
+    if(uniq.find(string(d[i].attrName)) == uniq.end())
+      uniq.insert(string(d[i].attrName));
+    else {
+      // attrName was used already
+      return SM_BADATTR; 
+    }
 
     if ((rc = attrfh.InsertRec((char*) &d[i], rid)) < 0
       )

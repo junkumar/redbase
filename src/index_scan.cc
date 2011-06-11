@@ -52,6 +52,10 @@ IndexScan::IndexScan(SM_Manager& smm,
   assert(strcmp(cond.lhsAttr.relName, relName.c_str()) == 0 ||
          strcmp(cond.rhsAttr.relName, relName.c_str()) == 0);
 
+  bSorted = true;
+  sortRel = string(relName_);
+  sortAttr = string(indexAttrName);
+
   rc = prmm->OpenFile(relName.c_str(), rmh);
   if (rc != 0) { 
     status = rc;

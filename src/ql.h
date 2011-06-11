@@ -59,7 +59,9 @@ class QL_Manager {
                             int nConditions, 
                             const Condition conditions[],
                             int nJoinConditions = 0,
-                            const Condition jconditions[] = NULL);
+                            const Condition jconditions[] = NULL,
+                            int order = 0,
+                            RelAttr* porderAttr = NULL);
 
   RC MakeRootIterator(Iterator*& newit,
                       int nSelAttrs, const RelAttr selAttrs[],

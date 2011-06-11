@@ -144,7 +144,8 @@ namespace {
 
 class Iterator {
  public:
-  Iterator():bIterOpen(false), indent("") {}
+ Iterator():bIterOpen(false), indent(""), 
+    bSorted(false), desc(false) {}
   virtual ~Iterator() {}
 
   virtual RC Open() = 0;
@@ -176,19 +177,23 @@ class Iterator {
   virtual void SetIndent(const string& indent_) { 
     indent = indent_;
   }
+
+  virtual bool IsSorted() const { return bSorted; }
+  virtual bool IsDesc() const { return desc; }
+  virtual string GetSortRel() const { return sortRel; }
+  virtual string GetSortAttr() const { return sortAttr; }
+
  protected:
   bool bIterOpen;
   DataAttrInfo* attrs;
   int attrCount;
   stringstream explain;
   string indent;
-};
-
-class SortedIterator : public virtual Iterator {
- public:
-  virtual bool IsDesc() const { return desc; }
- protected:
+  // ordering attributes
+  bool bSorted;
   bool desc;
+  string sortRel;
+  string sortAttr;
 };
 
 #endif // ITERATOR_H

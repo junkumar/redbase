@@ -39,23 +39,27 @@ class TupleCmp {
 };
 
 // Single key, single pass sort operator. Uses memory directly.
-class Sort: public SortedIterator {
+class Sort: public Iterator {
  public:
    Sort(Iterator *    lhsIt,
         AttrType     sortKeyType,
         int    sortKeyLength,
         int     sortKeyOffset,
         RC& status,
-        bool desc=false) 
+        bool desc_=false) 
      :cmp(sortKeyType, sortKeyLength, sortKeyOffset, (desc == true ? GT_OP : LT_OP)),
-      lhsIt(lhsIt), set(cmp)
+    lhsIt(lhsIt), set(cmp)
     {
-      if(lhsIt == NULL) {
+      if(lhsIt == NULL || 
+         sortKeyLength < 1 || 
+         sortKeyOffset < 0 ||
+         sortKeyOffset > lhsIt->TupleLength()-1 ) {
         status = SM_NOSUCHTABLE;
         return;
       }
 
-      this->desc = desc;
+      bSorted = true;
+      this->desc = desc_;
       attrCount = lhsIt->GetAttrCount();
       attrs = new DataAttrInfo[attrCount];
       DataAttrInfo* cattrs = lhsIt->GetAttr();
@@ -67,8 +71,16 @@ class Sort: public SortedIterator {
 
       string attr;
       for (int i = 0; i < attrCount; i++) {
-        if(attrs[i].offset == sortKeyOffset)
+        if(attrs[i].offset == sortKeyOffset) {
           attr = string(attrs[i].attrName);
+          sortRel = string(attrs[i].relName);
+          sortAttr = string(attrs[i].attrName);
+        }
+      }
+      // wrong offset - no such key
+      if(attr == string()) {
+        status = SM_NOSUCHTABLE;
+        return;
       }
 
       explain << "Sort\n";
@@ -100,8 +112,10 @@ class Sort: public SortedIterator {
     while(lhsIt->GetNext(t) != lhsIt->Eof()) {
       set.insert(t);
     }
-
+    
     it = set.begin();
+    rit = set.rbegin();
+
     bIterOpen = true;
     return 0;
   }
@@ -110,10 +124,14 @@ class Sort: public SortedIterator {
     if(!bIterOpen)
       return RM_FNOTOPEN;
 
-    if (it == set.end())
+    if (it == set.end() || rit == set.rend())
       return Eof();
-    t = *it;
+    if(!desc)
+      t = *it;
+    else
+      t = *rit;
     it++;
+    rit++;
     return 0;
   }
 
@@ -125,6 +143,7 @@ class Sort: public SortedIterator {
     if(rc != 0 ) return rc;
     set.clear();
     it = set.begin();
+    rit = set.rbegin();
 
     bIterOpen = false;
     return 0;
@@ -137,6 +156,7 @@ class Sort: public SortedIterator {
   Iterator* lhsIt;
   multiset<Tuple, TupleCmp> set;
   multiset<Tuple>::const_iterator it;
+  multiset<Tuple>::const_reverse_iterator rit;
 };
 
 #endif // SORT_H

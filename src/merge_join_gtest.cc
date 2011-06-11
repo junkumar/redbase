@@ -96,9 +96,9 @@ TEST_F(MergeJoinTest, Cons) {
 
     RC status = -1;
 
-    SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
+    Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
     ASSERT_EQ(status, 0);
-    SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
+    Iterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
     ASSERT_EQ(status, 0);
 
     Condition jcond;
@@ -139,10 +139,10 @@ TEST_F(MergeJoinTest, Cons) {
     ASSERT_EQ(rc, 0);
 
     { // descending order join
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
                                           cond, 0, NULL, true);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
                                           cond, 0, NULL, true);
       ASSERT_EQ(status, 0);
 
@@ -185,9 +185,9 @@ TEST_F(MergeJoinTest, Cons) {
     }
 
     { // bad types
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
       ASSERT_EQ(status, 0);
 
       conds[0].lhsAttr.attrName = "in";
@@ -197,9 +197,9 @@ TEST_F(MergeJoinTest, Cons) {
     }
 
     { // bad attrname
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "in", "in", status, cond);
       ASSERT_EQ(status, 0);
 
       conds[0].lhsAttr.attrName = "ffdfdfdf";
@@ -222,10 +222,10 @@ TEST_F(MergeJoinTest, Cons) {
       rcond.rhsValue.data = NULL;
 
 
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
                                           lcond, 0, NULL, false);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "soapid",
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "soapid",
                                           status, rcond, 0, NULL, false);
       ASSERT_EQ(status, 0);
 
@@ -271,10 +271,10 @@ TEST_F(MergeJoinTest, Cons) {
       rcond.rhsValue.data = NULL;
 
 
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status,
                                           lcond, 0, NULL, true);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "soapid",
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "soapid",
                                           status, rcond, 0, NULL, true);
       ASSERT_EQ(status, 0);
 
@@ -323,9 +323,9 @@ TEST_F(MergeJoinTest, Cons) {
       rcond.rhsValue.data = NULL;
 
 
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "bw", status, lcond);
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "bw", status, lcond);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "stname", status, rcond);
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "stname", status, rcond);
       ASSERT_EQ(status, 0);
 
 
@@ -372,9 +372,9 @@ TEST_F(MergeJoinTest, Cons) {
       rcond.rhsValue.data = NULL;
 
 
-      SortedIterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, lcond);
+      Iterator* lfs = new IndexScan(smm, rmm, ixm, "in", "in", status, lcond);
       ASSERT_EQ(status, 0);
-      SortedIterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "soapid", status, rcond);
+      Iterator* rfs = new IndexScan(smm, rmm, ixm, "stars", "soapid", status, rcond);
       ASSERT_EQ(status, 0);
 
       conds[0].lhsAttr.attrName = "in";

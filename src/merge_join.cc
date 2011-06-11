@@ -1,7 +1,7 @@
 #include "merge_join.h"
 
-MergeJoin::MergeJoin(SortedIterator*    lhsIt,      // access for left i/p to join -R
-                     SortedIterator*    rhsIt,      // access for right i/p to join -S
+MergeJoin::MergeJoin(Iterator*    lhsIt,      // access for left i/p to join -R
+                     Iterator*    rhsIt,      // access for right i/p to join -S
                      RC& status,
                      int nJoinConds,
                      int equiCond,        // the join condition that can be used as
@@ -20,6 +20,11 @@ MergeJoin::MergeJoin(SortedIterator*    lhsIt,      // access for left i/p to jo
   assert(nJoinConds > 0);
   assert(equiCond >= 0 && equiCond < nJoinConds &&
          joinConds[equiCond].op == EQ_OP);
+
+  if(!lhsIt->IsSorted() || !rhsIt->IsSorted()) {
+    status = -1;
+    return;
+  }
       
   if(lhsIt->IsDesc() != rhsIt->IsDesc()) {
     status = -1;
@@ -47,6 +52,11 @@ MergeJoin::MergeJoin(SortedIterator*    lhsIt,      // access for left i/p to jo
       }
     }
     nJoinConds--;
+
+    // populate sort rel, attr using equi
+    bSorted = true;
+    sortRel = string(equi.lhsAttr.relName);
+    sortAttr = string(equi.lhsAttr.attrName);
 
     curr = lhsIt;
     other = rhsIt;

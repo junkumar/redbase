@@ -141,6 +141,14 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
     }
   }
 
+  // NLJ get the same sort order as outer child - lhs
+  if(lhsIt->IsSorted()) {
+    bSorted = true;
+    desc = lhsIt->IsDesc();
+    sortRel = lhsIt->GetSortRel();
+    sortAttr = lhsIt->GetSortAttr();
+  }
+
   explain << "NestedLoopJoin\n";
   if(nOFilters > 0) {
     explain << "   nJoinConds = " << nOFilters << "\n";

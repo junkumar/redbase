@@ -41,6 +41,13 @@ Projection::Projection(Iterator* lhsIt_,
     }
   }
 
+  // project leaves sort order of child intact
+  if(lhsIt->IsSorted()) {
+    bSorted = true;
+    desc = lhsIt->IsDesc();
+    sortRel = lhsIt->GetSortRel();
+    sortAttr = lhsIt->GetSortAttr();
+  }
 
   explain << "Project\n";
   if(nProjections > 0) {

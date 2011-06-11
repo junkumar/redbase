@@ -28,7 +28,6 @@
 #include <vector>
 #include <functional>
 
-
 using namespace std;
 
 namespace {
@@ -228,7 +227,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   Iterator* it = NULL;
 
   if(nRelations == 1) {
-    it = GetLeafIterator(relations[0], nConditions, conditions);
+    it = GetLeafIterator(relations[0], nConditions, conditions, 0, NULL, order, &orderAttr);
     RC rc = MakeRootIterator(it, nSelAttrs, selAttrs, nRelations, relations,
                              order, orderAttr);
     if(rc != 0) return rc;
@@ -248,7 +247,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     int lcount = -1;
     GetCondsForSingleRelation(nConditions, conditions, relations[0], lcount,
                               lcond);
-    it = GetLeafIterator(relations[0], lcount, lcond);
+    it = GetLeafIterator(relations[0], lcount, lcond, 0, NULL, order, &orderAttr);
     if(lcount != 0) delete [] lcond;
     
     for(int i = 1; i < nRelations; i++) {
@@ -262,7 +261,8 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       int rcount = -1;
       GetCondsForSingleRelation(nConditions, conditions, relations[i], rcount,
                                 rcond);
-      Iterator* rfs = GetLeafIterator(relations[i], rcount, rcond, jcount, jcond);
+      Iterator* rfs = GetLeafIterator(relations[i], rcount, rcond, jcount,
+                                      jcond, order, &orderAttr);
       if(rcount != 0) delete [] rcond;
 
       Iterator* newit = NULL;
@@ -308,7 +308,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
                                   lcond);
    
         delete it;
-        it = GetLeafIterator(relations[0], lcount, lcond, jcount, jcond);
+        it = GetLeafIterator(relations[0], lcount, lcond, jcount, jcond, order, &orderAttr);
         if(lcount != 0) delete [] lcond;
 
         lixit = dynamic_cast<IndexScan*>(it);
@@ -417,8 +417,6 @@ RC QL_Manager::MakeRootIterator(Iterator*& newit,
                                 int order, RelAttr orderAttr) const
 {
   RC status = -1;
-  newit = new Projection(newit, status, nSelAttrs, selAttrs);
-  if(status != 0) return status;
   if(order != 0) {
     bool desc = (order == -1) ? true : false;
     RC rc = smm.FindRelForAttr(orderAttr, nRelations, relations);
@@ -426,14 +424,26 @@ RC QL_Manager::MakeRootIterator(Iterator*& newit,
     rc = smm.SemCheck(orderAttr);
     if(rc != 0) return rc;
     DataAttrInfo d;
-    RID rid;
-    rc = smm.GetAttrFromCat(orderAttr.relName, orderAttr.attrName, d,
-                            rid);
-    // TODO get DESC working
-    cout << "Making sort iterator\n";
-    newit = new Sort(newit, d.attrType, d.attrLength, d.offset, status, desc);
-    if(status != 0) return status;
+    DataAttrInfo* pattr = newit->GetAttr();
+    for(int i = 0; i < newit->GetAttrCount(); i++) {
+      if(strcmp(pattr[i].relName, orderAttr.relName) == 0 &&
+         strcmp(pattr[i].attrName, orderAttr.attrName) == 0)
+        d = pattr[i];
+    }
+
+    if(newit->IsSorted() &&
+       newit->IsDesc() == desc &&
+       newit->GetSortRel() == string(orderAttr.relName) &&
+       newit->GetSortAttr() == string(orderAttr.attrName)) {
+      cout << "already sorted - no need for sort operator\n";
+    } else {
+      cout << "Making sort iterator\n";
+      newit = new Sort(newit, d.attrType, d.attrLength, d.offset, status, desc);
+      if(status != 0) return status;
+    }
   }
+  newit = new Projection(newit, status, nSelAttrs, selAttrs);
+  if(status != 0) return status;
   return 0;
 }
 
@@ -911,7 +921,9 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
                                       int nConditions, 
                                       const Condition conditions[],
                                       int nJoinConditions,
-                                      const Condition jconditions[])
+                                      const Condition jconditions[],
+                                      int order,
+                                      RelAttr* porderAttr)
 {
   RC invalid = IsValid(); if(invalid) return NULL;
 
@@ -1053,8 +1065,13 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
   RC status = -1;
   Iterator* it;
 
+  bool desc = false;
+  if(order != 0 && 
+     strcmp(porderAttr->relName, relName) == 0 &&
+     strcmp(porderAttr->attrName, chosenIndex) == 0)
+    desc = (order == -1 ? true : false);
+
   if(chosenCond != NULL) {
-    bool desc = false;
     if(chosenCond->op == EQ_OP ||
        chosenCond->op == GT_OP ||
        chosenCond->op == GE_OP)
@@ -1063,9 +1080,9 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
     it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
                        *chosenCond, nFilters, filters, desc);
   }
-  else
+  else // non-conditional index scan
     it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
-                       NULLCONDITION, nFilters, filters);
+                       NULLCONDITION, nFilters, filters, desc);
 
   if(status != 0) {
     PrintErrorAll(status);
