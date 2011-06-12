@@ -29,25 +29,6 @@ select N_REGIONKEY, COUNT(N_NAME)
 from NATION
 GROUP BY N_REGIONKEY;
 
-/* diff order by args
-select  N_REGIONKEY, COUNT(N_NAME)
- from  NATION
-order by N_NAME ASC
-group by N_REGIONKEY;
-
-
-select N_REGIONKEY, N_NAME, COUNT(N_NAME)
-from NATION
-ORDER BY N_NAME
-GROUP BY N_REGIONKEY;
-*/
-/* order-by after group-by
-select  N_REGIONKEY, COUNT(N_NAME)
- from  NATION
-group by N_REGIONKEY
-order by N_NAME;
-*/
-
 /* count * */
 select N_REGIONKEY, COUNT(*)
 from NATION
