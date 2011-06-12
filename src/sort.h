@@ -14,30 +14,6 @@
 
 using namespace std;
 
-class TupleCmp {
- public:
-  TupleCmp(AttrType     sortKeyType,
-           int    sortKeyLength,
-           int     sortKeyOffset,
-           CompOp c) 
-    :c(c), p(sortKeyType, sortKeyLength, sortKeyOffset, c, NULL, NO_HINT),
-    sortKeyOffset(sortKeyOffset)
-    {}
-  
-  bool operator() (const Tuple& lhs, const Tuple& rhs) const 
-  {
-      void * b = NULL;
-      rhs.Get(sortKeyOffset, b);
-      const char * abuf;
-      lhs.GetData(abuf);
-      return p.eval(abuf, (char*)b, c);
-  }
- private:
-  CompOp c;
-  Predicate p;
-  int sortKeyOffset;
-};
-
 // Single key, single pass sort operator. Uses memory directly.
 class Sort: public Iterator {
  public:

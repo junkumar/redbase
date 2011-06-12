@@ -27,13 +27,16 @@ class QL_Manager {
   ~QL_Manager();                               // Destructor
 
   RC Select  (int nSelAttrs,                   // # attrs in select clause
-              const RelAttr selAttrs[],        // attrs in select clause
+              //              const RelAttr selAttrs[],        // attrs in select clause
+              const AggRelAttr selAttrs[],     // attrs in select clause              
               int   nRelations,                // # relations in from clause
               const char * const relations[],  // relations in from clause
               int   nConditions,               // # conditions in where clause
               const Condition conditions[],    // conditions in where clause
               int order,                       // order from order by clause
-              RelAttr orderAttr);              // the single attr ordered by
+              RelAttr orderAttr,               // the single attr ordered by
+              bool group,
+              RelAttr groupAttr);
 
   RC Insert  (const char *relName,             // relation to insert into
               int   nValues,                   // # values
@@ -64,9 +67,10 @@ class QL_Manager {
                             RelAttr* porderAttr = NULL);
 
   RC MakeRootIterator(Iterator*& newit,
-                      int nSelAttrs, const RelAttr selAttrs[],
+                      int nSelAttrs, const AggRelAttr selAttrs[],
                       int nRelations, const char * const relations[],
-                      int order, RelAttr orderAttr) const;
+                      int order, RelAttr orderAttr,
+                      bool group, RelAttr groupAttr) const;
 
   RC PrintIterator(Iterator* it) const;
 

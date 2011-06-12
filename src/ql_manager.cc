@@ -22,6 +22,7 @@
 #include "nested_block_join.h"
 #include "merge_join.h"
 #include "sort.h"
+#include "agg.h"
 #include "parser.h"
 #include "projection.h"
 #include <map>
@@ -86,10 +87,12 @@ QL_Manager::~QL_Manager()
 //
 // Handle the select clause
 //
-RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
+//RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
+RC QL_Manager::Select(int nSelAttrs, const AggRelAttr selAttrs_[],
                       int nRelations, const char * const relations_[],
                       int nConditions, const Condition conditions_[],
-                      int order, RelAttr orderAttr)
+                      int order, RelAttr orderAttr,
+                      bool group, RelAttr groupAttr)
 {
   RC invalid = IsValid(); if(invalid) return invalid;
   int i;
@@ -97,9 +100,16 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   // copies for rewrite
   RelAttr* selAttrs = new RelAttr[nSelAttrs];
   for (i = 0; i < nSelAttrs; i++) {
-    selAttrs[i] = selAttrs_[i];
+    selAttrs[i].relName = selAttrs_[i].relName;
+    selAttrs[i].attrName = selAttrs_[i].attrName;
   }
   
+  AggRelAttr* selAggAttrs = new AggRelAttr[nSelAttrs];
+  for (i = 0; i < nSelAttrs; i++) {
+    selAggAttrs[i].func = selAttrs_[i].func;
+    selAggAttrs[i].relName = selAttrs_[i].relName;
+    selAggAttrs[i].attrName = selAttrs_[i].attrName;
+  }
 
   char** relations = new char*[nRelations];
   for (i = 0; i < nRelations; i++) {
@@ -144,7 +154,9 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     }
     
     delete [] selAttrs;
+    delete [] selAggAttrs;
     selAttrs = new RelAttr[nSelAttrs];
+    selAggAttrs = new AggRelAttr[nSelAttrs];
     int j = 0;
     for (int i = 0; i < nRelations; i++) {
       int ac;
@@ -154,11 +166,46 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       for (int k = 0; k < ac; k++) {
         selAttrs[j].attrName = strdup(aa[k].attrName);
         selAttrs[j].relName = relations[i];
+        selAggAttrs[j].attrName = strdup(aa[k].attrName);
+        selAggAttrs[j].relName = relations[i];
+        selAggAttrs[j].func = NO_F;
         j++;
       }
       delete [] aa;
     }
   } // if rewrite select "*"
+
+  if(order != 0) {
+    RC rc = smm.FindRelForAttr(orderAttr, nRelations, relations);
+    if(rc != 0) return rc;
+    rc = smm.SemCheck(orderAttr);
+    if(rc != 0) return rc;
+  }
+
+  if(group) {
+    RC rc = smm.FindRelForAttr(groupAttr, nRelations, relations);
+    if(rc != 0) return rc;
+    rc = smm.SemCheck(groupAttr);
+    if(rc != 0) return rc;
+  } else {
+    // make sure no agg functions are defined
+    for (i = 0; i < nSelAttrs; i++) {
+      if(selAggAttrs[i].func != NO_F)
+        return SM_BADAGGFUN;
+    }
+  }
+
+  // rewrite select COUNT(*)
+  for (i = 0; i < nSelAttrs; i++) {
+    if(strcmp(selAggAttrs[i].attrName, "*") == 0 && 
+       selAggAttrs[i].func == COUNT_F) {
+      selAggAttrs[i].attrName = strdup(groupAttr.attrName);
+      selAggAttrs[i].relName = strdup(groupAttr.relName);
+      selAttrs[i].attrName = strdup(groupAttr.attrName);
+      selAttrs[i].relName = strdup(groupAttr.relName);
+      // cout << "rewriting select count(*) " << selAggAttrs[i] << endl;
+    }
+  }
 
   for (i = 0; i < nSelAttrs; i++) {
     if(selAttrs[i].relName == NULL) 
@@ -168,7 +215,10 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     } else {
       selAttrs[i].relName = strdup(selAttrs[i].relName);
     }
+    selAggAttrs[i].relName = strdup(selAttrs[i].relName);
     RC rc = smm.SemCheck(selAttrs[i]);
+    if (rc != 0) return rc;
+    rc = smm.SemCheck(selAggAttrs[i]);
     if (rc != 0) return rc;
   }
   
@@ -197,8 +247,6 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     if (rc != 0) return rc;
   }
   
-  // cerr << "sem checks done" << endl;
-
   // ensure that all relations mentioned in conditions are in the from clause
   for (int i = 0; i < nConditions; i++) {
     bool lfound = false;
@@ -224,12 +272,14 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
     }
   }
 
+  // cerr << "sem checks done" << endl;
+
   Iterator* it = NULL;
 
   if(nRelations == 1) {
     it = GetLeafIterator(relations[0], nConditions, conditions, 0, NULL, order, &orderAttr);
-    RC rc = MakeRootIterator(it, nSelAttrs, selAttrs, nRelations, relations,
-                             order, orderAttr);
+    RC rc = MakeRootIterator(it, nSelAttrs, selAggAttrs, nRelations, relations,
+                             order, orderAttr, group, groupAttr);
     if(rc != 0) return rc;
     rc = PrintIterator(it);
     if(rc != 0) return rc;
@@ -354,8 +404,8 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       // cout << "Select done with NBJ init\n";
 
       if(i == nRelations - 1) {
-        RC rc = MakeRootIterator(newit, nSelAttrs, selAttrs, nRelations, relations,
-                              order, orderAttr);
+        RC rc = MakeRootIterator(newit, nSelAttrs, selAggAttrs, nRelations, relations,
+                                 order, orderAttr, group, groupAttr);
         if(rc != 0) return rc;
       }
 
@@ -374,7 +424,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
 
   // cout << "   nSelAttrs = " << nSelAttrs << "\n";
   // for (int i = 0; i < nSelAttrs; i++)
-  //   cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
+  //   cout << "   selAttrs[" << i << "]:" << selAggAttrs[i] << "\n";
 
   // cout << "   nRelations = " << nRelations << "\n";
   // for (int i = 0; i < nRelations; i++)
@@ -389,15 +439,23 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
   //        << ((order == -1) ? " DESC" : " ASC")
   //        << "\n";
 
+  // if(group) 
+  //   cout << "   groupAttr:" << groupAttr 
+  //        << "\n";
+
   // recursively delete iterators
   delete it;
 
   for(int i = 0; i < nSelAttrs; i++) {
-    if(SELECTSTAR)
+    if(SELECTSTAR) {
       free(selAttrs[i].attrName);
+      free(selAggAttrs[i].attrName);
+    }
     free(selAttrs[i].relName);
+    free(selAggAttrs[i].relName);
   }
   delete [] selAttrs;
+  delete [] selAggAttrs;
   for (i = 0; i < nRelations; i++) {
     free(relations[i]);
   }
@@ -408,40 +466,134 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs_[],
       free(conditions[i].rhsAttr.relName);
   }
   delete [] conditions;
+  // TODO - free() the FindRelForAttr() result in orderAttr and groupAttr
+  // relName is only filled in optionally
   return 0;
 }
 
 RC QL_Manager::MakeRootIterator(Iterator*& newit,
-                                int nSelAttrs, const RelAttr selAttrs[],
+                                int nSelAttrs, const AggRelAttr selAttrs[],
                                 int nRelations, const char * const relations[],
-                                int order, RelAttr orderAttr) const
+                                int order, RelAttr orderAttr,
+                                bool group, RelAttr groupAttr) const
 {
   RC status = -1;
+
   if(order != 0) {
-    bool desc = (order == -1) ? true : false;
     RC rc = smm.FindRelForAttr(orderAttr, nRelations, relations);
     if(rc != 0) return rc;
     rc = smm.SemCheck(orderAttr);
     if(rc != 0) return rc;
+  }
+
+  if(group) {
+    bool desc = (order == -1) ? true : false;
+    RC rc = smm.FindRelForAttr(groupAttr, nRelations, relations);
+    if(rc != 0) return rc;
+    rc = smm.SemCheck(groupAttr);
+    if(rc != 0) return rc;
     DataAttrInfo d;
     DataAttrInfo* pattr = newit->GetAttr();
     for(int i = 0; i < newit->GetAttrCount(); i++) {
-      if(strcmp(pattr[i].relName, orderAttr.relName) == 0 &&
-         strcmp(pattr[i].attrName, orderAttr.attrName) == 0)
+      if(strcmp(pattr[i].relName, groupAttr.relName) == 0 &&
+         strcmp(pattr[i].attrName, groupAttr.attrName) == 0)
         d = pattr[i];
     }
 
     if(newit->IsSorted() &&
        newit->IsDesc() == desc &&
+       newit->GetSortRel() == string(groupAttr.relName) &&
+       newit->GetSortAttr() == string(groupAttr.attrName)) {
+      // cout << "already sorted - no need for sort operator - agg\n";
+    } else {
+      // cout << "Making sort iterator - agg\n";
+      newit = new Sort(newit, d.attrType, d.attrLength, d.offset, status, desc);
+      if(status != 0) return status;
+    }
+
+    AggRelAttr* extraAttrs = new AggRelAttr[nSelAttrs];
+    for(int i = 0; i < nSelAttrs; i++) {
+      extraAttrs[i] = selAttrs[i];
+    }
+    int nExtraSelAttrs = nSelAttrs;
+
+    if(order != 0) {
+      // add the sort column as a projection just in case
+      delete [] extraAttrs;
+      nExtraSelAttrs = nSelAttrs + 1;
+      extraAttrs = new AggRelAttr[nExtraSelAttrs];
+      AggRelAttr* extraAttrsNoF = new AggRelAttr[nExtraSelAttrs];
+
+      for(int i = 0; i < nExtraSelAttrs-1; i++) {
+        extraAttrs[i] = selAttrs[i];
+        extraAttrsNoF[i] = selAttrs[i];
+        extraAttrsNoF[i].func = NO_F;
+      }
+      extraAttrs[nExtraSelAttrs - 1].relName = strdup(orderAttr.relName);
+      extraAttrs[nExtraSelAttrs - 1].attrName = strdup(orderAttr.attrName);
+      extraAttrs[nExtraSelAttrs - 1].func = NO_F;
+      extraAttrsNoF[nExtraSelAttrs - 1] = extraAttrs[nExtraSelAttrs - 1];
+
+      // cout << "extraAttrs[new] " << extraAttrs[nExtraSelAttrs - 1] << endl;
+
+      newit = new Projection(newit, status, nExtraSelAttrs, extraAttrsNoF);
+      if(status != 0) return status;
+    }
+
+    newit = new Agg(newit, groupAttr, nExtraSelAttrs, extraAttrs, status);
+    if(status != 0) return status;
+
+    {
+      //TODO makes project work
+      newit->Explain();
+    }
+
+    // if(newit != NULL)
+    //   cout << "Non null Agg newit" << endl;
+
+  }
+
+  if(order != 0) {
+    bool desc = (order == -1) ? true : false;
+
+    DataAttrInfo d;
+    {
+      DataAttrInfo* pattr = newit->GetAttr();
+      newit->Explain();
+      // cout << "\n" << newit->Explain() << "\n";
+      for(int i = 0; i < newit->GetAttrCount(); i++) {
+        if(strcmp(pattr[i].relName, orderAttr.relName) == 0 &&
+           strcmp(pattr[i].attrName, orderAttr.attrName) == 0 &&
+           pattr[i].func != MIN_F && 
+           pattr[i].func != MAX_F &&
+           pattr[i].func != COUNT_F
+          )
+          d = pattr[i];
+        // cout << "pattr[" << i << "].relName was " << pattr[i].relName << endl;
+        // cout << "pattr[" << i << "].attrName was " << pattr[i].attrName << endl;
+        // cout << "pattr[" << i << "].func was " << int(pattr[i].func) << endl;
+      }
+    }
+    // cout << "orderAttr.relName was " << orderAttr.relName << endl;
+    // cout << "orderAttr.attrName was " << orderAttr.attrName << endl;
+    // cout << "d.func was " << d.func << endl;
+    // cout << "d.offset was " << d.offset << endl;
+    // cout << "d.attrName was " << d.attrName << endl;
+
+    if(newit->IsSorted() &&
+       newit->IsDesc() == desc &&
        newit->GetSortRel() == string(orderAttr.relName) &&
        newit->GetSortAttr() == string(orderAttr.attrName)) {
-      cout << "already sorted - no need for sort operator\n";
+      // cout << "already sorted - no need for sort operator\n";
     } else {
-      cout << "Making sort iterator\n";
+      // cout << "Making sort iterator\n";
       newit = new Sort(newit, d.attrType, d.attrLength, d.offset, status, desc);
       if(status != 0) return status;
     }
   }
+  // cout << "Sort cons done" << endl;
+      
+
   newit = new Projection(newit, status, nSelAttrs, selAttrs);
   if(status != 0) return status;
   return 0;
@@ -460,10 +612,11 @@ RC QL_Manager::PrintIterator(Iterator* it) const {
 
   while(1) {
     rc = it->GetNext(t);
+    // cout << "QL_Manager::PrintIterator tuple " << t << endl;
+
     if(rc ==  it->Eof())
       break;
     if (rc != 0) return rc;
-
 
     p.Print(cout, t);
   }
@@ -1066,7 +1219,7 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
   Iterator* it;
 
   bool desc = false;
-  if(order != 0 && 
+  if(order != 0 &&
      strcmp(porderAttr->relName, relName) == 0 &&
      strcmp(porderAttr->attrName, chosenIndex) == 0)
     desc = (order == -1 ? true : false);
@@ -1075,7 +1228,8 @@ Iterator* QL_Manager::GetLeafIterator(const char *relName,
     if(chosenCond->op == EQ_OP ||
        chosenCond->op == GT_OP ||
        chosenCond->op == GE_OP)
-      desc = true; // more optimal
+      if(order == 0) // use only if there is no order-by
+        desc = true; // more optimal
 
     it = new IndexScan(smm, rmm, ixm, relName, chosenIndex, status,
                        *chosenCond, nFilters, filters, desc);

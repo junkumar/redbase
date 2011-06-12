@@ -1,0 +1,85 @@
+/* test group by */
+
+CREATE TABLE NATION   ( N_NATIONKEY     i4,
+                        N_NAME          c25,
+                        N_REGIONKEY     i4,
+                        N_COMMENT       c152 );
+
+LOAD NATION   ("../../data/contest/nation.data");
+
+queryplans on;
+
+print relcat;
+
+select N_REGIONKEY, MIN(N_NATIONKEY), COUNT(N_REGIONKEY), N_NAME from NATION
+GROUP BY N_REGIONKEY;
+
+/* 0 records */
+select N_REGIONKEY, MIN(N_NATIONKEY), COUNT(N_REGIONKEY), N_NAME 
+from NATION
+where N_NATIONKEY > 1000
+GROUP BY N_REGIONKEY;
+
+/* MAX */
+select N_REGIONKEY, MAX(N_NATIONKEY), MIN(N_NATIONKEY), COUNT(N_NATIONKEY), COUNT(N_REGIONKEY), N_NAME from NATION
+GROUP BY N_REGIONKEY;
+
+/* count non numeric */
+select N_REGIONKEY, COUNT(N_NAME)
+from NATION
+GROUP BY N_REGIONKEY;
+
+/* diff order by args
+select  N_REGIONKEY, COUNT(N_NAME)
+ from  NATION
+order by N_NAME ASC
+group by N_REGIONKEY;
+
+
+select N_REGIONKEY, N_NAME, COUNT(N_NAME)
+from NATION
+ORDER BY N_NAME
+GROUP BY N_REGIONKEY;
+*/
+/* order-by after group-by
+select  N_REGIONKEY, COUNT(N_NAME)
+ from  NATION
+group by N_REGIONKEY
+order by N_NAME;
+*/
+
+/* count * */
+select N_REGIONKEY, COUNT(*)
+from NATION
+GROUP BY N_REGIONKEY;
+
+/* no agg func */
+select N_REGIONKEY
+from NATION
+GROUP BY N_REGIONKEY;
+
+/* already sorted stream */
+CREATE INDEX NATION(N_REGIONKEY);
+select N_REGIONKEY, COUNT(*)
+from NATION
+GROUP BY N_REGIONKEY;
+
+
+/* bad group by args */
+select N_REGIONKEY
+from NATION
+GROUP BY N_REGIONKEY, N_NAME;
+
+/* bad agg func 1 */
+select N_REGIONKEY, GAVG(N_NAME)
+from NATION
+GROUP BY N_REGIONKEY;
+
+/* bad agg func 2 */
+select N_REGIONKEY, AVG(N_NAME)
+from NATION
+GROUP BY N_REGIONKEY;
+
+
+
+exit;

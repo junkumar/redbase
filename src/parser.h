@@ -26,6 +26,15 @@ struct RelAttr{
     friend std::ostream &operator<<(std::ostream &s, const RelAttr &ra);
 };
 
+struct AggRelAttr{
+    AggFun   func; 
+    char     *relName;    // Relation name (may be NULL)
+    char     *attrName;   // Attribute name
+
+    // Print function
+    friend std::ostream &operator<<(std::ostream &s, const AggRelAttr &ra);
+};
+
 struct Value{
     AttrType type;         /* type of value               */
     void     *data;        /* value                       */
@@ -49,6 +58,7 @@ struct Condition{
 static Condition NULLCONDITION;
 
 std::ostream &operator<<(std::ostream &s, const CompOp &op);
+std::ostream &operator<<(std::ostream &s, const AggFun &func);
 std::ostream &operator<<(std::ostream &s, const AttrType &at);
 
 //

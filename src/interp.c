@@ -45,7 +45,10 @@ static int mk_attr_infos(NODE *list, int max, AttrInfo attrInfos[]);
 static int parse_format_string(char *format_string, AttrType *type, int *len);
 static int mk_rel_attrs(NODE *list, int max, RelAttr relAttrs[]);
 static void mk_rel_attr(NODE *node, RelAttr &relAttr);
+static int mk_agg_rel_attrs(NODE *list, int max, AggRelAttr relAttrs[]);
+static void mk_agg_rel_attr(NODE *node, AggRelAttr &relAttr);
 static void mk_order_relattr(NODE *node, int& order, RelAttr &relAttr);
+static void mk_group_relattr(NODE *node, bool& group, RelAttr &relAttr);
 static int mk_relations(NODE *list, int max, char *relations[]);
 static int mk_conditions(NODE *list, int max, Condition conditions[]);
 static int mk_values(NODE *list, int max, Value values[]);
@@ -55,10 +58,13 @@ static void echo_query(NODE *n);
 static void print_attrtypes(NODE *n);
 static void print_op(CompOp op);
 static void print_relattr(NODE *n);
+static void print_aggrelattr(NODE *n);
 static void print_orderattr(NODE *n);
+static void print_groupattr(NODE *n);
 static void print_value(NODE *n);
 static void print_condition(NODE *n);
 static void print_relattrs(NODE *n);
+static void print_aggrelattrs(NODE *n);
 static void print_relations(NODE *n);
 static void print_conditions(NODE *n);
 static void print_values(NODE *n);
@@ -147,16 +153,19 @@ RC interp(NODE *n)
       case N_QUERY:            /* for Query() */
          {
             int       nSelAttrs = 0;
-            RelAttr  relAttrs[MAXATTRS];
+            // RelAttr  relAttrs[MAXATTRS];
+            AggRelAttr  relAttrs[MAXATTRS];
             int       nRelations = 0;
             char      *relations[MAXATTRS];
             int       nConditions = 0;
             Condition conditions[MAXATTRS];
             int       order = 0; /* -1 desc, 0 no order, 1 asc */
             RelAttr   orderAttr;
+            bool      group = false;
+            RelAttr   groupAttr;
 
             /* Make a list of RelAttrs suitable for sending to Query */
-            nSelAttrs = mk_rel_attrs(n->u.QUERY.relattrlist, MAXATTRS,
+            nSelAttrs = mk_agg_rel_attrs(n->u.QUERY.relattrlist, MAXATTRS,
                   relAttrs);
             if(nSelAttrs < 0){
                print_error((char*)"select", nSelAttrs);
@@ -181,11 +190,17 @@ RC interp(NODE *n)
             /* Make the order by attr suitable for sending to Query */
             mk_order_relattr(n->u.QUERY.orderrelattr, order, orderAttr);
 
+            /* Make the group by attr suitable for sending to Query */
+            mk_rel_attr(n->u.QUERY.grouprelattr, groupAttr);
+            if(groupAttr.attrName != NULL)
+              group = true;
+
             /* Make the call to Select */
             errval = pQlm->Select(nSelAttrs, relAttrs,
                                   nRelations, relations,
                                   nConditions, conditions, 
-                                  order, orderAttr);
+                                  order, orderAttr,
+                                  group, groupAttr);
             break;
          }
 
@@ -341,8 +356,32 @@ static int mk_rel_attrs(NODE *list, int max, RelAttr relAttrs[])
 }
 
 /*
+ * mk_agg_rel_attrs: converts a list of relation-attributes (<relation,
+ * attribute> pairs) into an array of AggRelAttrs
+ *
+ * Returns:
+ *    the lengh of the list on success ( >= 0 )
+ *    error code otherwise
+ */
+static int mk_agg_rel_attrs(NODE *list, int max, AggRelAttr relAttrs[])
+{
+   int i;
+
+   /* For each element of the list... */
+   for(i = 0; list != NULL; ++i, list = list -> u.LIST.next){
+      /* If the list is too long then error */
+      if(i == max)
+         return E_TOOMANY;
+
+      mk_agg_rel_attr(list->u.LIST.curr, relAttrs[i]);
+   }
+
+   return i;
+}
+
+/*
  * mk_order_relattr: converts an int and a single relation-attribute (<relation,
- * attribute> pair) into a RelAttr
+ * attribute> pair) into a int and a RelAttr
  */
 static void mk_order_relattr(NODE *node, int& order, RelAttr &relAttr)
 {
@@ -351,6 +390,16 @@ static void mk_order_relattr(NODE *node, int& order, RelAttr &relAttr)
      mk_rel_attr(node->u.ORDERATTR.relattr, relAttr);
 }
 
+/*
+ * mk_group_relattr: converts an int and a single relation-attribute (<relation,
+ * attribute> pair) into a bool and a RelAttr
+ */
+static void mk_group_relattr(NODE *node, bool& group, RelAttr &relAttr)
+{
+  mk_rel_attr(node, relAttr);
+  if(relAttr.attrName != NULL)
+    group = true;
+}
 
 /*
  * mk_rel_attr: converts a single relation-attribute (<relation,
@@ -360,6 +409,17 @@ static void mk_rel_attr(NODE *node, RelAttr &relAttr)
 {
    relAttr.relName = node->u.RELATTR.relname;
    relAttr.attrName = node->u.RELATTR.attrname;
+}
+
+/*
+ * mk_agg_rel_attr: converts a single relation-attribute (<relation,
+ * attribute> pair) into a AggRelAttr
+ */
+static void mk_agg_rel_attr(NODE *node, AggRelAttr &relAttr)
+{
+   relAttr.func = node->u.AGGRELATTR.func;
+   relAttr.relName = node->u.AGGRELATTR.relname;
+   relAttr.attrName = node->u.AGGRELATTR.attrname;
 }
 
 /*
@@ -628,7 +688,7 @@ static void echo_query(NODE *n)
          break;
       case N_QUERY:            /* for Query() */
          printf("select ");
-         print_relattrs(n -> u.QUERY.relattrlist);
+         print_aggrelattrs(n -> u.QUERY.relattrlist);
          printf("\n from ");
          print_relations(n -> u.QUERY.rellist);
          if (n->u.QUERY.conditionlist) {
@@ -638,6 +698,9 @@ static void echo_query(NODE *n)
          }
          if (n->u.QUERY.orderrelattr) {
            print_orderattr(n->u.QUERY.orderrelattr);
+         }
+         if (n->u.QUERY.grouprelattr) {
+           print_groupattr(n->u.QUERY.grouprelattr);
          }
 
          printf(";\n");
@@ -731,12 +794,44 @@ static void print_orderattr(NODE *n)
    }        
 }  
 
+static void print_groupattr(NODE *n)
+{
+   if (n->u.RELATTR.attrname) {
+     printf("\ngroup by");
+     print_relattr(n);
+   }        
+}  
+
 static void print_relattr(NODE *n)
 {
    printf(" ");
    if (n->u.RELATTR.relname)
       printf("%s.",n->u.RELATTR.relname);
    printf("%s",n->u.RELATTR.attrname);
+}  
+
+static void print_aggrelattr(NODE *n)
+{
+   printf(" ");
+   if (n->u.AGGRELATTR.func != NO_F) {
+     char * foo = "NO_F";
+     if(n->u.AGGRELATTR.func == MAX_F)
+       foo = "MAX";
+     else if(n->u.AGGRELATTR.func == MIN_F)
+       foo = "MIN";
+     else if(n->u.AGGRELATTR.func == COUNT_F)
+       foo = "COUNT";
+     else if(n->u.AGGRELATTR.func == AVG_F)
+       foo = "AVG";
+     else if(n->u.AGGRELATTR.func == SUM_F)
+       foo = "SUM";
+     printf("%s(",foo);
+   }
+   if (n->u.AGGRELATTR.relname)
+      printf("%s.",n->u.AGGRELATTR.relname);
+   printf("%s",n->u.AGGRELATTR.attrname);
+   if (n->u.AGGRELATTR.func != NO_F)
+      printf(")");
 }  
 
 static void print_value(NODE *n)
@@ -768,6 +863,15 @@ static void print_relattrs(NODE *n)
 {
    for(; n != NULL; n = n -> u.LIST.next){
       print_relattr(n->u.LIST.curr);
+      if(n -> u.LIST.next != NULL)
+         printf(",");
+   }
+}
+
+static void print_aggrelattrs(NODE *n)
+{
+   for(; n != NULL; n = n -> u.LIST.next){
+      print_aggrelattr(n->u.LIST.curr);
       if(n -> u.LIST.next != NULL)
          printf(",");
    }

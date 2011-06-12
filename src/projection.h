@@ -15,8 +15,7 @@ class Projection: public Iterator {
   Projection(Iterator* lhsIt,
              RC& status,
              int nProjections = 0,
-             const RelAttr projections[] = NULL);
-
+             const AggRelAttr projections[] = NULL);
   virtual ~Projection();
 
   virtual RC Open() { return lhsIt->Open(); }

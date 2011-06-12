@@ -34,7 +34,8 @@ void SM_PrintError(RC rc);
 #define SM_BADOP           (START_SM_ERR - 10)
 #define SM_AMBGATTR        (START_SM_ERR - 11)
 #define SM_BADPARAM        (START_SM_ERR - 12)
+#define SM_BADAGGFUN       (START_SM_ERR - 13)
 
-#define SM_LASTERROR SM_BADPARAM
+#define SM_LASTERROR SM_BADAGGFUN
 
 #endif // SM_ERROR_H

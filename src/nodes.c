@@ -184,7 +184,7 @@ NODE *print_node(char *relname)
  * query node having the indicated values.
  */
 NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist, 
-                 NODE *order_relattr)
+                 NODE *order_relattr, NODE *group_relattr)
 {
     NODE *n = newnode(N_QUERY);
 
@@ -192,6 +192,7 @@ NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist,
     n->u.QUERY.rellist = rellist;
     n->u.QUERY.conditionlist = conditionlist;
     n->u.QUERY.orderrelattr = order_relattr;
+    n->u.QUERY.grouprelattr = group_relattr;
     return n;
 }
 
@@ -239,7 +240,7 @@ NODE *update_node(char *relname, NODE *relattr, NODE *relorvalue,
 
 
 /*
- * relattr_node: allocates, initializes, and returns a pointer to a new
+ * orderattr_node: allocates, initializes, and returns a pointer to a new
  * relattr node having the indicated values.
  */
 NODE *orderattr_node(int order, NODE *relattr)
@@ -261,6 +262,21 @@ NODE *relattr_node(char *relname, char *attrname)
 
     n -> u.RELATTR.relname = relname;
     n -> u.RELATTR.attrname = attrname;
+    return n;
+}
+
+
+/*
+ * aggrelattr_node: allocates, initializes, and returns a pointer to a new
+ * relattr node having the indicated values.
+ */
+NODE *aggrelattr_node(AggFun a, char *relname, char *attrname)
+{
+    NODE *n = newnode(N_AGGRELATTR);
+
+    n -> u.AGGRELATTR.func = a;
+    n -> u.AGGRELATTR.relname = relname;
+    n -> u.AGGRELATTR.attrname = attrname;
     return n;
 }
 

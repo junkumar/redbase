@@ -39,6 +39,7 @@ if ( $#argv == 0 ) then
 		echo running test '#' $queryfile:e '****************' >> $OUTPUT
 		$DBHOME/dbdestroy $TESTDB || :
 		$DBHOME/dbcreate  $TESTDB
+		# $DBHOME/redbase   $TESTDB < $queryfile >>& $OUTPUT
 		$DBHOME/redbase   $TESTDB < $queryfile >>& $OUTPUT
 	end
 
@@ -53,7 +54,7 @@ else
 			$DBHOME/dbdestroy $TESTDB || :
 			$DBHOME/dbcreate  $TESTDB
 			$DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
-#			valgrind --leak-check=full --suppressions=valgrind.supp $DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
+			#valgrind --leak-check=full --suppressions=valgrind.supp $DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
 		else
 			echo I can not find a test number $testnum. >> $OUTPUT
 		endif

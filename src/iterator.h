@@ -9,6 +9,7 @@
 #include "data_attr_info.h"
 #include "rm_rid.h"
 #include <sstream>
+#include "predicate.h"
 
 using namespace std;
 
@@ -122,7 +123,7 @@ namespace {
     for (int pos = 0; pos < t.GetAttrCount(); pos++) {
       void * k = NULL;
       AttrType attrType = attrs[pos].attrType;
-      t.Get(attrs[pos].attrName, k);
+      t.Get(attrs[pos].offset, k);
       if( attrType == INT )
         os << *((int*)k);
       if( attrType == FLOAT )
@@ -194,6 +195,33 @@ class Iterator {
   bool desc;
   string sortRel;
   string sortAttr;
-};
+};  // class Iterator
+
+class TupleCmp {
+ public:
+  TupleCmp(AttrType     sortKeyType,
+           int    sortKeyLength,
+           int     sortKeyOffset,
+           CompOp c) 
+    :c(c), p(sortKeyType, sortKeyLength, sortKeyOffset, c, NULL, NO_HINT),
+    sortKeyOffset(sortKeyOffset)
+    {}
+  // default - not the most sensible - here so I can make arrays
+  TupleCmp()
+    :c(EQ_OP), p(INT, 4, 0, c, NULL, NO_HINT), sortKeyOffset(0)
+    {}
+  bool operator() (const Tuple& lhs, const Tuple& rhs) const 
+  {
+      void * b = NULL;
+      rhs.Get(sortKeyOffset, b);
+      const char * abuf;
+      lhs.GetData(abuf);
+      return p.eval(abuf, (char*)b, c);
+  }
+ private:
+  CompOp c;
+  Predicate p;
+  int sortKeyOffset;
+}; // class TupleCmp
 
 #endif // ITERATOR_H

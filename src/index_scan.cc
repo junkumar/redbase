@@ -88,7 +88,9 @@ IndexScan::IndexScan(SM_Manager& smm,
 
   explain << "IndexScan\n";
   explain << "   relName = " << relName.c_str() << "\n";
-  explain << "   attrName = " << indexAttrName << "\n";
+  explain << "   attrName = " << indexAttrName
+          << " " << (desc == true ? "DESC" : "ASC");
+  explain << "\n";
   if(cond.rhsValue.data != NULL)
     explain << "   ScanCond = " << cond << "\n";
   if(nOutFilters > 0) {

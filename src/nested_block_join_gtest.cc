@@ -95,7 +95,7 @@ TEST_F(NestedBlockJoinTest, Contest) {
     // PrintErrorAll(status);
     ASSERT_EQ(status, 0);
 
-    RelAttr selAttrs[2];
+    AggRelAttr selAttrs[2];
     selAttrs[0].relName = "CUSTOMER";
     selAttrs[0].attrName = "C_CUSTKEY";
     selAttrs[1].relName = "SUPPLIER";
@@ -213,7 +213,7 @@ TEST_F(NestedBlockJoinTest, ContestSmallBuf) {
     // PrintErrorAll(status);
     ASSERT_EQ(status, 0);
 
-    RelAttr selAttrs[2];
+    AggRelAttr selAttrs[2];
     selAttrs[0].relName = "CUSTOMER";
     selAttrs[0].attrName = "C_CUSTKEY";
     selAttrs[1].relName = "SUPPLIER";

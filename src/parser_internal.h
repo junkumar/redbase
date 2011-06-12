@@ -58,6 +58,7 @@ typedef enum{
     N_UPDATE,
     N_RELATTR,
     N_ORDERATTR,
+    N_AGGRELATTR,
     N_CONDITION,
     N_RELATTR_OR_VALUE,
     N_ATTRTYPE,
@@ -127,6 +128,7 @@ typedef struct node{
          struct node *rellist;
          struct node *conditionlist;
          struct node *orderrelattr; 
+         struct node *grouprelattr; 
       } QUERY;
 
       /* insert node */
@@ -161,6 +163,13 @@ typedef struct node{
          int order;
          struct node *relattr;
       } ORDERATTR;
+
+      /* agg func + relation attribute node */
+      struct{
+         AggFun func;
+         char *relname;
+         char *attrname;
+      } AGGRELATTR;
 
       /* condition node */
       struct{
@@ -216,13 +225,15 @@ NODE *load_node(char *relname, char *filename);
 NODE *set_node(char *paramName, char *string);
 NODE *help_node(char *relname);
 NODE *print_node(char *relname);
-NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist, NODE *order_relattr);
+NODE *query_node(NODE *relattrlist, NODE *rellist, NODE *conditionlist, 
+                 NODE *order_relattr, NODE *group_relattr);
 NODE *insert_node(char *relname, NODE *valuelist);
 NODE *delete_node(char *relname, NODE *conditionlist);
 NODE *update_node(char *relname, NODE *relattr, NODE *value,
                   NODE *conditionlist);
 NODE *relattr_node(char *relname, char *attrname);
 NODE *orderattr_node(int order, NODE *relattr);
+NODE *aggrelattr_node(AggFun a, char *relname, char *attrname);
 NODE *condition_node(NODE *lhsRelattr, CompOp op, NODE *rhsRelattrOrValue);
 NODE *value_node(AttrType type, void *value);
 NODE *relattr_or_value_node(NODE *relattr, NODE *value);

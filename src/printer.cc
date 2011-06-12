@@ -9,6 +9,7 @@
 #include <cstring>
 #include <cstdlib>
 #include "printer.h"
+#include "parser.h"
 
 using namespace std;
 
@@ -51,9 +52,10 @@ void Printer::Init(const DataAttrInfo *attributes_, const int attrCount_)
     attrCount = attrCount_;
     attributes = new DataAttrInfo[attrCount];
 
-    for (int i=0; i < attrCount; i++)
+    for (int i=0; i < attrCount; i++) {
         attributes[i] = attributes_[i];
-
+        // cout << "Printer::init i, offset " << attributes[i].offset << endl;
+    }
     // Number of tuples printed
     iCount = 0;
 
@@ -88,6 +90,24 @@ void Printer::Init(const DataAttrInfo *attributes_, const int attrCount_)
                     attributes[i].relName, attributes[i].attrName);
         else
             strcpy(psHeader[i], attributes[i].attrName);
+
+        if(attributes[i].func != NO_F) {
+          char * foo = "NO_F";
+          if(attributes[i].func == MAX_F)
+            foo = "MAX";
+          else if(attributes[i].func == MIN_F)
+            foo = "MIN";
+          else if(attributes[i].func == COUNT_F)
+            foo = "COUNT";
+          else if(attributes[i].func == AVG_F)
+            foo = "AVG";
+          else if(attributes[i].func == SUM_F)
+            foo = "SUM";
+          char * copy = strdup(psHeader[i]);
+          sprintf(psHeader[i], "%s(%s)",
+                  foo, copy);
+          free(copy);
+        }
 
         if (attributes[i].attrType==STRING)
             spaces[i] = mmin(attributes[i].attrLength, MAXPRINTSTRING);
@@ -223,6 +243,7 @@ void Printer::Print(std::ostream &c, const Tuple& t)
 {
   const char * data;
   t.GetData(data);
+  // cout << "Printer::Print(tuple) " << t << endl;
   Print(c, data);
 }
 
@@ -248,6 +269,8 @@ void Printer::Print(ostream &c, const char * const data)
     iCount++;
 
     for (i = 0; i<attrCount; i++) {
+      // cout << "[Printer::Print i, offset " << attributes[i].offset << "]";
+
         if (attributes[i].attrType == STRING) {
             // We will only print out the first MAXNAME+10 characters of
             // the string value.
@@ -289,4 +312,3 @@ void Printer::Print(ostream &c, const char * const data)
     }
     c << "\n";
 }
-

@@ -38,6 +38,7 @@ struct DataAttrInfo
     memset(relName, 0, MAXNAME + 1);
     memset(attrName, 0, MAXNAME + 1);
     offset = -1;
+    func = NO_F;
   };
 
   DataAttrInfo(const AttrInfo &a ) {
@@ -48,6 +49,7 @@ struct DataAttrInfo
     memset(relName, 0, MAXNAME + 1);
     indexNo = -1;
     offset = -1;
+    func = NO_F;
   };
 
   // Copy constructor
@@ -58,6 +60,7 @@ struct DataAttrInfo
     attrType = d.attrType;
     attrLength = d.attrLength;
     indexNo = d.indexNo;
+    func = d.func;
   };
 
   DataAttrInfo& operator=(const DataAttrInfo &d) {
@@ -68,16 +71,17 @@ struct DataAttrInfo
       attrType = d.attrType;
       attrLength = d.attrLength;
       indexNo = d.indexNo;
+      // func = d.func;
     }
     return (*this);
   };
 
   static unsigned int size() { 
-    return 2*(MAXNAME+1) + sizeof(AttrType) + 3*sizeof(int);
+    return 2*(MAXNAME+1) + sizeof(AttrType) + 3*sizeof(int) + sizeof(AggFun);
   }
 
   static unsigned int members() { 
-    return 6;
+    return 7;
   }
 
   int      offset;                // Offset of attribute
@@ -86,6 +90,7 @@ struct DataAttrInfo
   int      indexNo;               // Index number of attribute
   char     relName[MAXNAME+1];    // Relation name
   char     attrName[MAXNAME+1];   // Attribute name
+  AggFun   func;                  // Aggr Function on attr
 };
 
 

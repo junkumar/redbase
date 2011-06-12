@@ -35,6 +35,7 @@ const char *SM_ErrorMsg[] = {
   (char*)"SM_BADOP Bad operator in condition.",
   (char*)"SM_AMBGATTR Attribute ambiguous - more than 1 relation contains same attr.",
   (char*)"SM_BADPARAM Bad parameters used with set on commandline",
+  (char*)"SM_BADAGGFUN Bad Aggregate function - not supported",
 };
 
 //

@@ -71,6 +71,7 @@ QL_Manager *pQlm;          // QL component manager
 %union{
     int ival;
     CompOp cval;
+    AggFun aval;
     float rval;
     char *sval;
     NODE *n;
@@ -90,6 +91,12 @@ QL_Manager *pQlm;          // QL component manager
       RW_FROM
       RW_WHERE
       RW_ORDER
+      RW_GROUP
+      RW_MAX
+      RW_MIN
+      RW_SUM
+      RW_AVG
+      RW_COUNT
       RW_BY
       RW_DESC
       RW_ASC
@@ -124,6 +131,7 @@ QL_Manager *pQlm;          // QL component manager
       T_SHELL_CMD
 
 %type   <cval>   op
+%type   <aval>   ammsc
 
 %type   <sval>   opt_relname
 
@@ -151,11 +159,14 @@ QL_Manager *pQlm;          // QL component manager
       non_mt_relattr_list
       non_mt_select_clause
       relattr
+      non_mt_aggrelattr_list
+      aggrelattr
       non_mt_relation_list
       relation
       opt_where_clause
       ordering_spec
       opt_order_by_clause
+      opt_group_by_clause
       non_mt_cond_list
       condition
       relattr_or_value
@@ -359,10 +370,15 @@ exit
    ;
 
 query
-   : RW_SELECT non_mt_select_clause RW_FROM non_mt_relation_list opt_where_clause opt_order_by_clause
+   : RW_SELECT non_mt_select_clause RW_FROM non_mt_relation_list opt_where_clause opt_order_by_clause opt_group_by_clause
    {
-     $$ = query_node($2, $4, $5, $6);
+     $$ = query_node($2, $4, $5, $6, $7);
    }
+   | RW_SELECT non_mt_select_clause RW_FROM non_mt_relation_list opt_where_clause opt_group_by_clause opt_order_by_clause
+   {
+     $$ = query_node($2, $4, $5, $7, $6);
+   }
+ 
    ;
 
 insert
@@ -399,18 +415,75 @@ non_mt_attrtype_list
 
 attrtype
    : T_STRING T_STRING
-    {
+   {
       $$ = attrtype_node($1, $2);
    }
    ;
 
 non_mt_select_clause
-   : non_mt_relattr_list
+   : non_mt_aggrelattr_list
    | '*'
    {
-       $$ = list_node(relattr_node(NULL, (char*)"*"));
+     $$ = list_node(aggrelattr_node(NO_F, NULL, (char*)"*"));
    }
       
+
+non_mt_aggrelattr_list
+   : aggrelattr ',' non_mt_aggrelattr_list
+   {
+      $$ = prepend($1, $3);
+   }
+   | aggrelattr
+   {
+      $$ = list_node($1);
+   }
+   ;
+
+aggrelattr
+   : ammsc '(' T_STRING '.' T_STRING ')'
+   {
+     $$ = aggrelattr_node($1, $3, $5);
+   }
+   | ammsc '(' T_STRING ')'
+   {
+     $$ = aggrelattr_node($1, NULL, $3);
+   }
+   | T_STRING '.' T_STRING
+   {
+     $$ = aggrelattr_node(NO_F, $1, $3);
+   }
+   | T_STRING
+   {
+     $$ = aggrelattr_node(NO_F, NULL, $1);
+   }
+   | ammsc '(' '*' ')'
+   {
+     $$ = aggrelattr_node($1, NULL, (char*)"*");
+   }
+   ;
+
+ammsc
+   : RW_AVG
+   { 
+     $$ = AVG_F;
+   }
+   | RW_MAX
+   { 
+     $$ = MAX_F;
+   }
+   | RW_MIN
+   { 
+     $$ = MIN_F;
+   }
+   | RW_SUM
+   { 
+     $$ = SUM_F;
+   }
+   | RW_COUNT
+   { 
+     $$ = COUNT_F;
+   }
+   ;
 
 non_mt_relattr_list
    : relattr ',' non_mt_relattr_list
@@ -469,6 +542,17 @@ opt_order_by_clause
       $$ = orderattr_node(0, 0);
    }
    | RW_ORDER RW_BY ordering_spec
+   {
+     $$ = $3;
+   }
+   ;
+
+opt_group_by_clause
+   : nothing
+   {
+     $$ = relattr_node(NULL, NULL);
+   }
+   | RW_GROUP RW_BY relattr
    {
      $$ = $3;
    }
@@ -677,6 +761,18 @@ ostream &operator<<(ostream &s, const RelAttr &qa)
       << "." << qa.attrName;
 }
 
+ostream &operator<<(ostream &s, const AggRelAttr &qa)
+{
+  if(qa.func == NO_F)
+   return 
+      s << (qa.relName ? qa.relName : "NULL")
+      << "." << qa.attrName;
+  else
+   return
+      s << qa.func << "(" << (qa.relName ? qa.relName : "NULL")
+        << "." << qa.attrName << ")";
+}
+
 ostream &operator<<(ostream &s, const Condition &c)
 {
    s << "\n      lhsAttr:" << c.lhsAttr << "\n"
@@ -700,6 +796,32 @@ ostream &operator<<(ostream &s, const Value &v)
          break;
       case STRING:
          s << " (char *)data=" << (char *)v.data;
+         break;
+   }
+   return s;
+}
+
+ostream &operator<<(ostream &s, const AggFun &func)
+{
+   switch(func){
+      case MIN_F:
+         s << " MIN";
+         break;
+      case MAX_F:
+         s << " MAX";
+         break;
+      case AVG_F:
+         s << " AVG";
+         break;
+      case SUM_F:
+         s << " SUM";
+         break;
+      case COUNT_F:
+         s << " COUNT";
+         break;
+      default:
+         // case NO_F:
+         s << " ";
          break;
    }
    return s;

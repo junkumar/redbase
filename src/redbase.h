@@ -75,6 +75,15 @@ enum CompOp {
 };
 
 //
+// Aggregation functions for group by
+//
+enum AggFun {
+  NO_F,
+  MIN_F, MAX_F, COUNT_F, 
+  SUM_F, AVG_F           // numeric args only
+};
+
+//
 // Pin Strategy Hint
 //
 enum ClientHint {

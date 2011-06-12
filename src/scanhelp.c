@@ -121,6 +121,8 @@ static int get_id(char *s)
       return yylval.ival = RW_WHERE;
    if(!strcmp(string, "order"))
       return yylval.ival = RW_ORDER;
+   if(!strcmp(string, "group"))
+      return yylval.ival = RW_GROUP;
    if(!strcmp(string, "by"))
       return yylval.ival = RW_BY;
    if(!strcmp(string, "desc"))
@@ -133,7 +135,17 @@ static int get_id(char *s)
       return yylval.ival = RW_DELETE;
    if(!strcmp(string, "update"))
       return yylval.ival = RW_UPDATE;
-   
+   if(!strcmp(string, "max"))
+     return yylval.ival = RW_MAX;
+   if(!strcmp(string, "min"))
+      return yylval.ival = RW_MIN;
+   if(!strcmp(string, "avg"))
+      return yylval.ival = RW_AVG;
+   if(!strcmp(string, "sum"))
+      return yylval.ival = RW_SUM;
+   if(!strcmp(string, "count"))
+      return yylval.ival = RW_COUNT;
+
    /* IO Statistics lexemes */
    if(!strcmp(string, "reset"))
       return yylval.ival = RW_RESET;

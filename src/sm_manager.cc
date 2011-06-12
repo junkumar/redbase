@@ -224,6 +224,7 @@ RC SM_Manager::GetAttrFromCat(const char* relName,
     return SM_BADATTR;
   
   attr = *data;
+  attr.func = NO_F;
   rec.GetRid(rid);
   return 0;
 }
@@ -1091,6 +1092,19 @@ RC SM_Manager::SemCheck(const RelAttr& ra) const {
   RC invalid = IsValid(); if(invalid) return invalid;
   DataAttrInfo a;
   RID rid;
+  return GetAttrFromCat(ra.relName, ra.attrName, a, rid);
+}
+
+RC SM_Manager::SemCheck(const AggRelAttr& ra) const {
+  RC invalid = IsValid(); if(invalid) return invalid;
+  DataAttrInfo a;
+  RID rid;
+  if(ra.func != NO_F &&
+     ra.func != MIN_F &&
+     ra.func != MAX_F &&
+     ra.func != COUNT_F)
+    return SM_BADAGGFUN;
+
   return GetAttrFromCat(ra.relName, ra.attrName, a, rid);
 }
 
