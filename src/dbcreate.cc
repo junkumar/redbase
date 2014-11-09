@@ -195,6 +195,15 @@ int main(int argc, char *argv[])
   a.indexNo = -1;
 	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
+    
+  strcpy(a.relName, "attrcat");
+  strcpy(a.attrName, "func");
+  a.offset = offsetof(DataAttrInfo, func);
+  a.attrType = INT;
+  a.attrLength = sizeof(AggFun);
+  a.indexNo = -1;
+       if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+    PrintErrorExit(rc); 
 
 
 	if ((rc =	rmm.CloseFile(attrfh)) < 0
