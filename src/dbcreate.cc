@@ -62,13 +62,13 @@ int main(int argc, char *argv[])
 
   if(
     (rc = rmm.CreateFile("relcat", DataRelInfo::size())) 
-    || (rc =	rmm.OpenFile("relcat", relfh))
+    || (rc =  rmm.OpenFile("relcat", relfh))
     ) 
     PrintErrorExit(rc);
   
   if(
     (rc = rmm.CreateFile("attrcat", DataAttrInfo::size())) 
-    || (rc =	rmm.OpenFile("attrcat", attrfh))
+    || (rc =  rmm.OpenFile("attrcat", attrfh))
     )
     PrintErrorExit(rc);
   
@@ -88,9 +88,9 @@ int main(int argc, char *argv[])
   attrcat_rel.numRecords = DataAttrInfo::members() + DataRelInfo::members();
   
   RID rid;
-	if ((rc = relfh.InsertRec((char*) &relcat_rel, rid)) < 0
-      || 	(rc = relfh.InsertRec((char*) &attrcat_rel, rid)) < 0
-		)
+  if ((rc = relfh.InsertRec((char*) &relcat_rel, rid)) < 0
+      ||   (rc = relfh.InsertRec((char*) &attrcat_rel, rid)) < 0
+    )
     PrintErrorExit(rc);  
 
   // relcat attrs
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
   a.attrType = STRING;
   a.attrLength = MAXNAME+1;
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "relcat");
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "relcat");
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);
 
   strcpy(a.relName, "relcat");
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "relcat");
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
   a.attrType = STRING;
   a.attrLength = MAXNAME+1;
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "attrcat");
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
   a.attrType = STRING;
   a.attrLength = MAXNAME+1;
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);
 
   strcpy(a.relName, "attrcat");
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "attrcat");
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(AttrType);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "attrcat");
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
 
   strcpy(a.relName, "attrcat");
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
   a.attrType = INT;
   a.attrLength = sizeof(int);
   a.indexNo = -1;
-	if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
+  if ((rc = attrfh.InsertRec((char*) &a, rid)) < 0)
     PrintErrorExit(rc);  
     
   strcpy(a.relName, "attrcat");
@@ -206,10 +206,10 @@ int main(int argc, char *argv[])
     PrintErrorExit(rc); 
 
 
-	if ((rc =	rmm.CloseFile(attrfh)) < 0
-		|| (rc =	rmm.CloseFile(relfh)) < 0
-		)
-		PrintErrorExit(rc);
+  if ((rc =  rmm.CloseFile(attrfh)) < 0
+    || (rc =  rmm.CloseFile(relfh)) < 0
+    )
+    PrintErrorExit(rc);
   
   return(0);
 }
