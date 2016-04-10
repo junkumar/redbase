@@ -1,3 +1,10 @@
 A mini database implementation. See src/doc* for each sub-component.
 This code was written for CS346 Spring 2011, Stanford University by 
 nandu@cs.stanford.edu.
+
+This code was placed online after requests from other students in my 
+class AFTER the completion of the course. Since then, this code has
+been used as a reference by many student globally.
+
+Please do not violate the Stanford University Honor code by directly 
+copying/reading this code for your coursework.
