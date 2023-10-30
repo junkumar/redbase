@@ -1052,7 +1052,7 @@ RC SM_Manager::GetFromTable(const char *relName,
   while(1) {
     RM_Record rec; 
     rc = afs.GetNextRec(rec);
-    if(rc == RM_EOF || numRecs > attrCount)
+    if(rc == RM_EOF || numRecs >= attrCount)
       break;
     DataAttrInfo * pattr;
 		rec.GetData((char*&)pattr);
