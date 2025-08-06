@@ -8,10 +8,14 @@ protected:
 	NestedBlockJoinTest() {}
 	virtual void SetUp() 
 	{
+		// Clean up any existing test database
+		system("rm -rf nested_block_join_test");
 	}
 
 	virtual void TearDown() 
   {
+		// Clean up test database
+		system("rm -rf nested_block_join_test");
 	}
 };
 
@@ -22,7 +26,7 @@ TEST_F(NestedBlockJoinTest, Contest) {
     IX_Manager ixm(pfm);
     SM_Manager smm(ixm, rmm);
 
-    const char * dbname = "test";
+    const char * dbname = "nested_block_join_test";
     stringstream command;
     command << "rm -rf " << dbname;
     rc = system (command.str().c_str());
@@ -140,7 +144,7 @@ TEST_F(NestedBlockJoinTest, ContestSmallBuf) {
     IX_Manager ixm(pfm);
     SM_Manager smm(ixm, rmm);
 
-    const char * dbname = "test";
+    const char * dbname = "nested_block_join_test";
     stringstream command;
     command << "rm -rf " << dbname;
     rc = system (command.str().c_str());
@@ -257,7 +261,7 @@ TEST_F(NestedBlockJoinTest, Cons) {
     IX_Manager ixm(pfm);
     SM_Manager smm(ixm, rmm);
 
-    const char * dbname = "test";
+    const char * dbname = "nested_block_join_test";
     stringstream command;
     command << "rm -rf " << dbname;
     rc = system (command.str().c_str());

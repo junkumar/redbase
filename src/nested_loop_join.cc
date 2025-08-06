@@ -152,8 +152,8 @@ NestedLoopJoin(Iterator *    lhsIt_,      // access for left i/p to join -R
   explain << "NestedLoopJoin\n";
   if(nOFilters > 0) {
     explain << "   nJoinConds = " << nOFilters << "\n";
-    for (int i = 0; i < nOutFilters; i++)
-      explain << "   joinConds[" << i << "]:" << oFilters[i] << "\n";
+    for (int i = 0; i < nOFilters; i++)
+      explain << "   joinConds[" << i << "]:" << outFilters[i] << "\n";
   }
 
   status = 0;

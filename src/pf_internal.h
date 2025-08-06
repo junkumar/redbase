@@ -38,7 +38,7 @@ struct PF_PageHdr {
                         //  - the number of the next free page
                         //  - PF_PAGE_LIST_END if this is last free page
                         //  - PF_PAGE_USED if the page is not free
-};
+} __attribute__((packed));
 
 // Justify the file header to the length of one page
 const int PF_FILE_HDR_SIZE = PF_PAGE_SIZE + sizeof(PF_PageHdr);

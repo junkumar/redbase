@@ -39,7 +39,7 @@ struct PF_BufPageDesc {
     short int  pinCount;    // pin count
     PageNum    pageNum;     // page number for this page
     int        fd;          // OS file descriptor of this page
-};
+} __attribute__((packed));
 
 //
 // PF_BufferMgr - manage the page buffer

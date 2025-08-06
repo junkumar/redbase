@@ -281,11 +281,9 @@ int BtreeNode::Insert(const void* newkey, const RID & rid)
   assert(IsValid() == 0);
   if(numKeys >= order) return -1;
   int i = -1;
-  void *prevKey = NULL;
   void *currKey = NULL;
   for(i = numKeys-1; i >= 0; i--)
   {
-    prevKey = currKey;
     GetKey(i, currKey);    
     if (CmpKey(newkey, currKey) >= 0)
       break; // go out and insert at i

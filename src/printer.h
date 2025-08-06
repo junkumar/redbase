@@ -20,7 +20,7 @@
 // Print some number of spaces
 void Spaces(int maxLength, int printedSoFar);
 
-class DataAttrInfo;
+struct DataAttrInfo;
 class Tuple;
 
 class Printer {

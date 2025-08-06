@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <iostream>
+#include <cstdint>
 #include "pf_buffermgr.h"
 
 using namespace std;
@@ -329,7 +330,7 @@ RC PF_BufferMgr::MarkDirty(int fd, PageNum pageNum)
 
    // The page must be found and pinned in the buffer
    if ((rc = hashTable.Find(fd, pageNum, slot))){
-      if ((rc == PF_HASHNOTFOUND))
+      if (rc == PF_HASHNOTFOUND)
          return (PF_PAGENOTINBUF);
       else
          return (rc);              // unexpected error
@@ -365,7 +366,7 @@ RC PF_BufferMgr::UnpinPage(int fd, PageNum pageNum)
 
    // The page must be found and pinned in the buffer
    if ((rc = hashTable.Find(fd, pageNum, slot))){
-      if ((rc == PF_HASHNOTFOUND))
+      if (rc == PF_HASHNOTFOUND)
          return (PF_PAGENOTINBUF);
       else
          return (rc);              // unexpected error
@@ -951,7 +952,7 @@ RC PF_BufferMgr::AllocateBlock(char *&buffer)
       return rc;
 
    // Create artificial page number (just needs to be unique for hash table)
-   PageNum pageNum = PageNum(bufTable[slot].pData);
+   PageNum pageNum = PageNum(reinterpret_cast<uintptr_t>(bufTable[slot].pData));
 
    // Insert the page into the hash table, and initialize the page description entry
    if ((rc = hashTable.Insert(MEMORY_FD, pageNum, slot) != OK_RC) ||
@@ -976,5 +977,5 @@ RC PF_BufferMgr::AllocateBlock(char *&buffer)
 //
 RC PF_BufferMgr::DisposeBlock(char* buffer)
 {
-   return UnpinPage(MEMORY_FD, PageNum(buffer));
+   return UnpinPage(MEMORY_FD, PageNum(reinterpret_cast<uintptr_t>(buffer)));
 }

@@ -7,9 +7,19 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <type_traits>
 #include "predicate.h"
 
 using namespace std;
+
+// Template function for safe unaligned reads
+template<typename T>
+T read_unaligned(const void* ptr) {
+    static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
+    T result;
+    std::memcpy(&result, ptr, sizeof(T));
+    return result;
+}
 
 bool AlmostEqualRelative(float A, float B, float maxRelativeError=0.000001)
 {
@@ -36,14 +46,14 @@ bool Predicate::eval(const char *buf, const char* rhs, CompOp c) const {
   }
   const char * attr = buf + attrOffset;
 
-  // cerr << "Predicate::eval " << *((int *)attr) << " " << *((int *)value_) << endl;
+  // cerr << "Predicate::eval " << *(reinterpret_cast<const int*>(attr)) << " " << *(reinterpret_cast<const int*>(value_)) << endl;
 
   if(c == LT_OP) {
     if(attrType == INT) {
-      return *((int *)attr) < *((int *)value_);
+      return read_unaligned<int>(attr) < read_unaligned<int>(value_);
     }
     if(attrType == FLOAT) {
-      return *((float *)attr) < *((float *)value_);
+      return read_unaligned<float>(attr) < read_unaligned<float>(value_);
     }
     if(attrType == STRING) {
       return strncmp(attr, (char *)value_, attrLength) < 0;
@@ -51,10 +61,10 @@ bool Predicate::eval(const char *buf, const char* rhs, CompOp c) const {
   }
   if(c == GT_OP) {
     if(attrType == INT) {
-      return *((int *)attr) > *((int *)value_);
+      return read_unaligned<int>(attr) > read_unaligned<int>(value_);
     }
     if(attrType == FLOAT) {
-      return *((float *)attr) > *((float *)value_);
+      return read_unaligned<float>(attr) > read_unaligned<float>(value_);
     }
     if(attrType == STRING) {
       return strncmp(attr, (char *)value_, attrLength) > 0;
@@ -62,11 +72,11 @@ bool Predicate::eval(const char *buf, const char* rhs, CompOp c) const {
   }
   if(c == EQ_OP) {
     if(attrType == INT) {
-      return *((int *)attr) == *((int *)value_);
+      return read_unaligned<int>(attr) == read_unaligned<int>(value_);
     }
     if(attrType == FLOAT) {
-      return *((float *)attr) == *((float *)value_);
-      // return AlmostEqualRelative(*((float *)attr), *((float *)value_));
+      return read_unaligned<float>(attr) == read_unaligned<float>(value_);
+      // Alternative: return AlmostEqualRelative(read_unaligned<float>(attr), read_unaligned<float>(value_));
     }
     if(attrType == STRING) {
       return strncmp(attr, (char *)value_, attrLength) == 0;

@@ -25,3 +25,8 @@ build/
 lib/
 src/contest
 nested_scratch
+.DS_Store
+# LLDB debugger temp files
+*.lldb
+debug_script.lldb
+src/debug_script.lldb

@@ -5,6 +5,7 @@
 #include "projection.h"
 #include "ql_error.h"
 #include "sm_error.h"
+#include <cstring>
 
 using namespace std;
 
@@ -25,18 +26,20 @@ Projection::Projection(Iterator* lhsIt_,
   attrs = new DataAttrInfo[attrCount];
   lattrs = new DataAttrInfo[attrCount];
 
+  // Initialize arrays to zero to avoid garbage values
+  memset(attrs, 0, sizeof(DataAttrInfo) * attrCount);
+  memset(lattrs, 0, sizeof(DataAttrInfo) * attrCount);
+
   DataAttrInfo * itattrs = lhsIt_->GetAttr();
   int offsetsofar = 0;
 
   // cout << "Projection::Projection() lhsIt->GetAttrCount() " << lhsIt->GetAttrCount() << endl;
       
   for(int j = 0; j < attrCount; j++) {
+    bool found = false;
     for(int i = 0; i < lhsIt->GetAttrCount(); i++) {
-      // cout << "Projection::Projection() itattrs[i].func " << itattrs[i].func
-      //      << endl;
-      // cout << "Projection::Projection() itattrs[i].attrName " << itattrs[i].attrName << endl;
-
-      if(strcmp(projections[j].relName, itattrs[i].relName) == 0 &&
+      if(projections[j].relName != NULL && projections[j].attrName != NULL &&
+         strcmp(projections[j].relName, itattrs[i].relName) == 0 &&
          strcmp(projections[j].attrName, itattrs[i].attrName) == 0 &&
          projections[j].func == itattrs[i].func
         ) {
@@ -48,8 +51,15 @@ Projection::Projection(Iterator* lhsIt_,
         // cout << "Projection::Projection() attrs[j].attrName " << attrs[j].attrName << endl;
         // cout << "Projection::Projection() lattrs[i].offset " << lattrs[i].offset << endl;
         // cout << "offsetsofar " << offsetsofar << endl;
+        found = true;
         break;
       }
+    }
+    
+    // Error if projection attribute not found
+    if (!found) {
+      status = SM_BADATTR;
+      return;
     }
   }
 
@@ -88,7 +98,6 @@ string Projection::Explain() {
 
 Projection::~Projection()
 {
-  delete lhsIt;
   delete [] attrs;
   delete [] lattrs;
 }

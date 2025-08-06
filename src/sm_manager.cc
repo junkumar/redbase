@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <unistd.h>
 #include "redbase.h"
 #include "sm.h"
 #include "ix.h"
@@ -37,7 +38,7 @@ RC SM_Manager::OpenDb(const char *dbName)
     return SM_DBOPEN; 
   }
 
-  if (getcwd(cwd, 1024) < 0) {
+  if (getcwd(cwd, 1024) == NULL) {
     cerr << " getcwd error." << endl;
     return SM_NOSUCHDB;
   }
@@ -405,7 +406,7 @@ RC SM_Manager::CreateIndex(const char *relName,
     return (rc);
    
   if((0 == rfh.IsValid())) {
-    if (rc = rmm.CloseFile(rfh))
+    if ((rc = rmm.CloseFile(rfh)) != 0)
       return (rc);
   }
 
@@ -858,7 +859,7 @@ RC SM_Manager::Print(const char *relName)
     return (rc);
    
   if((0 == rfh.IsValid())) {
-    if (rc = rmm.CloseFile(rfh))
+    if ((rc = rmm.CloseFile(rfh)) != 0)
       return (rc);
   }
 
@@ -1075,7 +1076,7 @@ bool SM_Manager::IsAttrIndexed(const char* relName, const char* attrName) const 
   RC invalid = IsValid(); if(invalid) return invalid;
   DataAttrInfo a;
   RID rid;
-  RC rc = GetAttrFromCat(relName, attrName, a, rid);
+  (void)GetAttrFromCat(relName, attrName, a, rid);
   
   return a.indexNo != -1 ? true : false;
 }

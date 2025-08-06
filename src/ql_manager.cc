@@ -35,7 +35,7 @@ namespace {
   bool strlt (char* i, char* j) { return (strcmp(i,j) < 0); }
   bool streq (char* i, char* j) { return (strcmp(i,j) == 0); }
 
-  class npageslt : public std::binary_function<char*, char*, bool>
+  class npageslt
   {
   public:
     npageslt(const SM_Manager& smm): psmm(&smm) {}
@@ -46,7 +46,7 @@ namespace {
     const SM_Manager* psmm;
   };
 
-  class nrecslt : public std::binary_function<char*, char*, bool>
+  class nrecslt
   {
   public:
     nrecslt(const SM_Manager& smm): psmm(&smm) {}

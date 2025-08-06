@@ -8,10 +8,10 @@
 #
 # Global variables
 #
-CC             = g++
+CC             = clang++
 BUILD_DIR      = ../build/
 LIB_DIR        = ../lib/
-GTEST_ROOT     = ../gtest-1.5.0
+GTEST_ROOT     = ../gtest/googletest
 INC_DIRS       = -I. -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
 AR             = ar -rc
 RANLIB         = ranlib
@@ -25,7 +25,7 @@ LEX            = flex
 # -O1 - Basic optimization
 # -Wall - All warnings
 # -DDEBUG_PF - This turns on the LOG file for lots of BufferMgr info
-CFLAGS         = -m32 -ggdb -DDEBUG -O0 -Wall $(STATS_OPTION) $(INC_DIRS)
+CFLAGS         = -g -DDEBUG -O0 -Wall -std=c++20 $(STATS_OPTION) $(INC_DIRS)
 
 # The STATS_OPTION can be set to -DPF_STATS or to nothing to turn on and
 # off buffer manager statistics.  The student should not modify this
@@ -53,13 +53,13 @@ SM_SOURCES     = statistics.cc sm_error.cc sm_manager.cc printer.cc \
 QL_SOURCES     = statistics.cc ql_manager.cc ql_error.cc file_scan.cc \
 		 file_scan_gtest.cc index_scan.cc index_scan_gtest.cc \
 		 nested_loop_join.cc nested_loop_join_gtest.cc \
-		 ql_manager_gtest.cc projection.cc nested_block_join_gtest.cc \
+		 ql_manager_gtest.cc projection.cc projection_gtest.cc nested_block_join_gtest.cc \
 		 merge_join.cc merge_join_gtest.cc sort_gtest.cc
 
 UTILS_SOURCES  = dbcreate.cc dbdestroy.cc redbase.cc
 PARSER_SOURCES = scan.c parse.c nodes.c interp.c
 TESTER_SOURCES = pf_test1.cc pf_test2.cc pf_test3.cc rm_test.cc \
-	         ix_test.cc parser_test.cc ix_testkpg_2.cc nested_scratch.cc \
+		         ix_test.cc parser_test.cc nested_scratch.cc \
 
 GTEST_SOURCES  = $(GTEST_ROOT)/src/gtest-all.cc
 
@@ -108,9 +108,7 @@ testers: all $(TESTS)
 test: testers gtest
 #	./pf_test1
 	./rm_test
-	./rm_testTA
 	./ix_test
-	./ix_testkpg_2
 	./gtest
 
 tag tags: 

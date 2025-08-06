@@ -9,11 +9,22 @@
 #include "data_attr_info.h"
 #include "rm_rid.h"
 #include <sstream>
+#include <cstring>
+#include <type_traits>
 #include "predicate.h"
 
 using namespace std;
 
-class DataAttrInfo;
+// Template function for safe unaligned reads
+template<typename T>
+T read_unaligned(const void* ptr) {
+    static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
+    T result;
+    std::memcpy(&result, ptr, sizeof(T));
+    return result;
+}
+
+struct DataAttrInfo;
 
 // abstraction to hide details of offsets and type conversions
 class Tuple {
@@ -78,7 +89,7 @@ class Tuple {
     assert(attrs != NULL);
     for (int i = 0; i < count; i++) {
       if(strcmp(attrs[i].attrName, attrName) == 0) {
-        intAttr = *(int*)(data+attrs[i].offset);
+        memcpy(&intAttr, data+attrs[i].offset, sizeof(int));
         return;
       }
     }
@@ -87,7 +98,7 @@ class Tuple {
     assert(attrs != NULL);
     for (int i = 0; i < count; i++) {
       if(strcmp(attrs[i].attrName, attrName) == 0) {
-        floatAttr = *(float*)(data+attrs[i].offset);
+        memcpy(&floatAttr, data+attrs[i].offset, sizeof(float));
         return;
       }
     }
@@ -125,9 +136,9 @@ namespace {
       AttrType attrType = attrs[pos].attrType;
       t.Get(attrs[pos].offset, k);
       if( attrType == INT )
-        os << *((int*)k);
+        os << read_unaligned<int>(k);
       if( attrType == FLOAT )
-        os << *((float*)k);
+        os << read_unaligned<float>(k);
       if( attrType == STRING ) {
         for(int i=0; i < attrs[pos].attrLength; i++) {
           if(((char*)k)[i] == 0) break;

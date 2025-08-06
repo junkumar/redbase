@@ -31,7 +31,7 @@ struct RM_FileHdr {
   int firstFree;     // first free page in the linked list
   int numPages;      // # of pages in the file
   int extRecordSize;  // record size as seen by users.
-};
+} __attribute__((packed));
 
 class bitmap {
 public:
