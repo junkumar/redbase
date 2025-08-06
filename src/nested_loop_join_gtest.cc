@@ -245,7 +245,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
         ASSERT_EQ(rc, 0);
     }
 
-    // Test Case 6: Index scan with join
+    // Test Case 6: One side Index scan with join
     {
         Condition inScanCondition = createScanCondition("in", "bw");
         
@@ -339,7 +339,7 @@ TEST_F(NestedLoopJoinTest, Cons) {
         ASSERT_EQ(rc, 0);
     }
 
-    // Test Case 8: Multiple join conditions
+    // Test Case 8: Cross Product Multiple join conditions
     {
         Condition inScanCondition = createScanCondition("in", "bw");
         
