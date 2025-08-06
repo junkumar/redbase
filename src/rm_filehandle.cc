@@ -116,7 +116,7 @@ RC RM_FileHandle::GetNextFreePage(PageNum& pageNum)
   }
   if( //we need to allocate a new page
       // because this is the firs time
-    hdr.numPages == 0 || 
+    hdr.numPages == 1 || 
     hdr.firstFree == RM_PAGE_LIST_END ||
     // or due to a full page
 //      (pHdr.numFreeSlots == 0 && pHdr.nextFree == RM_PAGE_FULLY_USED)
