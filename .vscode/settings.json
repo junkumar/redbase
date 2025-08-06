@@ -1,3 +1,50 @@
 {
-    "makefile.makefilePath": "src/Makefile"
+    "makefile.makefilePath": "src/Makefile",
+    
+    // Default indentation settings
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.indentSize": 2,
+    "editor.detectIndentation": false,
+    
+    // Language-specific settings
+    "[c]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[cpp]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[h]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[hpp]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[makefile]": {
+        "editor.insertSpaces": false,
+        "editor.tabSize": 4
+    },
+    "[markdown]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[json]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[yaml]": {
+        "editor.tabSize": 2,
+        "editor.indentSize": 2,
+        "editor.insertSpaces": true
+    }
 }

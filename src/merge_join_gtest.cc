@@ -9,14 +9,19 @@ protected:
 	virtual void SetUp() 
 	{
 		// Clean up any existing test database
-		system("rm -rf merge_join_test");
+    stringstream command;
+    command << "rm -rf " << dbname;
+    system (command.str().c_str());
 	}
 
 	virtual void TearDown() 
   {
 		// Clean up test database
-		system("rm -rf merge_join_test");
+    stringstream command;
+    command << "rm -rf " << dbname;
+    system (command.str().c_str());
 	}
+  const char * dbname = "merge_join_test";
 };
 
 
@@ -27,12 +32,8 @@ TEST_F(MergeJoinTest, Cons) {
     IX_Manager ixm(pfm);
     SM_Manager smm(ixm, rmm);
 
-    const char * dbname = "merge_join_test";
-    
     // Database setup
     stringstream command;
-    command << "rm -rf " << dbname;
-    rc = system (command.str().c_str());
 
     command.str("");
     command << "./dbcreate " << dbname;
