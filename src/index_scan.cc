@@ -212,7 +212,7 @@ RC IndexScan::GetNext(Tuple &t)
       if(cond.bRhsIsAttr == TRUE) {
         DataAttrInfo rhsAttr;
         RID r;
-        rc = psmm->GetAttrFromCat(relName.c_str(), cond.lhsAttr.attrName, rhsAttr, r);
+        rc = psmm->GetAttrFromCat(relName.c_str(), cond.rhsAttr.attrName, rhsAttr, r);
         if (rc != 0) return rc;
         rhs = (buf + rhsAttr.offset);
       }

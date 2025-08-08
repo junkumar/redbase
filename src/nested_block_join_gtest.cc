@@ -5,23 +5,23 @@
 
 class NestedBlockJoinTest : public ::testing::Test {
 protected:
-	NestedBlockJoinTest() {}
-	virtual void SetUp() 
-	{
-		// Clean up any existing test database
-    stringstream command;
-    command << "rm -rf " << dbname;
-    system (command.str().c_str());
-	}
-
-	virtual void TearDown() 
+  NestedBlockJoinTest() {}
+  virtual void SetUp()
   {
-		// Clean up test database
+    // Clean up any existing test database
     stringstream command;
     command << "rm -rf " << dbname;
-    system (command.str().c_str());
-	}
-  const char * dbname = "nested_block_join_test";
+    system(command.str().c_str());
+  }
+
+  virtual void TearDown()
+  {
+    // Clean up test database
+    stringstream command;
+    command << "rm -rf " << dbname;
+    system(command.str().c_str());
+  }
+  const char *dbname = "nested_block_join_test";
 };
 
 TEST_F(NestedBlockJoinTest, Contest) {

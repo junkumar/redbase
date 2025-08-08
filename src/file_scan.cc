@@ -65,7 +65,7 @@ FileScan::FileScan(SM_Manager& smm,
     explain << "   ScanCond = " << cond << "\n";
   if(nOFilters > 0) {
     explain << "   nFilters = " << nOFilters << "\n";
-    for (int i = 0; i < nOutFilters; i++)
+    for (int i = 0; i < nOFilters; i++)
       explain << "   filters[" << i << "]:" << oFilters[i] << "\n";
   }
 
@@ -157,7 +157,7 @@ RC FileScan::GetNext(Tuple &t)
       if(cond.bRhsIsAttr == TRUE) {
         DataAttrInfo rhsAttr;
         RID r;  
-        rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, rhsAttr, r);
+        rc = psmm->GetAttrFromCat(relName, cond.rhsAttr.attrName, rhsAttr, r);
         if (rc != 0) return rc;
         rhs = (buf + rhsAttr.offset);
       }       
