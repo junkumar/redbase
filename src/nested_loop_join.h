@@ -14,6 +14,9 @@
 
 using namespace std;
 
+// NestedLoopJoin does not own lhsIt/rhsIt. The caller is responsible for
+// allocating and deleting child iterators. Join conditions are shallow-copied
+// and borrow attribute/value pointers for the operator's lifetime.
 class NestedLoopJoin: public virtual Iterator {
  public:
   NestedLoopJoin(

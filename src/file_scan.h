@@ -13,6 +13,10 @@
 
 using namespace std;
 
+// FileScan borrows the outFilters array via shallow copy. It precomputes
+// attribute metadata once and does not perform per-tuple catalog lookups.
+// Caller manages the lifetime of any external resources; FileScan does not
+// own the database (SM/RM) managers passed in.
 class FileScan: public Iterator {
  public:
   FileScan(SM_Manager& smm,

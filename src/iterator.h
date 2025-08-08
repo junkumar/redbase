@@ -26,6 +26,19 @@ T read_unaligned(const void* ptr) {
 
 struct DataAttrInfo;
 
+// Ownership and lifetime rules for all Iterators in this project
+// - Child operators are NOT owned by their parents. Callers allocate and
+//   delete child iterators; operator destructors must not delete inputs
+//   unless explicitly documented otherwise.
+// - Selection/join conditions are SHALLOW-copied. Pointers inside Condition
+//   (attribute/value pointers) are borrowed. If bRhsIsAttr == FALSE, the
+//   producer must ensure rhsValue.data points to stable storage for the
+//   lifetime of the consuming operator. Attribute name pointers must also
+//   remain valid for the operator lifetime.
+// - Operators may precompute attribute metadata at construction; therefore
+//   schema/relational metadata referenced by names must remain valid while
+//   the operator exists.
+//
 // abstraction to hide details of offsets and type conversions
 class Tuple {
  public: 

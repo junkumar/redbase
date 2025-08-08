@@ -14,6 +14,9 @@
 
 using namespace std;
 
+// IndexScan borrows the outFilters array via shallow copy. It precomputes
+// attribute metadata once and does not perform per-tuple catalog lookups.
+// Caller manages SM/RM/IX manager lifetimes; IndexScan does not own them.
 class IndexScan: public Iterator {
  public:
   IndexScan(SM_Manager& smm,
