@@ -10,6 +10,7 @@
 #include "ix.h"
 #include "sm.h"
 #include "rm.h"
+#include "filter_eval.h"
 
 using namespace std;
 
@@ -55,6 +56,7 @@ class IndexScan: public Iterator {
   IX_IndexHandle ixh;
   int nOFilters;
   Condition* oFilters;
+  FilterEvaluator filter;
   // options used to open scan
   CompOp c;
 };

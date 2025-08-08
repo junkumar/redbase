@@ -18,7 +18,7 @@ FileScan::FileScan(SM_Manager& smm,
                    int nOutFilters,
                    const Condition outFilters[]
   ):rfs(RM_FileScan()), prmm(&rmm), psmm(&smm), rmh(RM_FileHandle()),
-    relName(relName_), nOFilters(nOutFilters)
+    relName(relName_), nOFilters(nOutFilters), oFilters(NULL)
 {
   attrCount = -1;
   attrs = NULL;
@@ -58,7 +58,10 @@ FileScan::FileScan(SM_Manager& smm,
   for(int i = 0; i < nOFilters; i++) {
     oFilters[i] = outFilters[i]; // shallow copy
   }
-
+  
+  RC frc = filter.init(psmm, relName, nOFilters, oFilters);
+  if (frc != 0) { status = frc; return; }
+  
   explain << "FileScan\n";
   explain << "   relName = " << relName << "\n";
   if(cond.rhsValue.data != NULL)
@@ -139,34 +142,9 @@ RC FileScan::GetNext(Tuple &t)
     rec.GetRid(recrid);
 
     bool recordIn = true;
-    for (int i = 0; i < nOFilters; i++) {
-      Condition cond = oFilters[i];
-      DataAttrInfo condAttr;
-      RID r;  
-      rc = psmm->GetAttrFromCat(relName, cond.lhsAttr.attrName, condAttr, r);
-      if (rc != 0) return rc;
-
-      Predicate p(condAttr.attrType,
-                  condAttr.attrLength,
-                  condAttr.offset,
-                  cond.op,
-                  cond.rhsValue.data,
-                  NO_HINT);
-        
-      char * rhs = (char*)cond.rhsValue.data;
-      if(cond.bRhsIsAttr == TRUE) {
-        DataAttrInfo rhsAttr;
-        RID r;  
-        rc = psmm->GetAttrFromCat(relName, cond.rhsAttr.attrName, rhsAttr, r);
-        if (rc != 0) return rc;
-        rhs = (buf + rhsAttr.offset);
-      }       
-   
-      if(!p.eval(buf, rhs, cond.op)) {
-        recordIn = false;
-        break;
-      }
-    } // for
+    if (!filter.passes(buf)) {
+      recordIn = false;
+    }
 
     if(recordIn) {
       t.Set(buf);

@@ -8,6 +8,7 @@
 #include "redbase.h"
 #include "iterator.h"
 #include "rm.h"
+#include "filter_eval.h"
 #include "sm.h"
 
 using namespace std;
@@ -44,6 +45,7 @@ class FileScan: public Iterator {
   RM_FileHandle rmh;
   int nOFilters;
   Condition* oFilters;
+  FilterEvaluator filter;
 };
 
 #endif // FILESCAN_H

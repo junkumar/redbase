@@ -85,6 +85,9 @@ IndexScan::IndexScan(SM_Manager& smm,
   for(int i = 0; i < nOFilters; i++) {
     oFilters[i] = outFilters[i]; // shallow copy
   }
+  
+  RC frc = filter.init(psmm, relName.c_str(), nOFilters, oFilters);
+  if (frc != 0) { status = frc; return; }
 
   explain << "IndexScan\n";
   explain << "   relName = " << relName.c_str() << "\n";
@@ -194,33 +197,8 @@ RC IndexScan::GetNext(Tuple &t)
     if (rc != 0 ) return rc;
 
     bool recordIn = true;
-    for (int i = 0; i < nOFilters; i++) {
-      Condition cond = oFilters[i];
-      DataAttrInfo condAttr;
-      RID r;  
-      rc = psmm->GetAttrFromCat(relName.c_str(), cond.lhsAttr.attrName, condAttr, r);
-      if (rc != 0) return rc;
-
-      Predicate p(condAttr.attrType,
-                  condAttr.attrLength,
-                  condAttr.offset,
-                  cond.op,
-                  cond.rhsValue.data,
-                  NO_HINT);
-        
-      char * rhs = (char*)cond.rhsValue.data;
-      if(cond.bRhsIsAttr == TRUE) {
-        DataAttrInfo rhsAttr;
-        RID r;
-        rc = psmm->GetAttrFromCat(relName.c_str(), cond.rhsAttr.attrName, rhsAttr, r);
-        if (rc != 0) return rc;
-        rhs = (buf + rhsAttr.offset);
-      }
-   
-      if(!p.eval(buf, rhs, cond.op)) {
-        recordIn = false;
-        break;
-      }
+    if (!filter.passes(buf)) {
+      recordIn = false;
     }
 
     if(recordIn) {
